@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 215 20.2% 65.1%;
+    --radius: 0.5rem;
+  }
+
+  :root[class~="dark"] {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 216 34% 17%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-200 inline-flex items-center justify-center relative overflow-hidden;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-light;
+  }
+  .btn-accent {
+    @apply bg-accent text-background hover:bg-accent-hover;
+  }
+  .btn-outline {
+    @apply border border-border bg-transparent text-text-primary hover:bg-surface;
+  }
+  .card {
+    @apply bg-surface rounded-lg border border-border transition-all duration-200;
+  }
+  .card-hover {
+    @apply hover:shadow-card-hover hover:shadow-white/20 hover:translate-y-[-2px] transition-all duration-200;
+  }
+  .nav-item {
+    @apply px-3 py-2 rounded-md text-text-secondary hover:text-accent hover:bg-surface transition-all duration-200;
+  }
+  .nav-item-active {
+    @apply text-accent bg-surface;
+  }
+  .badge {
+    @apply px-2 py-1 text-xs font-medium rounded-full;
+  }
+  .badge-success {
+    @apply bg-success bg-opacity-20 text-success;
+  }
+  .badge-warning {
+    @apply bg-warning bg-opacity-20 text-warning animate-pulse-status;
+  }
+  .badge-error {
+    @apply bg-error bg-opacity-20 text-error;
+  }
+  .table-header {
+    @apply bg-primary bg-opacity-50 text-text-primary font-medium;
+  }
+  .table-row {
+    @apply border-b border-border hover:bg-surface transition-all duration-200;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+  }
+  .input {
+    @apply bg-surface border border-border rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-200;
+  }
+  .dropdown {
+    @apply absolute z-10 bg-surface border border-border rounded-md shadow-dropdown min-w-[180px] py-1 animate-fade-in;
+  }
+  .dropdown-item {
+    @apply px-4 py-2 text-text-secondary hover:bg-primary hover:bg-opacity-30 hover:text-accent cursor-pointer transition-all duration-150;
+  }
+  .tooltip {
+    @apply absolute z-20 bg-surface text-text-primary text-xs py-1 px-2 rounded shadow-lg;
+  }
+  .ripple {
+    @apply absolute rounded-full bg-white bg-opacity-30 animate-ripple;
+  }
+}

@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { Orders } from './pages/Orders';
-import './index.css';
 
 export function ManagerRoutes() {
   return (

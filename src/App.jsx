@@ -4,9 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { BloggerDashboard } from './pages/BloggerDashboard';
-import { Dashboard as ManagerDashboard } from './manager/pages/Dashboard.jsx';
-import { Orders as ManagerOrders } from './manager/pages/Orders.jsx';
-import './manager/index.css';
+import { ManagerRoutes } from './manager/App.jsx';
 import { App as TeamsApp } from './teams/App.jsx';
 
 function App() {
@@ -18,8 +16,7 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/blogger" element={<BloggerDashboard />} />
-        <Route path="/manager" element={<ManagerDashboard />} />
-        <Route path="/manager/orders" element={<ManagerOrders />} />
+        <Route path="/manager/*" element={<ManagerRoutes />} />
         <Route path="/teams" element={<TeamsApp />} />
       </Routes>
     </BrowserRouter>

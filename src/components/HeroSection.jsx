@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 
 export function HeroSection() {
-  const heroVisualRef = useRef<HTMLDivElement>(null);
+  const heroVisualRef = useRef(null);
 
   useEffect(() => {
     const container = heroVisualRef.current;
     if (!container) return;
     
-    const particles: HTMLDivElement[] = [];
+  const particles = [];
+
     
     // Create 20 dynamic particles
     for (let i = 0; i < 20; i++) {

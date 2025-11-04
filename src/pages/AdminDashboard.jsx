@@ -1,41 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Bell, 
-  User, 
-  LogOut,
-  LayoutGrid,
-  TrendingUp,
   Users,
-  ShoppingCart,
-  BarChart3,
   Users2,
-  Globe,
-  Wallet,
-  Link,
+  User,
+  BarChart3,
   Filter
 } from 'lucide-react';
+import { AdminSidebar } from './components/AdminSidebar';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    navigate('/');
-  };
-
-  const navItems = [
-    { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard' },
-    { id: 'reporting', icon: TrendingUp, label: 'Reporting' },
-    { id: 'bloggers', icon: Users, label: 'Bloggers Lists' },
-    { id: 'orders', icon: ShoppingCart, label: 'Orders' },
-    { id: 'charts', icon: BarChart3, label: 'Price Charts' },
-    { id: 'team', icon: Users2, label: 'Team Members' },
-    { id: 'sites', icon: Globe, label: 'Sites' },
-    { id: 'wallet', icon: Wallet, label: 'Wallet' },
-    { id: 'links', icon: Link, label: 'More Links' }
-  ];
 
   const withdrawalRequests = [
     {
@@ -62,106 +39,53 @@ export function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0F1724] flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--background-dark)' }}>
       {/* Sidebar */}
-      <div className="w-64 bg-[#2D1066] border-r border-[#2C3445] p-8 relative">
-        <div className="relative">
-          {/* Gradient overlay */}
-          <div className="absolute top-0 left-0 right-0 h-full bg-gradient-to-b from-[#6BF0FF]/10 to-transparent pointer-events-none"></div>
-          
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-10 relative z-10">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#6BF0FF] to-[#3ED9EB] rounded-lg flex items-center justify-center text-[#1B0642] font-bold text-xl shadow-lg shadow-[#6BF0FF]/40">
-              L
-            </div>
-            <div className="text-white text-xl font-bold">LINKS</div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="space-y-2 relative z-10">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-300 relative overflow-hidden border ${
-                    isActive
-                      ? 'bg-[#4E2C93]/60 text-white border-[#6BF0FF]/50 shadow-lg shadow-[#6BF0FF]/15'
-                      : 'text-[#D1D5DB] border-transparent hover:bg-[#4E2C93]/40 hover:text-white hover:border-[#6BF0FF]/30 hover:translate-x-1'
-                  }`}
-                >
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#6BF0FF] to-[#3ED9EB] rounded-r"></div>
-                  )}
-                  
-                  {/* Gradient overlay */}
-                  {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#6BF0FF]/10 to-transparent"></div>
-                  )}
-                  
-                  <Icon className="w-5 h-5 relative z-10" />
-                  <span className="relative z-10 font-medium">{item.label}</span>
-                  
-                  {/* Active indicator dot */}
-                  {isActive && (
-                    <div className="absolute right-4 w-2 h-2 bg-[#6BF0FF] rounded-full shadow-lg shadow-[#6BF0FF]/80 animate-pulse"></div>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
+      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-[#1A2233] border-b border-[#2C3445] p-6">
+        <header className="p-6" style={{ backgroundColor: 'var(--card-background)', borderBottom: '1px solid var(--border)' }}>
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-white mb-2">Dashboard</h1>
-              <p className="text-[#D1D5DB]">Welcome back to your Link Management dashboard.</p>
+              <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
+              <p style={{ color: 'var(--text-secondary)' }}>Welcome back to your Link Management dashboard.</p>
             </div>
             <div className="flex items-center gap-4">
               {/* Search */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-[#6BF0FF]" />
+                  <Search className="h-5 w-5" style={{ color: 'var(--primary-cyan)' }} />
                 </div>
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="bg-[#0F1724] border border-[#2C3445] rounded-xl pl-10 pr-4 py-3 text-white placeholder-[#9AA4B2] focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent transition-all duration-300 min-w-[300px]"
+                  className="rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all duration-300 min-w-[300px]"
+                  style={{
+                    backgroundColor: 'var(--background-dark)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                  }}
                 />
               </div>
 
               {/* Notifications */}
               <div className="relative">
-                <button className="w-12 h-12 bg-[#1A2233] border border-[#2C3445] rounded-xl flex items-center justify-center text-[#6BF0FF] hover:bg-[#4E2C93] hover:border-[#6BF0FF] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#6BF0FF]/30 transition-all duration-300">
+                <button className="w-12 h-12 rounded-xl flex items-center justify-center hover:-translate-y-0.5 transition-all duration-300" style={{
+                  backgroundColor: 'var(--background-dark)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--primary-cyan)'
+                }}>
                   <Bell className="h-5 w-5" />
                 </button>
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#F87171] text-white text-xs rounded-full flex items-center justify-center font-semibold border-2 border-[#0F1724]">
+                <div className="absolute -top-1 -right-1 w-5 h-5 text-white text-xs rounded-full flex items-center justify-center font-semibold border-2" style={{
+                  backgroundColor: 'var(--error)',
+                  borderColor: 'var(--background-dark)'
+                }}>
                   3
                 </div>
               </div>
-
-              {/* Profile */}
-              <button className="w-12 h-12 bg-[#1A2233] border border-[#2C3445] rounded-xl flex items-center justify-center text-[#6BF0FF] hover:bg-[#4E2C93] hover:border-[#6BF0FF] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#6BF0FF]/30 transition-all duration-300">
-                <User className="h-5 w-5" />
-              </button>
-
-              {/* Logout */}
-              <button 
-                onClick={handleLogout}
-                className="px-4 py-2 bg-[#F87171] hover:bg-[#EF4444] text-white rounded-lg font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#F87171]/30"
-              >
-                <LogOut className="h-4 w-4 inline mr-2" />
-                Logout
-              </button>
             </div>
           </div>
         </header>
@@ -179,22 +103,24 @@ export function AdminDashboard() {
             ].map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <div key={index} className="bg-[#1A2233] border border-[#2C3445] rounded-2xl p-6 relative overflow-hidden hover:-translate-y-1 hover:border-[#6BF0FF] hover:shadow-lg hover:shadow-[#6BF0FF]/20 transition-all duration-300">
-                  {/* Top border gradient */}
-                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${stat.color}`}></div>
-                  
+                <div key={index} className="rounded-2xl p-6 relative overflow-hidden hover:-translate-y-1 transition-all duration-300" style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border)'
+                }}>
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-[#9AA4B2] text-sm font-medium uppercase tracking-wide mb-3">{stat.label}</h3>
-                      <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
-                      <div className="flex items-center gap-1 text-sm">
-                        <span className={`${stat.change.includes('+') || stat.change.includes('new') ? 'text-[#4ADE80]' : 'text-[#F87171]'}`}>
+                      <h3 className="text-sm font-medium uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>{stat.label}</h3>
+                      <div className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{stat.value}</div>
+                      <div className="flex items-center gap-1 text-sm" style={{
+                        color: stat.change.includes('+') || stat.change.includes('new') ? 'var(--success)' : 'var(--error)'
+                      }}>
+                        <span>
                           {stat.change}
                         </span>
                       </div>
                     </div>
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-[#1B0642] shadow-lg`}>
-                      <Icon className="h-6 w-6" />
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
+                      <Icon className="h-6 w-6" style={{ color: 'var(--icon-on-gradient)' }} />
                     </div>
                   </div>
                 </div>
@@ -203,13 +129,22 @@ export function AdminDashboard() {
           </div>
 
           {/* Withdrawal Requests Table */}
-          <div className="bg-[#1A2233] border border-[#2C3445] rounded-2xl p-8 shadow-xl">
+          <div className="rounded-2xl p-8 shadow-xl" style={{
+            backgroundColor: 'var(--card-background)',
+            border: '1px solid var(--border)'
+          }}>
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-white">Pending Withdrawal Requests</h2>
-                <div className="w-2 h-2 bg-[#6BF0FF] rounded-full animate-pulse shadow-lg shadow-[#6BF0FF]/60"></div>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Pending Withdrawal Requests</h2>
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ 
+                  backgroundColor: 'var(--primary-cyan)',
+                  boxShadow: '0 0 20px rgba(107, 240, 255, 0.6)'
+                }}></div>
               </div>
-              <button className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] text-[#1B0642] px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#6BF0FF]/30 transition-all duration-300">
+              <button className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:-translate-y-0.5 transition-all duration-300" style={{
+                color: 'var(--icon-on-gradient)',
+                boxShadow: '0 4px 12px rgba(107, 240, 255, 0.3)'
+              }}>
                 <Filter className="h-4 w-4" />
                 Filter
               </button>
@@ -217,47 +152,50 @@ export function AdminDashboard() {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-[#0F1724] rounded-lg">
+                <thead className="rounded-lg" style={{ backgroundColor: 'var(--background-dark)' }}>
                   <tr>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-[#9AA4B2] uppercase tracking-wide">User</th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-[#9AA4B2] uppercase tracking-wide">Payment Method</th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-[#9AA4B2] uppercase tracking-wide">Amount</th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-[#9AA4B2] uppercase tracking-wide">Date & Time</th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-[#9AA4B2] uppercase tracking-wide">Action</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>User</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Payment Method</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Date & Time</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {withdrawalRequests.map((request, index) => (
-                    <tr key={index} className="border-b border-[#2C3445] hover:bg-[#6BF0FF]/5 transition-colors duration-200">
+                    <tr key={index} className="transition-colors duration-200" style={{ borderBottom: '1px solid var(--border)' }}>
                       <td className="px-4 py-5">
                         <div>
-                          <div className="font-semibold text-white">{request.user.name}</div>
-                          <div className="text-sm text-[#9AA4B2]">{request.user.email}</div>
+                          <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{request.user.name}</div>
+                          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{request.user.email}</div>
                         </div>
                       </td>
                       <td className="px-4 py-5">
                         <div>
-                          <div className="font-medium text-white">{request.paymentMethod.type}</div>
-                          <div className="text-sm text-[#9AA4B2]">{request.paymentMethod.details}</div>
+                          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{request.paymentMethod.type}</div>
+                          <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{request.paymentMethod.details}</div>
                         </div>
                       </td>
                       <td className="px-4 py-5">
-                        <div className="font-bold text-[#4ADE80] text-lg">{request.amount}</div>
+                        <div className="font-bold text-lg" style={{ color: 'var(--success)' }}>{request.amount}</div>
                       </td>
                       <td className="px-4 py-5">
                         <div className="space-y-1">
                           <div>
-                            <div className="text-xs text-[#9AA4B2] uppercase">Request</div>
-                            <div className="text-sm text-[#D1D5DB]">{request.requestDate}</div>
+                            <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Request</div>
+                            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{request.requestDate}</div>
                           </div>
                           <div>
-                            <div className="text-xs text-[#9AA4B2] uppercase">Clearance</div>
-                            <div className="text-sm text-[#D1D5DB]">{request.clearanceDate}</div>
+                            <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Clearance</div>
+                            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{request.clearanceDate}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-5">
-                        <button className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] text-[#1B0642] px-4 py-2 rounded-lg font-semibold text-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#6BF0FF]/30 transition-all duration-300">
+                        <button className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] px-4 py-2 rounded-lg font-semibold text-sm hover:-translate-y-0.5 transition-all duration-300" style={{
+                          color: 'var(--icon-on-gradient)',
+                          boxShadow: '0 4px 12px rgba(107, 240, 255, 0.3)'
+                        }}>
                           Detail
                         </button>
                       </td>
@@ -269,6 +207,9 @@ export function AdminDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Theme Toggle */}
+      <ThemeToggle />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import './index.css';
 import { TopNav } from './components/layout/TopNav';
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/Dashboard';
+import { ThemeToggle } from '../components/ThemeToggle';
+
 export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   return <div className="flex h-screen bg-[#0F1724] text-white overflow-hidden">
@@ -13,5 +15,6 @@ export function App() {
           <Dashboard />
         </main>
       </div>
+      <ThemeToggle />
     </div>;
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { ThemeToggle } from '../../../components/ThemeToggle';
 
 export const Layout = ({
   children
@@ -12,5 +13,6 @@ export const Layout = ({
         <TopBar onMenuClick={() => setIsMobileSidebarOpen(true)} />
         <main className="container py-6 px-4 lg:px-8 flex-1">{children}</main>
       </div>
+      <ThemeToggle />
     </div>;
 };

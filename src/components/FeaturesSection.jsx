@@ -1,54 +1,117 @@
+import React from 'react';
 import { DollarSign, Clock, FileText, HelpCircle, Lock, Heart } from 'lucide-react';
 
 export function FeaturesSection() {
   const features = [
     {
       title: 'Continuous Revenue',
-      description: 'We can ensure regular flow of orders to websites with quality traffic & good metrics. Ideally a bloggers can easily make upwards of $500 every month!',
-      icon: <DollarSign className="h-10 w-10 text-[#6BF0FF]" />
+      description: 'Regular flow of orders to websites with quality traffic. Make upwards of $500 every month with consistent brand deals.',
+      icon: DollarSign,
+      color: 'rgba(107, 240, 255, 0.1)'
     },
     {
       title: 'Secure & Timely Payouts',
-      description: 'Unlike other platforms that have set dates for making payments, on BM publishers can request payments whenever they want. You request a payment; you get it within 24 hours.',
-      icon: <Clock className="h-10 w-10 text-[#6BF0FF]" />
+      description: 'Request payments whenever you want. Get paid within 24 hours, no waiting for scheduled payment dates.',
+      icon: Clock,
+      color: 'rgba(62, 217, 235, 0.1)'
     },
     {
       title: 'High-Quality Content',
-      description: 'We ensure high quality SEO optimised content that further add authority to your website in front of search engines. We make no compromise with content quality.',
-      icon: <FileText className="h-10 w-10 text-[#6BF0FF]" />
+      description: 'SEO-optimized content that adds authority to your website. No compromise on quality standards.',
+      icon: FileText,
+      color: 'rgba(107, 240, 255, 0.1)'
     },
     {
       title: 'Instant Support',
-      description: 'A Publisher can accept an order or reject the same depending on what they feel is right. The platform or the admin will not do anything to take the decision',
-      icon: <HelpCircle className="h-10 w-10 text-[#6BF0FF]" />
+      description: 'Accept or reject orders based on your preferences. You have full control over what appears on your site.',
+      icon: HelpCircle,
+      color: 'rgba(62, 217, 235, 0.1)'
     },
     {
       title: 'Decentralised Control',
-      description: "At links management, its the publisher that takes the shot, unlike other platforms. You're free to accept or reject an order you're not comfortable with",
-      icon: <Lock className="h-10 w-10 text-[#6BF0FF]" />
+      description: "You're in the driver's seat. Accept or reject orders you're not comfortable with, unlike other platforms.",
+      icon: Lock,
+      color: 'rgba(107, 240, 255, 0.1)'
     },
     {
-      title: 'Long Term Association',
-      description: "At LM, we're focused on building the largest ecosystem of publishers and bloggers for the long run. And we're committed to nurturing the relationship.",
-      icon: <Heart className="h-10 w-10 text-[#6BF0FF]" />
+      title: 'Long Term Partnership',
+      description: "Building the largest ecosystem of publishers for the long run. Committed to nurturing lasting relationships.",
+      icon: Heart,
+      color: 'rgba(62, 217, 235, 0.1)'
     }
   ];
 
   return (
-    <section className="py-20 bg-[#0F1724]">
+    <section 
+      id="features"
+      className="py-20 md:py-32"
+      style={{ backgroundColor: 'var(--background-dark)' }}
+    >
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <div key={index} className="bg-[#1A2233] rounded-xl shadow-lg shadow-[#2D1066]/10 p-8 transition-all duration-300 hover:shadow-xl hover:shadow-[#6BF0FF]/10 hover:-translate-y-2 border border-[#2C3445] hover:border-[#6BF0FF]/30 group">
-              <div className="mb-4 bg-[#2D1066]/20 inline-flex p-3 rounded-lg group-hover:bg-[#2D1066]/40 transition-all duration-300">
-                {feature.icon}
+        {/* Section Header */}
+        <div className="text-center mb-16 max-w-3xl mx-auto">
+          <h2 
+            className="text-3xl md:text-4xl font-bold mb-4"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Why Publishers Choose{' '}
+            <span className="gradient-text">LinkMag</span>
+          </h2>
+          <p 
+            className="text-lg"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            Everything you need to monetize your content and grow your revenue
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <div 
+                key={index} 
+                className="card transition-all duration-200 hover:transform hover:-translate-y-1 hover:shadow-md group"
+                style={{
+                  border: '1px solid var(--border)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-cyan)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                }}
+              >
+                {/* Icon Container */}
+                <div 
+                  className="inline-flex p-3 rounded-lg mb-4"
+                  style={{ backgroundColor: feature.color }}
+                >
+                  <Icon 
+                    size={24} 
+                    style={{ color: 'var(--primary-cyan)' }}
+                  />
+                </div>
+
+                {/* Title */}
+                <h3 
+                  className="text-xl font-semibold mb-3"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {feature.title}
+                </h3>
+
+                {/* Description */}
+                <p 
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white group-hover:text-[#6BF0FF] transition-colors duration-300">
-                {feature.title}
-              </h3>
-              <p className="text-[#D1D5DB]">{feature.description}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

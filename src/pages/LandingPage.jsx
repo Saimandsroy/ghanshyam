@@ -15,11 +15,19 @@ export function LandingPage() {
       <Navbar />
       <main>
         <HeroSection />
-        <FeaturesSection />
-        <AboutSection />
-        <HowItWorksSection />
+        <section id="features">
+          <FeaturesSection />
+        </section>
+        <section id="about">
+          <AboutSection />
+        </section>
+        <section id="how-it-works">
+          <HowItWorksSection />
+        </section>
         <TestimonialsSection />
-        <ContactSection />
+        <section id="contact">
+          <ContactSection />
+        </section>
         <PlatformPreviewSection />
         <TrustBanner />
       </main>

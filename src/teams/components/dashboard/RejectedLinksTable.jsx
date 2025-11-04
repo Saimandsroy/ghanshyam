@@ -42,55 +42,55 @@ export function RejectedLinksTable() {
       [id]: !prev[id]
     }));
   };
-  return <div className="bg-[#1A2233] rounded-xl border border-[#2C3445] overflow-hidden">
+  return <div className="bg-card rounded-xl border border-border overflow-hidden">
       {rejectedLinks.length > 0 ? <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#2D1066]">
-                <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider w-10"></th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <tr className="bg-background">
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider w-10"></th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Order ID
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Number of Links
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                   Sites Sent
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2C3445]">
+            <tbody className="divide-y divide-border">
               {rejectedLinks.map(item => <Fragment key={item.id}>
-                  <tr className="hover:bg-[#1B0642] transition-colors duration-150 cursor-pointer" onClick={() => toggleRow(item.id)}>
+                  <tr className="hover:bg-accent transition-colors duration-150 cursor-pointer" onClick={() => toggleRow(item.id)}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button className="text-[#6BF0FF]">
+                      <button className="text-primary">
                         {expandedRows[item.id] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#F87171]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-error">
                       {item.id}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {item.type}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {item.links}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#D1D5DB]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted">
                       Click to view details
                     </td>
                   </tr>
-                  {expandedRows[item.id] && <tr className="bg-[#0F1724]">
+                  {expandedRows[item.id] && <tr className="bg-background">
                       <td colSpan={5} className="px-6 py-4">
                         <div className="pl-10 space-y-4">
-                          {item.sites.map((site, siteIndex) => <div key={siteIndex} className="border-l-2 border-[#F87171] pl-4">
-                              <a href="#" className="text-[#6BF0FF] hover:underline text-sm font-medium">
+                          {item.sites.map((site, siteIndex) => <div key={siteIndex} className="border-l-2 border-error pl-4">
+                              <a href="#" className="text-primary hover:underline text-sm font-medium">
                                 {site.url}
                               </a>
-                              <p className="text-[#D1D5DB] text-sm mt-1">
+                              <p className="text-muted text-sm mt-1">
                                 {site.notes}
                               </p>
                             </div>)}
@@ -101,13 +101,13 @@ export function RejectedLinksTable() {
             </tbody>
           </table>
         </div> : <div className="flex flex-col items-center justify-center py-16">
-          <div className="p-4 rounded-full bg-[#1B0642]">
-            <AlertCircle size={32} className="text-[#9AA4B2]" />
+          <div className="p-4 rounded-full bg-accent">
+            <AlertCircle size={32} className="text-muted" />
           </div>
-          <h3 className="mt-4 text-lg font-medium text-white">
+          <h3 className="mt-4 text-lg font-medium text-foreground">
             No Rejected Links
           </h3>
-          <p className="mt-2 text-sm text-[#9AA4B2]">
+          <p className="mt-2 text-sm text-muted">
             All links are currently approved.
           </p>
         </div>}

@@ -7,7 +7,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 
 export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  return <div className="flex h-screen bg-[#0F1724] text-white overflow-hidden">
+  return <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <Sidebar isOpen={sidebarOpen} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopNav onMenuClick={() => setSidebarOpen(!sidebarOpen)} />

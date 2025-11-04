@@ -52,79 +52,79 @@ export function CompletedOrdersTable() {
     links: 3,
     package: 'Enterprise'
   }];
-  return <div className="bg-[#1A2233] rounded-xl border border-[#2C3445] overflow-hidden">
+  return <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-[#2D1066]">
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+            <tr className="bg-background">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Order ID
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Type
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Category
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Manager
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Client Name
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Website
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Links
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Package
               </th>
-              <th className="px-6 py-4 text-right text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-right text-xs font-medium text-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#2C3445]">
-            {orders.map((order, index) => <tr key={index} className="hover:bg-[#1B0642] transition-colors duration-150">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#4ADE80]">
+          <tbody className="divide-y divide-border">
+            {orders.map((order, index) => <tr key={index} className="hover:bg-accent transition-colors duration-150">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-success">
                   {order.id}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {order.type}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.categoryColor} bg-opacity-20 text-white`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary`}>
                     {order.category}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {order.manager}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {order.clientName}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <a href="#" className="text-[#6BF0FF] hover:underline truncate max-w-[200px] inline-block">
+                  <a href="#" className="text-primary hover:underline truncate max-w-[200px] inline-block">
                     {order.website}
                   </a>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {order.links}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {order.package}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <div className="flex justify-end space-x-2">
-                    <button className="p-2 rounded-full hover:bg-[#4E2C93] text-[#6BF0FF] transition-colors" aria-label="View order">
+                    <button className="p-2 rounded-full hover:bg-accent text-primary transition-colors" aria-label="View order">
                       <Eye size={16} />
                     </button>
-                    <button className="p-2 rounded-full hover:bg-[#4E2C93] text-[#6BF0FF] transition-colors" aria-label="Download report">
+                    <button className="p-2 rounded-full hover:bg-accent text-primary transition-colors" aria-label="Download report">
                       <Download size={16} />
                     </button>
-                    <button className="p-2 rounded-full hover:bg-[#4E2C93] text-[#6BF0FF] transition-colors" aria-label="More options">
+                    <button className="p-2 rounded-full hover:bg-accent text-primary transition-colors" aria-label="More options">
                       <MoreHorizontal size={16} />
                     </button>
                   </div>

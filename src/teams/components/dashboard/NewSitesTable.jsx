@@ -77,81 +77,81 @@ export function NewSitesTable() {
         return 'text-[#FACC15]';
     }
   };
-  return <div className="bg-[#1A2233] rounded-xl border border-[#2C3445] overflow-hidden">
+  return <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-[#2D1066]">
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+            <tr className="bg-background">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Domain
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 DR
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 DA
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 RD
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Spam Score
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Traffic
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Price
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Trend
               </th>
-              <th className="px-6 py-4 text-right text-xs font-medium text-[#D1D5DB] uppercase tracking-wider">
+              <th className="px-6 py-4 text-right text-xs font-medium text-muted uppercase tracking-wider">
                 Info
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#2C3445]">
-            {sites.map((site, index) => <tr key={index} className="hover:bg-[#1B0642] transition-colors duration-150">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#6BF0FF]">
+          <tbody className="divide-y divide-border">
+            {sites.map((site, index) => <tr key={index} className="hover:bg-accent transition-colors duration-150">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
                   {site.domain}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${site.statusColor} bg-opacity-20 text-white`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success`}>
                     {site.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.dr}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.da}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.rd}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.spamScore}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.traffic}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {site.price}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     {getTrendIcon(site.trend)}
-                    <span className={`ml-2 text-xs font-medium ${getTrendText(site.trend)}`}>
+                    <span className={`ml-2 text-xs font-medium ${getTrendText(site.trend).replace('#4ADE80','success').replace('#F87171','error').replace('#FACC15','warning')}`}>
                       {site.trend.charAt(0).toUpperCase() + site.trend.slice(1)}
                     </span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  <button className="p-2 rounded-full hover:bg-[#4E2C93] text-[#6BF0FF] transition-colors" aria-label="More information">
+                  <button className="p-2 rounded-full hover:bg-accent text-primary transition-colors" aria-label="More information">
                     <Info size={16} />
                   </button>
                 </td>

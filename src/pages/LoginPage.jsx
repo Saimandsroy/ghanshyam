@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 export function LoginPage() {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [userType, setUserType] = useState('blogger');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,11 +25,16 @@ export function LoginPage() {
     e.preventDefault();
     // Simple demo logic - in real app, this would authenticate with backend
     if (formData.email && formData.password) {
-      if (userType === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/blogger');
-      }
+      const routeMap = {
+        admin: '/admin',
+        blogger: '/blogger',
+        manager: '/manager',
+        team: '/teams',
+        writer: '/writer',
+        accountant: '/accountant'
+      };
+      login(userType);
+      navigate(routeMap[userType] || '/');
     } else {
       alert('Please fill in all fields');
     }
@@ -55,7 +62,7 @@ export function LoginPage() {
         {/* Login Form */}
         <div className="bg-[#1A2233] border border-[#2C3445] rounded-2xl p-8 shadow-xl">
           {/* User Type Selection */}
-          <div className="flex bg-[#0F1724] rounded-lg p-1 mb-6">
+          <div className="flex bg-[#0F1724] rounded-lg p-1 mb-3">
             <button
               type="button"
               onClick={() => setUserType('blogger')}
@@ -78,6 +85,21 @@ export function LoginPage() {
             >
               Admin
             </button>
+          </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-[#D1D5DB] mb-2">Role</label>
+            <select
+              value={userType}
+              onChange={(e) => setUserType(e.target.value)}
+              className="w-full bg-[#0F1724] border border-[#2C3445] rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6BF0FF]"
+            >
+              <option value="admin">Admin</option>
+              <option value="blogger">Blogger</option>
+              <option value="manager">Manager</option>
+              <option value="team">Team</option>
+              <option value="writer">Writer</option>
+              <option value="accountant">Accountant</option>
+            </select>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

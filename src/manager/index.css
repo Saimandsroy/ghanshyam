@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --border: 240 5% 84%;
+  --input: 240 5% 90%;
+  --ring: 240 5% 65%;
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+}

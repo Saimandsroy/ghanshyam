@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FilterBar } from '../../components/FilterBar';
+import { Pagination } from '../../components/Pagination.jsx';
 
 const orders = Array.from({ length: 30 }).map((_, i) => ({
   id: 8000 + i,
@@ -11,6 +12,8 @@ const orders = Array.from({ length: 30 }).map((_, i) => ({
 
 export function Orders() {
   const [filters, setFilters] = useState({ q: '', status: 'all', start: '', end: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const rows = useMemo(() => {
     let r = orders;
     const q = filters.q.toLowerCase();
@@ -20,11 +23,13 @@ export function Orders() {
     if (filters.end) r = r.filter(o => new Date(o.date) <= new Date(filters.end));
     return r;
   }, [filters]);
+  const total = rows.length;
+  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Today Orders</h2>
-      <FilterBar value={filters} onChange={setFilters} />
+      <FilterBar value={filters} onChange={(v) => { setFilters(v); setPage(1); }} />
       <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <table className="w-full">
           <thead style={{ backgroundColor: 'var(--background-dark)' }}>
@@ -37,7 +42,7 @@ export function Orders() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((o) => (
+            {pageData.map((o) => (
               <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>#{o.id}</td>
                 <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.client}</td>
@@ -46,7 +51,7 @@ export function Orders() {
                 <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(o.date).toLocaleString()}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {pageData.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No orders</td>
               </tr>
@@ -54,6 +59,14 @@ export function Orders() {
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        pageSizeOptions={[20, 50]}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      />
     </div>
   );
 }

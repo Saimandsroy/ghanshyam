@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
-import { LayoutGrid, TrendingUp, ShoppingCart, BarChart3 } from 'lucide-react';
+import { LayoutGrid, TrendingUp, ShoppingCart, BarChart3, Users, Users2 } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../auth/AuthContext.jsx';
 
@@ -18,8 +18,10 @@ export function AdminLayout() {
   const navItems = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', to: '/admin', active: pathname === '/admin' },
     { icon: <TrendingUp size={20} />, label: 'Reporting', to: '/admin/reporting', active: pathname.startsWith('/admin/reporting') },
+    { icon: <Users size={20} />, label: 'Bloggers Lists', to: '/admin/bloggers', active: pathname.startsWith('/admin/bloggers') },
     { icon: <ShoppingCart size={20} />, label: 'Orders', to: '/admin/orders', active: pathname.startsWith('/admin/orders') },
     { icon: <BarChart3 size={20} />, label: 'Price Charts', to: '/admin/price-charts', active: pathname.startsWith('/admin/price-charts') },
+    { icon: <Users2 size={20} />, label: 'Team Members', to: '/admin/team-members', active: pathname.startsWith('/admin/team-members') },
   ];
 
   return (

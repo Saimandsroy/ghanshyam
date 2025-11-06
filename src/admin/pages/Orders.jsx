@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Pagination } from '../../components/Pagination.jsx';
 
 const mockOrders = Array.from({ length: 25 }).map((_, i) => ({
   id: 1000 + i,
@@ -12,7 +13,7 @@ const mockOrders = Array.from({ length: 25 }).map((_, i) => ({
 export function Orders() {
   const [filters, setFilters] = useState({ search: '', status: 'all', start: '', end: '' });
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(20);
 
   const filtered = useMemo(() => {
     let r = mockOrders;
@@ -24,7 +25,8 @@ export function Orders() {
     return r;
   }, [filters]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
@@ -87,13 +89,14 @@ export function Orders() {
         </table>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Page {page} of {totalPages}</div>
-        <div className="space-x-2">
-          <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="px-3 py-1 rounded-md text-sm disabled:opacity-50" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Prev</button>
-          <button disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="px-3 py-1 rounded-md text-sm disabled:opacity-50" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Next</button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        pageSizeOptions={[20, 50]}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      />
     </div>
   );
 }

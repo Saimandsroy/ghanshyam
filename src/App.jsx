@@ -6,9 +6,11 @@ import { ManagerRoutes } from './manager/App.jsx';
 import { App as TeamsApp } from './teams/App.jsx';
 import { AdminLayout } from './admin/Layout.jsx';
 import { Dashboard as AdminDashboard } from './admin/pages/Dashboard.jsx';
-import { Reporting as AdminReporting } from './admin/pages/Reporting.jsx';
+import { ReportingLayout as AdminReportingLayout } from './admin/pages/reports/ReportingLayout.jsx';
 import { Orders as AdminOrders } from './admin/pages/Orders.jsx';
 import { PriceCharts as AdminPriceCharts } from './admin/pages/PriceCharts.jsx';
+import { Bloggers as AdminBloggers } from './admin/pages/Bloggers.jsx';
+import { TeamMembers as AdminTeamMembers } from './admin/pages/TeamMembers.jsx';
 import { BloggerLayout } from './blogger/Layout.jsx';
 import { Dashboard as BloggerDashboard } from './blogger/pages/Dashboard.jsx';
 import { Orders as BloggerOrders } from './blogger/pages/Orders.jsx';
@@ -32,9 +34,11 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="reporting" element={<AdminReporting />} />
+          <Route path="reporting/*" element={<AdminReportingLayout />} />
+          <Route path="bloggers" element={<AdminBloggers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="price-charts" element={<AdminPriceCharts />} />
+          <Route path="team-members" element={<AdminTeamMembers />} />
         </Route>
         <Route path="/blogger" element={<BloggerLayout />}>
           <Route index element={<BloggerDashboard />} />

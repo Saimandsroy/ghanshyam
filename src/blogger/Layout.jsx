@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
-import { LayoutGrid, Wallet, ShoppingBag, MessageCircle, BarChart3, Settings } from 'lucide-react';
+import { LayoutGrid, CreditCard, Globe, Upload, ShoppingBag, MessageCircle } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../auth/AuthContext.jsx';
 
@@ -17,11 +17,32 @@ export function BloggerLayout() {
   };
   const navItems = [
     { icon: <LayoutGrid size={20} />, label: 'Dashboard', to: `${base}`, active: pathname === `${base}` },
-    { icon: <Wallet size={20} />, label: 'Wallet', to: `${base}/wallet`, active: pathname.startsWith(`${base}/wallet`) },
-    { icon: <ShoppingBag size={20} />, label: 'Today Orders', to: `${base}/orders`, active: pathname.startsWith(`${base}/orders`) },
+    {
+      icon: <CreditCard size={20} />,
+      label: 'Payments',
+      to: '#',
+      active: pathname.startsWith(`${base}/payments`),
+      hasDropdown: true,
+      dropdownItems: [
+        { label: 'Fill Payment Details', to: `${base}/payments/fill-details` },
+        { label: 'Invoice List', to: `${base}/payments/invoices` },
+        { label: 'Wallet', to: `${base}/payments/wallet` },
+      ],
+    },
+    {
+      icon: <Globe size={20} />,
+      label: 'Sites',
+      to: '#',
+      active: pathname.startsWith(`${base}/sites`),
+      hasDropdown: true,
+      dropdownItems: [
+        { label: 'Single Site', to: `${base}/sites/single` },
+        { label: 'View All Sites', to: `${base}/sites/all` },
+      ],
+    },
+    { icon: <Upload size={20} />, label: 'Bulk Sites', to: `${base}/bulk-sites`, active: pathname.startsWith(`${base}/bulk-sites`) },
+    { icon: <ShoppingBag size={20} />, label: 'Orders', to: `${base}/orders`, active: pathname.startsWith(`${base}/orders`) },
     { icon: <MessageCircle size={20} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`) },
-    { icon: <BarChart3 size={20} />, label: 'Reports', to: `${base}/reports`, active: pathname.startsWith(`${base}/reports`) },
-    { icon: <Settings size={20} />, label: 'Settings', to: `${base}/settings`, active: pathname.startsWith(`${base}/settings`) },
   ];
 
   return (

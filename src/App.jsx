@@ -16,11 +16,17 @@ import { Dashboard as BloggerDashboard } from './blogger/pages/Dashboard.jsx';
 import { Orders as BloggerOrders } from './blogger/pages/Orders.jsx';
 import { Wallet as BloggerWallet } from './blogger/pages/Wallet.jsx';
 import { Threads as BloggerThreads } from './blogger/pages/Threads.jsx';
-import { Reports as BloggerReports } from './blogger/pages/Reports.jsx';
-import { Settings as BloggerSettings } from './blogger/pages/Settings.jsx';
+import { FillPaymentDetails } from './blogger/pages/payments/FillPaymentDetails.jsx';
+import { InvoiceList } from './blogger/pages/payments/InvoiceList.jsx';
+import { SingleSite } from './blogger/pages/sites/SingleSite.jsx';
+import { ViewAllSites } from './blogger/pages/sites/ViewAllSites.jsx';
+import { BulkSites } from './blogger/pages/BulkSites.jsx';
 import { WriterLayout } from './writer/Layout.jsx';
 import { Dashboard as WriterDashboard } from './writer/pages/Dashboard.jsx';
 import { CompletedOrders as WriterCompleted } from './writer/pages/CompletedOrders.jsx';
+import { OrderNotifications as WriterOrderNotifications } from './writer/pages/OrderNotifications.jsx';
+import { RejectedNotifications as WriterRejectedNotifications } from './writer/pages/RejectedNotifications.jsx';
+import { Threads as WriterThreads } from './writer/pages/Threads.jsx';
 import { AccountantLayout } from './accountant/Layout.jsx';
 import { Payments as AccountantPayments } from './accountant/pages/Payments.jsx';
 import { RequireAuth } from './auth/AuthContext.jsx';
@@ -43,14 +49,23 @@ function App() {
         <Route path="/blogger" element={<BloggerLayout />}>
           <Route index element={<BloggerDashboard />} />
           <Route path="orders" element={<BloggerOrders />} />
-          <Route path="wallet" element={<BloggerWallet />} />
           <Route path="threads" element={<BloggerThreads />} />
-          <Route path="reports" element={<BloggerReports />} />
-          <Route path="settings" element={<BloggerSettings />} />
+          {/* Payments */}
+          <Route path="payments/fill-details" element={<FillPaymentDetails />} />
+          <Route path="payments/invoices" element={<InvoiceList />} />
+          <Route path="payments/wallet" element={<BloggerWallet />} />
+          {/* Sites */}
+          <Route path="sites/single" element={<SingleSite />} />
+          <Route path="sites/all" element={<ViewAllSites />} />
+          {/* Bulk Sites */}
+          <Route path="bulk-sites" element={<BulkSites />} />
         </Route>
         <Route path="/writer" element={<WriterLayout />}>
           <Route index element={<WriterDashboard />} />
           <Route path="completed-orders" element={<WriterCompleted />} />
+          <Route path="notifications" element={<WriterOrderNotifications />} />
+          <Route path="rejected" element={<WriterRejectedNotifications />} />
+          <Route path="threads" element={<WriterThreads />} />
         </Route>
         <Route path="/accountant" element={<AccountantLayout />}>
           <Route index element={<AccountantPayments />} />

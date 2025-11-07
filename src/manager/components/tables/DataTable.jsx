@@ -6,6 +6,8 @@ const StatusBadge = ({ status }) => {
     switch (status) {
       case 'accepted':
         return 'badge-success';
+      case 'completed':
+        return 'badge-success';
       case 'rejected':
         return 'badge-error';
       case 'pending':
@@ -20,7 +22,9 @@ export const DataTable = ({
   columns,
   data,
   isLoading = false,
-  emptyStateMessage = 'No data available'
+  emptyStateMessage = 'No data available',
+  onView = () => {},
+  onDelete = () => {}
 }) => {
   return (
     <div className="w-full overflow-hidden rounded-lg shadow-sm border border-border">
@@ -58,7 +62,7 @@ export const DataTable = ({
             ) : (
               data.map((row, rowIndex) => (
                 <tr key={rowIndex} className="table-row">
-                  {Object.keys(row).map((key, cellIndex) => {
+                  {Object.keys(row).filter(k => !k.startsWith('_')).map((key, cellIndex) => {
                     if (key === 'status') {
                       return (
                         <td key={cellIndex} className="table-cell">
@@ -74,10 +78,10 @@ export const DataTable = ({
                   })}
                   <td className="table-cell text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 rounded-md hover:bg-surface-hover transition-colors" title="View">
+                      <button className="p-1.5 rounded-md hover:bg-surface-hover transition-colors" title="View" onClick={() => onView(row)}>
                         <Eye size={16} className="text-accent" />
                       </button>
-                      <button className="p-1.5 rounded-md hover:bg-surface-hover transition-colors" title="Delete">
+                      <button className="p-1.5 rounded-md hover:bg-surface-hover transition-colors" title="Delete" onClick={() => onDelete(row)}>
                         <Trash2 size={16} className="text-error" />
                       </button>
                     </div>

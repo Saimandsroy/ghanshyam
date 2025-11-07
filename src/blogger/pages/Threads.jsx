@@ -1,48 +1,49 @@
-import React, { useMemo, useState } from 'react';
-import { FilterBar } from '../../components/FilterBar';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pagination } from '../../components/Pagination.jsx';
-
-const threads = Array.from({ length: 20 }).map((_, i) => ({
-  id: 100 + i,
-  subject: ['Payment Query','Order Update','Site Issue','General'][i % 4],
-  lastMessage: ['Please confirm payment','Order delivered','404 issue fixed','Thank you'][i % 4],
-  updatedAt: new Date(2025, i % 12, 10 + (i % 15)).toISOString(),
-}));
+import { getThreads } from '../../lib/threadsStore.js';
 
 export function Threads() {
-  const [filters, setFilters] = useState({ q: '', status: 'all', start: '', end: '' });
+  const [rows, setRows] = useState(() => getThreads());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const rows = useMemo(() => {
-    let r = threads;
-    const q = filters.q.toLowerCase();
-    if (q) r = r.filter(t => t.subject.toLowerCase().includes(q) || t.lastMessage.toLowerCase().includes(q));
-    if (filters.start) r = r.filter(t => new Date(t.updatedAt) >= new Date(filters.start));
-    if (filters.end) r = r.filter(t => new Date(t.updatedAt) <= new Date(filters.end));
-    return r;
-  }, [filters]);
+
+  useEffect(() => {
+    const onStorage = () => setRows(getThreads());
+    window.addEventListener('storage', onStorage);
+    // also refresh on mount
+    setRows(getThreads());
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const total = rows.length;
-  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
+  const pageData = useMemo(() => rows.slice((page - 1) * pageSize, page * pageSize), [rows, page, pageSize]);
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Threads</h2>
-      <FilterBar value={filters} onChange={(v) => { setFilters(v); setPage(1); }} fields={{ q: true, status: false, start: true, end: true }} />
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Threads {'>'} List</div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Threads</h2>
+        <button className="px-4 py-2 rounded-lg text-white bg-amber-500 hover:bg-amber-600 transition-colors">New thread</button>
+      </div>
+
       <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         <table className="w-full">
           <thead style={{ backgroundColor: 'var(--background-dark)' }}>
             <tr>
+              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Thread Created by</th>
               <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Subject</th>
-              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Last Message</th>
-              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Updated</th>
+              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Last Updated at</th>
             </tr>
           </thead>
           <tbody>
             {pageData.map((t) => (
               <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{t.subject}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{t.lastMessage}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(t.updatedAt).toLocaleString()}</td>
+                <td className="px-4 py-3">
+                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{t.creator}</div>
+                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Messages:- {t.messages}</div>
+                </td>
+                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{t.subject}</td>
+                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(t.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
               </tr>
             ))}
             {pageData.length === 0 && (
@@ -53,6 +54,7 @@ export function Threads() {
           </tbody>
         </table>
       </div>
+
       <Pagination
         page={page}
         pageSize={pageSize}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { StatCard } from '../components/dashboard/StatCard';
 import { DataTable } from '../components/tables/DataTable';
@@ -6,6 +7,7 @@ import { EmptyState } from '../components/empty/EmptyState';
 import { TableFilter } from '../components/filters/TableFilter';
 import { Users, AlertTriangle, MessageSquare } from 'lucide-react';
 export const Dashboard = () => {
+  const navigate = useNavigate();
   // Sample data for KPI cards
   const stats = [{
     icon: <Users size={24} />,
@@ -64,7 +66,7 @@ export const Dashboard = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">Recent Orders</h2>
-          <button className="btn btn-accent">Create New Order</button>
+          <button className="btn btn-accent" onClick={() => navigate('/manager/orders/create')}>Create New Order</button>
         </div>
         <TableFilter />
         <DataTable columns={orderColumns} data={orderData} />

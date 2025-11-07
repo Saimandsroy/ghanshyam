@@ -1,13 +1,12 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Home, 
-  BarChart2, 
-  Users, 
-  Link, 
-  FileText, 
-  AlertCircle, 
-  Database 
+  Home,
+  CheckCircle,
+  Bell,
+  XCircle,
+  Database,
+  MessageSquare
 } from 'lucide-react';
 import { ModernSidebar } from '../../../components/ModernSidebar';
 
@@ -16,48 +15,12 @@ export function Sidebar({ isOpen }) {
   const navigate = useNavigate();
 
   const navItems = [
-    {
-      icon: <Home size={20} />,
-      label: 'Dashboard',
-      to: '/teams',
-      active: location.pathname === '/teams' || location.pathname === '/teams/'
-    },
-    {
-      icon: <BarChart2 size={20} />,
-      label: 'Analytics',
-      to: '/teams/analytics',
-      active: location.pathname === '/teams/analytics'
-    },
-    {
-      icon: <Users size={20} />,
-      label: 'Team',
-      to: '/teams/team',
-      active: location.pathname === '/teams/team'
-    },
-    {
-      icon: <Link size={20} />,
-      label: 'Links',
-      to: '/teams/links',
-      active: location.pathname === '/teams/links'
-    },
-    {
-      icon: <FileText size={20} />,
-      label: 'Orders',
-      to: '/teams/orders',
-      active: location.pathname === '/teams/orders'
-    },
-    {
-      icon: <AlertCircle size={20} />,
-      label: 'Issues',
-      to: '/teams/issues',
-      active: location.pathname === '/teams/issues'
-    },
-    {
-      icon: <Database size={20} />,
-      label: 'Sites',
-      to: '/teams/sites',
-      active: location.pathname === '/teams/sites'
-    }
+    { icon: <Home size={20} />, label: 'Dashboard', to: '/teams', active: location.pathname === '/teams' || location.pathname === '/teams/' },
+    { icon: <CheckCircle size={20} />, label: 'Completed Orders', to: '/teams/completed-orders', active: location.pathname === '/teams/completed-orders' },
+    { icon: <Bell size={20} />, label: 'Order Added Notifications', to: '/teams/order-notifications', active: location.pathname === '/teams/order-notifications' },
+    { icon: <XCircle size={20} />, label: 'Rejected Links', to: '/teams/rejected-links', active: location.pathname === '/teams/rejected-links' },
+    { icon: <Database size={20} />, label: 'New Sites', to: '/teams/new-sites', active: location.pathname === '/teams/new-sites' },
+    { icon: <MessageSquare size={20} />, label: 'Threads', to: '/teams/threads', active: location.pathname === '/teams/threads' },
   ];
 
   const handleLogout = () => {

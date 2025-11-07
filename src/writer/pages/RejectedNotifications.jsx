@@ -1,17 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Pagination } from '../../components/Pagination.jsx';
 
-const managers = ['Shivanjali Sethi','Arjun','Maya'];
-const types = ['gp','li','niche'];
+// Start empty to match the screenshot's empty-state
+const data = [];
 
-const data = Array.from({ length: 100 }).map((_, i) => ({
-  id: ['R986','R6475','R64845','R987682','R74415','F9DCB89F','R112233'][i % 7],
-  manager: managers[i % managers.length],
-  type: types[i % types.length],
-  pushedAt: new Date(2024, (i*2)%12, (i%28)+1, 22, 34, 0).toISOString()
-}));
-
-export function CompletedOrders() {
+export function RejectedNotifications() {
   const [filters, setFilters] = useState({ date: '', orderId: '', orderType: '', manager: '' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -30,8 +23,8 @@ export function CompletedOrders() {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Completed Orders {'>'} List</div>
-      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Completed Orders</h2>
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Rejected Notifications {'>'} List</div>
+      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Rejected Notifications</h2>
 
       <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
         <div className="flex items-center justify-between mb-3">
@@ -44,52 +37,32 @@ export function CompletedOrders() {
             <input type="date" value={filters.date} onChange={(e)=>{ setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
           </div>
           <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order id</label>
+            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order Id</label>
             <input value={filters.orderId} onChange={(e)=>{ setFilters({ ...filters, orderId: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
           </div>
           <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order type</label>
+            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order Type</label>
             <select value={filters.orderType} onChange={(e)=>{ setFilters({ ...filters, orderType: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
               <option value="">Select an option</option>
-              {types.map(t => <option key={t}>{t}</option>)}
+              <option>gp</option>
+              <option>li</option>
+              <option>niche</option>
             </select>
           </div>
           <div>
             <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Manager</label>
             <select value={filters.manager} onChange={(e)=>{ setFilters({ ...filters, manager: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
               <option value="">Select an option</option>
-              {managers.map(m => <option key={m}>{m}</option>)}
+              <option>Shivanjali Sethi</option>
+              <option>Arjun</option>
+              <option>Maya</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-            <tr>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Order ID</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Manager</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Order Type</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Pushed Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((o, idx) => (
-              <tr key={`${o.id}-${idx}`} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B' }}>{o.id}</span></td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.manager}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.type}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(o.pushedAt).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-              </tr>
-            ))}
-            {pageData.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center" style={{ color: 'var(--text-muted)' }}>No data</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="rounded-2xl flex items-center justify-center py-16" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+        <div className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>No Rejected Notifications</div>
       </div>
 
       <Pagination

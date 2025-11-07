@@ -16,13 +16,13 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
     {
       icon: <Package size={18} />,
       label: 'Orders',
-      to: '/manager/orders',
+      to: '/manager/orders/view',
       active: location.pathname.startsWith('/manager/orders'),
       hasDropdown: true,
       dropdownItems: [
-        { label: 'New Orders', to: '/manager/orders?filter=new' },
-        { label: 'View Orders', to: '/manager/orders' },
-        { label: 'Pending from Bloggers', to: '/manager/orders?filter=pending-bloggers' }
+        { label: 'Create View Order', to: '/manager/orders/create' },
+        { label: 'View Orders', to: '/manager/orders/view' },
+        { label: 'Pending from Bloggers', to: '/manager/orders/pending-bloggers' }
       ]
     },
     {
@@ -32,15 +32,19 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       active: location.pathname.startsWith('/manager/pending'),
       dropdownItems: [
         { label: 'Bloggers', to: '/manager/pending/bloggers' },
-        { label: 'Teams', to: '/manager/pending/teams' },
-        { label: 'Writers', to: '/manager/pending/writers' }
+        { label: 'Writers', to: '/manager/pending/writers' },
+        { label: 'Teams', to: '/manager/pending/teams' }
       ]
     },
     {
       icon: <AlertTriangle size={18} />,
       label: 'Rejected Orders',
-      to: '/manager/rejected',
-      active: location.pathname === '/manager/rejected'
+      to: '/manager/rejected/bloggers',
+      active: location.pathname.startsWith('/manager/rejected'),
+      hasDropdown: true,
+      dropdownItems: [
+        { label: 'Bloggers', to: '/manager/rejected/bloggers' }
+      ]
     },
     {
       icon: <MessageSquare size={18} />,

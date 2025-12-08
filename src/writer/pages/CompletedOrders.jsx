@@ -1,105 +1,194 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { RefreshCw, CheckCircle, DollarSign, Calendar, Globe } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
+import { writerAPI } from '../../lib/api';
 
-const managers = ['Shivanjali Sethi','Arjun','Maya'];
-const types = ['gp','li','niche'];
-
-const data = Array.from({ length: 100 }).map((_, i) => ({
-  id: ['R986','R6475','R64845','R987682','R74415','F9DCB89F','R112233'][i % 7],
-  manager: managers[i % managers.length],
-  type: types[i % types.length],
-  pushedAt: new Date(2024, (i*2)%12, (i%28)+1, 22, 34, 0).toISOString()
-}));
-
+/**
+ * CompletedOrders - Writer's completed tasks
+ * Integrated with backend API
+ */
 export function CompletedOrders() {
-  const [filters, setFilters] = useState({ date: '', orderId: '', orderType: '', manager: '' });
+  // State for data
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // State for pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const rows = useMemo(() => {
-    let r = data;
-    if (filters.date) r = r.filter(x => new Date(x.pushedAt).toDateString() === new Date(filters.date).toDateString());
-    if (filters.orderId) r = r.filter(x => `${x.id}`.toLowerCase().includes(filters.orderId.toLowerCase()));
-    if (filters.orderType) r = r.filter(x => x.type === filters.orderType);
-    if (filters.manager) r = r.filter(x => x.manager === filters.manager);
-    return r;
-  }, [filters]);
+  // Fetch tasks
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const total = rows.length;
-  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
+      const response = await writerAPI.getTasks();
+      // Filter for completed tasks only
+      const completedTasks = (response.tasks || []).filter(t =>
+        t.current_status === 'COMPLETED' || t.current_status === 'CREDITED'
+      );
+      setTasks(completedTasks);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError(err.message || 'Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Calculate totals
+  const totalEarned = useMemo(() => {
+    return tasks.reduce((sum, t) => sum + parseFloat(t.payment_amount || 0), 0);
+  }, [tasks]);
+
+  // Paginated tasks
+  const paginatedTasks = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return tasks.slice(startIndex, startIndex + pageSize);
+  }, [tasks, page, pageSize]);
 
   return (
     <div className="space-y-4">
-      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Completed Orders {'>'} List</div>
-      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Completed Orders</h2>
+      {/* Breadcrumb */}
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        Tasks {'>'} Completed
+      </div>
 
-      <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-medium" style={{ color: 'var(--text-secondary)' }}>Filters</div>
-          <button className="text-sm" style={{ color: 'var(--error)' }} onClick={() => { setFilters({ date: '', orderId: '', orderType: '', manager: '' }); setPage(1); }}>Reset</button>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <CheckCircle className="h-6 w-6" style={{ color: '#22C55E' }} />
+          Completed Orders
+        </h2>
+        <button
+          onClick={fetchTasks}
+          disabled={loading}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+              <CheckCircle className="h-6 w-6" style={{ color: '#22C55E' }} />
+            </div>
+            <div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Completed</p>
+              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{tasks.length}</p>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Pushed Date</label>
-            <input type="date" value={filters.date} onChange={(e)=>{ setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order id</label>
-            <input value={filters.orderId} onChange={(e)=>{ setFilters({ ...filters, orderId: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order type</label>
-            <select value={filters.orderType} onChange={(e)=>{ setFilters({ ...filters, orderType: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-              <option value="">Select an option</option>
-              {types.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Manager</label>
-            <select value={filters.manager} onChange={(e)=>{ setFilters({ ...filters, manager: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-              <option value="">Select an option</option>
-              {managers.map(m => <option key={m}>{m}</option>)}
-            </select>
+        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)' }}>
+              <DollarSign className="h-6 w-6" style={{ color: '#6BF0FF' }} />
+            </div>
+            <div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Earned</p>
+              <p className="text-2xl font-bold" style={{ color: '#22C55E' }}>${totalEarned.toFixed(2)}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-            <tr>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Order ID</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Manager</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Order Type</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Pushed Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((o, idx) => (
-              <tr key={`${o.id}-${idx}`} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B' }}>{o.id}</span></td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.manager}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.type}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(o.pushedAt).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-              </tr>
-            ))}
-            {pageData.length === 0 && (
+      {/* Error State */}
+      {error && (
+        <div
+          className="rounded-2xl p-4 flex items-center justify-between"
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+        >
+          <p className="text-red-400">{error}</p>
+          <button onClick={fetchTasks} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && tasks.length === 0 && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
+          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading completed tasks...</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {!loading && (
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full">
+            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center" style={{ color: 'var(--text-muted)' }}>No data</td>
+                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Task ID</th>
+                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Website</th>
+                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Completed</th>
+                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
+                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Payment</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {paginatedTasks.map((task) => (
+                <tr key={task.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 rounded text-xs font-medium"
+                      style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: '#6BF0FF' }}>
+                      TASK-{task.id}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 flex items-center gap-2">
+                    <Globe className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ color: 'var(--text-primary)' }}>{task.website_domain || 'N/A'}</span>
+                  </td>
+                  <td className="px-4 py-3 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>{new Date(task.updated_at || task.created_at).toLocaleDateString()}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 rounded text-xs font-medium"
+                      style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22C55E' }}>
+                      {task.current_status === 'CREDITED' ? 'Credited' : 'Completed'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold" style={{ color: '#22C55E' }}>
+                      ${parseFloat(task.payment_amount || 0).toFixed(2)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {paginatedTasks.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                    No completed tasks yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        pageSizeOptions={[20, 50]}
-        onPageChange={(p) => setPage(p)}
-        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-      />
+      {/* Pagination */}
+      {tasks.length > pageSize && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={tasks.length}
+          pageSizeOptions={[20, 50]}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+        />
+      )}
     </div>
   );
 }

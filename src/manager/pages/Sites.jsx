@@ -1,187 +1,195 @@
-import React, { useMemo, useState } from 'react';
-import { Layout } from '../components/layout/Layout';
-import { DataTable } from '../components/tables/DataTable';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { RefreshCw, Globe } from 'lucide-react';
+import { Pagination } from '../../components/Pagination.jsx';
+import { adminAPI } from '../../lib/api';
 
-const seed = [
-  {
-    rootDomain: 'myzimbabwe.co.zw',
-    siteStatus: 'A',
-    dr: 50,
-    da: 66,
-    rd: 862,
-    spam: 1,
-    traffic: 1900,
-    gpPrice: 20,
-    nichePrice: 20,
-    fcGp: 0,
-    fcNe: 0,
-    websiteStatus: 'Acceptable',
-    category: 'General Blog',
-    addedOn: new Date('2024-01-05T20:48:00').toISOString(),
-    email: 'contact@myzimbabwe.co.zw',
-    status: 'Approved',
-    fc: 'No'
-  }
-];
+export function Sites() {
+  const [websites, setWebsites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({ domain: '', category: '', status: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-export const Sites = () => {
-  const [filters, setFilters] = useState({ root: '', email: '', status: 'Approved', fc: '' });
+  // Fetch websites from API
+  const fetchWebsites = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminAPI.getWebsites();
+      setWebsites(response.websites || []);
+    } catch (err) {
+      console.error('Error fetching websites:', err);
+      setError(err.message || 'Failed to load websites');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const columns = ['Root Domain','Site Status','DR','DA','RD','Spam score','Traffic','GP Price','Niche Price','FC GP','FC NE','Website Status'];
+  useEffect(() => {
+    fetchWebsites();
+  }, [fetchWebsites]);
 
+  // Filter websites
   const rows = useMemo(() => {
-    let list = seed;
-    if (filters.root) list = list.filter(r => r.rootDomain.toLowerCase().includes(filters.root.toLowerCase()));
-    if (filters.email) list = list.filter(r => (r.email||'').toLowerCase().includes(filters.email.toLowerCase()));
-    if (filters.status) list = list.filter(r => r.status === filters.status);
-    if (filters.fc) list = list.filter(r => r.fc.toLowerCase() === filters.fc.toLowerCase());
-    return list.map(r => ({
-      rootDomain: (
-        <div>
-          <div className="font-medium">{r.rootDomain}</div>
-          <div className="text-xs text-text-secondary">Category:- {r.category}<br/>Added on:- {new Date(r.addedOn).toLocaleString()}</div>
-        </div>
-      ),
-      siteStatus: r.siteStatus,
-      dr: r.dr,
-      da: r.da,
-      rd: r.rd,
-      spam: r.spam,
-      traffic: r.traffic,
-      gpPrice: r.gpPrice,
-      nichePrice: r.nichePrice,
-      fcGp: r.fcGp,
-      fcNe: r.fcNe,
-      websiteStatus: r.websiteStatus
-    }));
-  }, [filters]);
+    let r = websites;
+    if (filters.domain) {
+      r = r.filter(x => (x.domain_url || '').toLowerCase().includes(filters.domain.toLowerCase()));
+    }
+    if (filters.category) {
+      r = r.filter(x => (x.category || '').toLowerCase().includes(filters.category.toLowerCase()));
+    }
+    if (filters.status) {
+      r = r.filter(x => x.status === filters.status);
+    }
+    return r;
+  }, [websites, filters]);
+
+  const total = rows.length;
+  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
 
   return (
-    <Layout>
-      <h1 className="text-2xl font-bold mb-4">View All Sites</h1>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Globe className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
+          View All Sites
+        </h2>
+        <button
+          onClick={fetchWebsites}
+          disabled={loading}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
 
-      <div className="card p-4 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-medium text-text-secondary">Filters</div>
-          <button className="text-error text-sm" onClick={() => setFilters({ root: '', email: '', status: 'Approved', fc: '' })}>Reset</button>
+      {/* Error State */}
+      {error && (
+        <div className="rounded-2xl p-4 flex items-center justify-between" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          <p className="text-red-400">{error}</p>
+          <button onClick={fetchWebsites} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Root domain</label>
-            <input className="input w-full" value={filters.root} onChange={(e)=>setFilters(f=>({...f,root:e.target.value}))} />
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Website niche</label>
-            <input className="input w-full" />
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Email</label>
-            <input className="input w-full" value={filters.email} onChange={(e)=>setFilters(f=>({...f,email:e.target.value}))} />
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Status</label>
-            <select className="input w-full" value={filters.status} onChange={(e)=>setFilters(f=>({...f,status:e.target.value}))}>
-              <option>Approved</option>
-              <option>Pending</option>
-              <option>Rejected</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">FC</label>
-            <select className="input w-full" value={filters.fc} onChange={(e)=>setFilters(f=>({...f,fc:e.target.value}))}>
-              <option value="">Select an option</option>
-              <option>Yes</option>
-              <option>No</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Added on</label>
-            <input type="date" className="input w-full" />
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">DR</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">DA</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">RD</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Traffic</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">GP price</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Niche edit price</label>
-            <div className="flex gap-2">
-              <select className="input w-24">
-                <option>Select condition</option>
-                <option>{'>'}</option>
-                <option>{'<'}</option>
-                <option>≥</option>
-                <option>≤</option>
-              </select>
-              <input type="number" className="input flex-1" />
-            </div>
+      )}
+
+      {/* Filters */}
+      <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+        <div className="mb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Filters</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <input
+            placeholder="Root domain"
+            value={filters.domain}
+            onChange={(e) => { setFilters({ ...filters, domain: e.target.value }); setPage(1); }}
+            className="rounded-xl px-3 py-2"
+            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          />
+          <input
+            placeholder="Category"
+            value={filters.category}
+            onChange={(e) => { setFilters({ ...filters, category: e.target.value }); setPage(1); }}
+            className="rounded-xl px-3 py-2"
+            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          />
+          <select
+            value={filters.status}
+            onChange={(e) => { setFilters({ ...filters, status: e.target.value }); setPage(1); }}
+            className="rounded-xl px-3 py-2"
+            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          >
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={() => { setFilters({ domain: '', category: '', status: '' }); setPage(1); }}
+              className="text-sm"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Reset
+            </button>
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{total} site(s)</span>
           </div>
         </div>
       </div>
 
-      <div className="card">
-        <DataTable columns={columns} data={rows} emptyStateMessage="No sites found" />
-      </div>
-    </Layout>
+      {/* Loading State */}
+      {loading && websites.length === 0 && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
+          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading websites...</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {!loading && (
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full">
+            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
+              <tr>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Root Domain</th>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Category</th>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>DA/PA Score</th>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Status</th>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Added On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageData.map((site) => (
+                <tr key={site.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-4 py-3">
+                    <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{site.domain_url}</div>
+                    {site.category && (
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Category: {site.category}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{site.category || 'N/A'}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{site.da_pa_score || 'N/A'}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="px-2 py-1 rounded text-xs"
+                      style={{
+                        backgroundColor: 'var(--background-dark)',
+                        border: '1px solid var(--border)',
+                        color: site.status === 'Active' ? 'var(--success)' : 'var(--error)'
+                      }}
+                    >
+                      {site.status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>
+                    {site.created_at ? new Date(site.created_at).toLocaleDateString() : 'N/A'}
+                  </td>
+                </tr>
+              ))}
+              {pageData.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No websites found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          pageSizeOptions={[20, 50]}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
+      )}
+    </div>
   );
-};
+}
+
+export default Sites;

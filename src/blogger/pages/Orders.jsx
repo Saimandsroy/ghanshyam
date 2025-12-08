@@ -1,124 +1,275 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { RefreshCw, FileText } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
+import { bloggerAPI } from '../../lib/api';
+import { useToast } from '../../context/ToastContext';
+import {
+  StatusPills,
+  OrderFilters,
+  OrdersTable,
+  TaskDetailModal,
+  SubmitLinkModal,
+  mapTaskStatus
+} from '../components';
 
-const statuses = ['all','pending','waiting','rejected','completed'];
-const orders = Array.from({ length: 140 }).map((_, i) => ({
-  id: 965894000 + i,
-  root: ['indiehackers.com','tftimes.com','fourmagazine.co.uk','greensourcedfw.org'][i % 4],
-  status: ['completed','pending','waiting','rejected'][i % 4],
-  date: new Date(2025, (i*2)%12, (i%28)+1, 16, (i*3)%60, (i*7)%60).toISOString(),
-}));
+// Status options for filtering
+const STATUS_OPTIONS = ['all', 'pending', 'waiting', 'rejected', 'completed'];
 
+/**
+ * Orders Page - Displays blogger's assigned tasks
+ * Integrated with backend API for real data
+ */
 export function Orders() {
+  // Toast notifications
+  const { showSuccess, showError } = useToast();
+
+  // State for data
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // State for filtering
   const [status, setStatus] = useState('all');
-  const [filters, setFilters] = useState({ date: '', orderId: '', root: '' });
+  const [filters, setFilters] = useState({ date: '', orderId: '', domain: '' });
+
+  // State for pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const rows = useMemo(() => {
-    let r = orders;
-    if (status !== 'all') r = r.filter(o => o.status === status);
-    if (filters.date) r = r.filter(o => new Date(o.date).toDateString() === new Date(filters.date).toDateString());
-    if (filters.orderId) r = r.filter(o => `${o.id}`.includes(filters.orderId));
-    if (filters.root) r = r.filter(o => o.root.toLowerCase().includes(filters.root.toLowerCase()));
-    return r;
-  }, [status, filters]);
+  // State for modals
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const counts = useMemo(() => {
-    const c = { all: orders.length };
-    ['pending','waiting','rejected','completed'].forEach(s => { c[s] = orders.filter(o => o.status === s).length; });
-    return c;
+  // Fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await bloggerAPI.getTasks();
+      setTasks(response.tasks || []);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+      setError(err.message || 'Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const total = rows.length;
-  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const counts = { all: tasks.length, pending: 0, waiting: 0, rejected: 0, completed: 0 };
+
+    tasks.forEach(task => {
+      const displayStatus = mapTaskStatus(task.current_status);
+      if (counts[displayStatus] !== undefined) {
+        counts[displayStatus]++;
+      }
+    });
+
+    return counts;
+  }, [tasks]);
+
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    let result = tasks;
+
+    // Filter by status
+    if (status !== 'all') {
+      result = result.filter(task => mapTaskStatus(task.current_status) === status);
+    }
+
+    // Filter by date
+    if (filters.date) {
+      result = result.filter(task =>
+        new Date(task.created_at).toDateString() === new Date(filters.date).toDateString()
+      );
+    }
+
+    // Filter by task ID
+    if (filters.orderId) {
+      result = result.filter(task =>
+        String(task.id).includes(filters.orderId)
+      );
+    }
+
+    // Filter by domain
+    if (filters.domain) {
+      result = result.filter(task =>
+        (task.website_domain || '').toLowerCase().includes(filters.domain.toLowerCase())
+      );
+    }
+
+    return result;
+  }, [tasks, status, filters]);
+
+  // Paginated data
+  const paginatedTasks = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredTasks.slice(startIndex, startIndex + pageSize);
+  }, [filteredTasks, page, pageSize]);
+
+  // Handlers
+  const handleStatusChange = (newStatus) => {
+    setStatus(newStatus);
+    setPage(1);
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({ date: '', orderId: '', domain: '' });
+    setStatus('all');
+    setPage(1);
+  };
+
+  const handleViewDetails = (task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleOpenSubmitModal = (task) => {
+    setSelectedTask(task);
+    setIsSubmitModalOpen(true);
+  };
+
+  const handleSubmitLink = async (taskId, liveUrl) => {
+    try {
+      setSubmitting(true);
+      await bloggerAPI.submitLink(taskId, liveUrl);
+
+      // Close modal and refresh tasks
+      setIsSubmitModalOpen(false);
+      setSelectedTask(null);
+      await fetchTasks();
+
+      // Show success notification
+      showSuccess('Link submitted successfully!');
+    } catch (err) {
+      console.error('Error submitting link:', err);
+      showError('Failed to submit link: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Orders {'>'} List</div>
-      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders</h2>
-
-      {/* Status pills */}
-      <div className="inline-flex gap-2 rounded-xl p-2" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-        {['all','pending','waiting','rejected','completed'].map((s) => {
-          const active = status === s;
-          return (
-            <button
-              key={s}
-              onClick={() => { setStatus(s); setPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-sm ${active ? 'text-white' : ''}`}
-              style={active ? { backgroundColor: '#f59e0b' } : { color: 'var(--text-secondary)' }}
-            >
-              {s.charAt(0).toUpperCase()+s.slice(1)} <span className="ml-1 opacity-80">{counts[s]}</span>
-            </button>
-          );
-        })}
+      {/* Breadcrumb */}
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        Orders {'>'} List
       </div>
 
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <FileText className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
+          My Tasks
+        </h2>
+        <button
+          onClick={fetchTasks}
+          disabled={loading}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      {/* Error State */}
+      {error && (
+        <div
+          className="rounded-2xl p-4 flex items-center justify-between"
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+        >
+          <p className="text-red-400">{error}</p>
+          <button
+            onClick={fetchTasks}
+            className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            style={{
+              background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)',
+              color: 'var(--background-dark)'
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Status Pills */}
+      <StatusPills
+        statuses={STATUS_OPTIONS}
+        activeStatus={status}
+        counts={statusCounts}
+        onStatusChange={handleStatusChange}
+      />
+
       {/* Filters */}
-      <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-medium" style={{ color: 'var(--text-secondary)' }}>Filters</div>
-          <button className="text-sm" style={{ color: 'var(--error)' }} onClick={() => { setFilters({ date: '', orderId: '', root: '' }); setStatus('all'); setPage(1); }}>Reset</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Search By Date</label>
-            <input type="date" value={filters.date} onChange={(e)=>{ setFilters({ ...filters, date: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Order Id</label>
-            <input value={filters.orderId} onChange={(e)=>{ setFilters({ ...filters, orderId: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-          <div className="lg:col-span-2">
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Search by Root Domain</label>
-            <input value={filters.root} onChange={(e)=>{ setFilters({ ...filters, root: e.target.value }); setPage(1); }} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-        </div>
+      <OrderFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onReset={handleResetFilters}
+      />
+
+      {/* Results Summary */}
+      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        Showing {paginatedTasks.length} of {filteredTasks.length} tasks
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-            <tr>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Order Id</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Root Domain</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Date/Time</th>
-              <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((o) => (
-              <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B' }}>DK{o.id}</span>
-              </td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{o.root}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(o.date).toISOString().slice(0,19).replace('T',' ')}</td>
-                <td className="px-4 py-3">
-                  <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: o.status === 'completed' ? 'var(--success)' : o.status === 'rejected' ? 'var(--error)' : '#F59E0B' }}>
-                    {o.status.charAt(0).toUpperCase()+o.status.slice(1)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {pageData.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No orders</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <OrdersTable
+        data={paginatedTasks}
+        onViewDetails={handleViewDetails}
+        onSubmitLink={handleOpenSubmitModal}
+        loading={loading && tasks.length === 0}
+      />
 
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        pageSizeOptions={[20, 50]}
-        onPageChange={(p) => setPage(p)}
-        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+      {/* Pagination */}
+      {filteredTasks.length > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={filteredTasks.length}
+          pageSizeOptions={[20, 50]}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      )}
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedTask(null);
+        }}
+        onSubmitLink={handleOpenSubmitModal}
+      />
+
+      {/* Submit Link Modal */}
+      <SubmitLinkModal
+        task={selectedTask}
+        isOpen={isSubmitModalOpen}
+        onClose={() => {
+          setIsSubmitModalOpen(false);
+          setSelectedTask(null);
+        }}
+        onSubmit={handleSubmitLink}
+        submitting={submitting}
       />
     </div>
   );

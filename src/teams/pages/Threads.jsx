@@ -1,109 +1,40 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pagination } from '../../components/Pagination.jsx';
-import { addThread, getThreads } from '../../lib/threadsStore.js';
+import React from 'react';
+import { MessageCircle, Clock } from 'lucide-react';
 
 export function Threads() {
-  const [form, setForm] = useState({ role: '', user: '', subject: '' });
-  const [rows, setRows] = useState(() => getThreads());
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  const onChange = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const onCreate = (another = false) => {
-    if (!form.role || !form.user || !form.subject) return;
-    const next = addThread({ role: form.role, user: form.user, subject: form.subject });
-    setRows(next);
-    if (another) {
-      setForm({ role: form.role, user: form.user, subject: '' });
-    } else {
-      setForm({ role: '', user: '', subject: '' });
-    }
-  };
-
-  useEffect(() => {
-    const onStorage = () => setRows(getThreads());
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  const total = rows.length;
-  const pageData = useMemo(() => rows.slice((page - 1) * pageSize, page * pageSize), [rows, page, pageSize]);
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Create Thread</h2>
-
-      <div className="rounded-2xl" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-        <div className="border-b px-4 py-3 font-medium rounded-t-2xl" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Add New Ticket</div>
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Role*</label>
-            <select value={form.role} onChange={onChange('role')} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-              <option value="">Select an option</option>
-              <option>vendor</option>
-              <option>manager</option>
-              <option>blogger</option>
-              <option>client</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>User*</label>
-            <select value={form.user} onChange={onChange('user')} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-              <option value="">Select an option</option>
-              <option>Only Mail Checker</option>
-              <option>Support Team</option>
-              <option>Account</option>
-            </select>
-          </div>
-          <div className="lg:col-span-3">
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Subject*</label>
-            <input value={form.subject} onChange={onChange('subject')} className="w-full rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-          </div>
-        </div>
-        <div className="px-4 pb-4 flex gap-3">
-          <button onClick={() => onCreate(false)} className="px-4 py-2 rounded-lg text-white bg-amber-500 hover:bg-amber-600 transition-colors">Create</button>
-          <button onClick={() => onCreate(true)} className="px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>Create & create another</button>
-          <button onClick={() => setForm({ role: '', user: '', subject: '' })} className="px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <MessageCircle className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
+          Threads
+        </h2>
       </div>
 
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-        <table className="w-full">
-          <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-            <tr>
-              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Thread Created by</th>
-              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Subject</th>
-              <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Last Updated at</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{t.creator}</div>
-                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Messages:- {t.messages}</div>
-                </td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{t.subject}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{new Date(t.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-              </tr>
-            ))}
-            {pageData.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No threads</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Coming Soon Card */}
+      <div className="rounded-2xl p-12 text-center" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+        <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)' }}>
+          <Clock className="h-8 w-8" style={{ color: 'var(--primary-cyan)' }} />
+        </div>
+        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Coming Soon</h3>
+        <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+          The messaging/threads feature is under development. You'll be able to communicate with managers and other team members directly from here.
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: 'var(--primary-cyan)' }}>
+            📩 Messaging
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', color: 'var(--medium-purple)' }}>
+            📋 Task Discussions
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+            🔔 Notifications
+          </span>
+        </div>
       </div>
-
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        pageSizeOptions={[20, 50]}
-        onPageChange={(p) => setPage(p)}
-        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-      />
     </div>
   );
 }
+
+export default Threads;

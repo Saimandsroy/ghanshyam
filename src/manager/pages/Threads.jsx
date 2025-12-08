@@ -1,71 +1,40 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Layout } from '../components/layout/Layout';
-import { DataTable } from '../components/tables/DataTable';
-import { addThread, getThreads } from '../../lib/threadsStore.js';
+import React from 'react';
+import { MessageCircle, Clock } from 'lucide-react';
 
-export const Threads = () => {
-  const [form, setForm] = useState({ user: '', subject: '' });
-  const [rows, setRows] = useState(() => getThreads());
-
-  useEffect(() => {
-    const onStorage = () => setRows(getThreads());
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  const create = (keep = false) => {
-    if (!form.user || !form.subject) return;
-    addThread({ role: 'vendor', user: form.user, subject: form.subject });
-    setRows(getThreads());
-    setForm({ user: keep ? form.user : '', subject: '' });
-  };
-
-  const columns = ['Thread Created by', 'Subject', 'Last Updated at'];
-  const data = useMemo(() => rows.map(t => ({
-    creator: (
-      <div>
-        <div className="font-medium">{t.creator}</div>
-        <div className="text-xs text-text-secondary">Messages:- {t.messages}</div>
-      </div>
-    ),
-    subject: t.subject,
-    updatedAt: new Date(t.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-  })), [rows]);
-
+export function Threads() {
   return (
-    <Layout>
-      <h1 className="text-2xl font-bold mb-4">Create Thread</h1>
-
-      <div className="card p-4 mb-6">
-        <div className="text-text-secondary font-medium mb-3">Add New Ticket</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">User*</label>
-            <select className="input w-full" value={form.user} onChange={e=>setForm({ ...form, user: e.target.value })}>
-              <option value="">Select an option</option>
-              <option>Only Mail Checker</option>
-              <option>Support Team</option>
-              <option>Account</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-text-secondary mb-1">Subject*</label>
-            <input className="input w-full" value={form.subject} onChange={e=>setForm({ ...form, subject: e.target.value })} />
-          </div>
-        </div>
-        <div className="mt-4 flex gap-3">
-          <button className="btn btn-accent" onClick={() => create(false)}>Create</button>
-          <button className="btn btn-outline" onClick={() => create(true)}>Create & create another</button>
-          <button className="btn">Cancel</button>
-        </div>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <MessageCircle className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
+          Threads
+        </h2>
       </div>
 
-      <div className="card">
-        <div className="px-4 py-3 border-b border-border font-medium">Threads</div>
-        <div className="p-4">
-          <DataTable columns={columns} data={data} emptyStateMessage="No threads" />
+      {/* Coming Soon Card */}
+      <div className="rounded-2xl p-12 text-center" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+        <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)' }}>
+          <Clock className="h-8 w-8" style={{ color: 'var(--primary-cyan)' }} />
+        </div>
+        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Coming Soon</h3>
+        <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+          The messaging/threads feature is under development. You'll be able to communicate with team members, bloggers, and writers directly from here.
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: 'var(--primary-cyan)' }}>
+            📩 Messaging
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', color: 'var(--medium-purple)' }}>
+            📋 Task Discussions
+          </span>
+          <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+            🔔 Notifications
+          </span>
         </div>
       </div>
-    </Layout>
+    </div>
   );
-};
+}
+
+export default Threads;

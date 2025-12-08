@@ -9,9 +9,8 @@ export function LoginPage() {
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [userType, setUserType] = useState('blogger');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loading, error } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -21,23 +20,29 @@ export function LoginPage() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simple demo logic - in real app, this would authenticate with backend
-    if (formData.email && formData.password) {
-      const routeMap = {
-        admin: '/admin',
-        blogger: '/blogger',
-        manager: '/manager',
-        team: '/teams',
-        writer: '/writer',
-        accountant: '/accountant'
-      };
-      login(userType);
-      navigate(routeMap[userType] || '/');
-    } else {
+
+    if (!formData.email || !formData.password) {
       alert('Please fill in all fields');
+      return;
     }
+
+    const result = await login(formData.email, formData.password);
+
+    if (result.success) {
+      // Map roles to routes
+      const routeMap = {
+        Admin: '/admin',
+        Blogger: '/blogger',
+        Manager: '/manager',
+        Team: '/teams',
+        Writer: '/writer',
+        Accountant: '/accountant'
+      };
+      navigate(routeMap[result.role] || '/');
+    }
+    // Error will be displayed from auth context
   };
 
   return (
@@ -61,46 +66,12 @@ export function LoginPage() {
 
         {/* Login Form */}
         <div className="bg-[#1A2233] border border-[#2C3445] rounded-2xl p-8 shadow-xl">
-          {/* User Type Selection */}
-          <div className="flex bg-[#0F1724] rounded-lg p-1 mb-3">
-            <button
-              type="button"
-              onClick={() => setUserType('blogger')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                userType === 'blogger'
-                  ? 'bg-[#6BF0FF] text-[#0F1724] shadow-md'
-                  : 'text-[#D1D5DB] hover:text-white'
-              }`}
-            >
-              Blogger
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('admin')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                userType === 'admin'
-                  ? 'bg-[#6BF0FF] text-[#0F1724] shadow-md'
-                  : 'text-[#D1D5DB] hover:text-white'
-              }`}
-            >
-              Admin
-            </button>
-          </div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-[#D1D5DB] mb-2">Role</label>
-            <select
-              value={userType}
-              onChange={(e) => setUserType(e.target.value)}
-              className="w-full bg-[#0F1724] border border-[#2C3445] rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#6BF0FF]"
-            >
-              <option value="admin">Admin</option>
-              <option value="blogger">Blogger</option>
-              <option value="manager">Manager</option>
-              <option value="team">Team</option>
-              <option value="writer">Writer</option>
-              <option value="accountant">Accountant</option>
-            </select>
-          </div>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
@@ -119,7 +90,8 @@ export function LoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
+                  disabled={loading}
+                  className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300 disabled:opacity-50"
                   placeholder="you@example.com"
                 />
               </div>
@@ -141,13 +113,15 @@ export function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-10 pr-12 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
+                  disabled={loading}
+                  className="block w-full pl-10 pr-12 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300 disabled:opacity-50"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5 text-[#9AA4B2] hover:text-[#6BF0FF] transition-colors" />
@@ -175,9 +149,10 @@ export function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-[#6BF0FF] hover:bg-[#3ED9EB] text-[#0F1724] font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(107,240,255,0.5)]"
+              disabled={loading}
+              className="w-full bg-[#6BF0FF] hover:bg-[#3ED9EB] text-[#0F1724] font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(107,240,255,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
@@ -192,10 +167,10 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Demo Note */}
+        {/* Help Note */}
         <div className="mt-6 p-4 bg-[#1A2233]/50 border border-[#2C3445] rounded-lg">
           <p className="text-sm text-[#9AA4B2] text-center">
-            <strong className="text-[#6BF0FF]">Demo Mode:</strong> Enter any email and password to access the dashboard
+            <strong className="text-[#6BF0FF]">Note:</strong> Use your registered email and password to access the system
           </p>
         </div>
       </div>

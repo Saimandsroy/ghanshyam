@@ -59,18 +59,31 @@ export function LandingPage() {
 
           {/* ANIMATED GOLDEN CIRCLE */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] md:w-[1000px] md:h-[1000px] pointer-events-none z-0">
-            {/* Base Ring - Thin and Elegant */}
-            <div className="absolute inset-0 rounded-full border-[0.5px] border-white/10"></div>
+            {/* Base Ring - Ultra Thin */}
+            <div className="absolute inset-0 rounded-full border-[0.5px] border-white/5"></div>
 
-            {/* Rotating Golden Arc - Slow & Premium */}
-            <div className="absolute inset-0 animate-spin [animation-duration:60s]">
+            {/* Rotating Golden Arc - 300s Ultra Tortoise Speed (Reliable CSS Class) */}
+            <div className="absolute inset-0 animate-spin-very-slow">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                {/* The Glow Shadow/Trail Layer - Longer & blurrier */}
-                <circle cx="50" cy="50" r="49.8" fill="none" stroke="#FF8C42" strokeWidth="0.15" strokeDasharray="40 270" strokeLinecap="round" className="opacity-30 blur-md" />
-                {/* The Glow Shadow/Trail Layer - Closer */}
-                <circle cx="50" cy="50" r="49.8" fill="none" stroke="#FF8C42" strokeWidth="0.15" strokeDasharray="30 280" strokeLinecap="round" className="opacity-50 blur-sm" />
-                {/* The Sharp Main Line - Short & Bright */}
-                <circle cx="50" cy="50" r="49.8" fill="none" stroke="#FF8C42" strokeWidth="0.15" strokeDasharray="20 290" strokeLinecap="round" className="drop-shadow-[0_0_15px_rgba(255,140,66,1)]" />
+                <defs>
+                  <linearGradient id="luxury-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#966F33" stopOpacity="0" />
+                    <stop offset="20%" stopColor="#D4AF37" stopOpacity="1" /> {/* Metallic Gold */}
+                    <stop offset="50%" stopColor="#FFD700" stopOpacity="1" /> {/* Bright Gold */}
+                    <stop offset="80%" stopColor="#D4AF37" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#966F33" stopOpacity="0" />
+                  </linearGradient>
+                  <filter id="subtle-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="0.5" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* The Ultra-Thin Luxury Gradient Arc */}
+                <circle cx="50" cy="50" r="49.85" fill="none" stroke="url(#luxury-gold)" strokeWidth="0.08" strokeDasharray="120 194" strokeLinecap="round" filter="url(#subtle-glow)" />
               </svg>
             </div>
           </div>
@@ -85,18 +98,15 @@ export function LandingPage() {
 
             {/* Left Content */}
             <div className="space-y-10 animate-fade-up">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#FF8C42]/30 bg-[#FF8C42]/5 shadow-[0_0_10px_rgba(255,140,66,0.1)]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#FF8C42]/30 bg-[#FF8C42]/5 shadow-[0_0_15px_rgba(255,140,66,0.1)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FF8C42] animate-pulse"></span>
                 <span className="text-[10px] font-mono font-medium tracking-widest text-[#FF8C42] uppercase">Trusted by 5,000+ Publishers</span>
               </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-[76px] leading-[1.05] font-semibold tracking-tighter text-white">
                 Unlock Your <br />
-                <span className="text-[#FF8C42] inline-block relative">
+                <span className="text-[#FF8C42] inline-block relative drop-shadow-[0_0_25px_rgba(255,140,66,0.3)]">
                   Revenue
-                  <svg className="absolute w-full h-3 -bottom-1 left-0 text-[#FF8C42] opacity-40" viewBox="0 0 100 10" preserveAspectRatio="none">
-                    <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
-                  </svg>
                 </span> With <br />
                 Sponsorships .
               </h1>
@@ -106,7 +116,7 @@ export function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <a href="/signup" className="group relative bg-[#0A0A0A] text-white pl-6 pr-8 py-4 rounded-full text-[15px] font-medium transition-all duration-300 border border-[#333] hover:border-[#FF8C42]/50 hover:shadow-[0_0_20px_rgba(255,140,66,0.2)] overflow-hidden text-center sm:text-left">
+                <a href="/signup" className="group relative bg-[#0A0A0A] text-white pl-6 pr-8 py-4 rounded-full text-[15px] font-medium transition-all duration-300 border border-[#333] hover:border-[#FF8C42]/50 hover:shadow-[0_0_30px_rgba(255,140,66,0.2)] overflow-hidden text-center sm:text-left">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF8C42]/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                   <span className="relative flex items-center justify-center sm:justify-start gap-2">
                     Get Started Free
@@ -122,42 +132,69 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right Content: Dashboard Card */}
+            {/* Right Content: Premium Dashboard Card */}
             <div className="relative hidden lg:block animate-float">
-              <div className="bg-[#080808]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md ml-auto shadow-[0_20px_50px_-12px_rgba(0,0,0,1)] relative z-20 hover:border-[#FF8C42]/30 transition-colors duration-500">
-                {/* Glow Effect */}
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FF8C42]/20 blur-[50px] rounded-full pointer-events-none"></div>
+              <div className="relative bg-[#050505] rounded-3xl w-full max-w-md ml-auto p-[1px] overflow-hidden group">
+                {/* Shimmer Border */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-shimmer"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-50 rounded-3xl pointer-events-none"></div>
 
-                <div className="flex justify-between items-center mb-10">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#555]">Performance</span>
-                  <div className="flex gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#333]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#333]"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#333]"></div>
-                  </div>
-                </div>
+                {/* Main Card Content */}
+                <div className="bg-[#080808]/90 backdrop-blur-2xl rounded-[23px] p-8 h-full relative z-10 border border-white/5 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]">
 
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex justify-between mb-3">
-                      <label className="text-[13px] text-[#888888] font-medium">Total Revenue</label>
-                      <span className="text-[13px] font-mono text-[#666] border border-white/10 px-2 py-0.5 rounded bg-white/5">$47,300</span>
-                    </div>
-                    <div className="h-1 w-full bg-[#1A1A1A] rounded-full relative overflow-hidden">
-                      <div className="absolute left-0 top-0 h-full w-[70%] bg-gradient-to-r from-[#FF8C42] to-white rounded-full"></div>
-                      <div className="absolute left-0 top-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                  {/* Inner Glow */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF8C42]/5 blur-[80px] rounded-full pointer-events-none mix-blend-screen"></div>
+
+                  <div className="flex justify-between items-center mb-10 border-b border-white/5 pb-4">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#666]">Live Metrics</span>
+                    <div className="flex items-center gap-2 px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                      <span className="text-[10px] text-green-500 font-medium">System Active</span>
                     </div>
                   </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <label className="text-[13px] text-[#888888] font-medium">Payout Speed</label>
-                      <span className="text-[12px] font-mono text-[#FF8C42] bg-[#FF8C42]/10 border border-[#FF8C42]/20 px-2 py-1 rounded">48 Hours</span>
+
+                  <div className="space-y-10">
+                    {/* Revenue Metric */}
+                    <div className="group/metric transition-all duration-300">
+                      <div className="flex justify-between mb-3 items-end">
+                        <label className="text-[13px] text-[#888] font-medium">Monthly Revenue</label>
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="w-3 h-3 text-green-500" />
+                          <span className="text-[11px] text-green-500 font-mono">+12.5%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-1 mb-3">
+                        <span className="text-3xl font-bold text-white tracking-tight">$47,300</span>
+                        <span className="text-sm text-[#444]">.00</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[#151515] rounded-full relative overflow-hidden">
+                        <div className="absolute left-0 top-0 h-full w-[70%] bg-gradient-to-r from-[#FF8C42] via-[#FF6B00] to-white rounded-full shadow-[0_0_15px_rgba(255,140,66,0.5)]"></div>
+                      </div>
                     </div>
-                    <div className="flex items-end gap-2 h-24 pt-2">
-                      {[30, 45, 60, 75].map((h, i) => (
-                        <div key={i} className={`w-full bg-[#1A1A1A] rounded-sm h-[${h}%] transition-all duration-500 hover:bg-[#222]`}></div>
-                      ))}
-                      <div className="w-full bg-gradient-to-t from-[#FF8C42]/80 to-[#FF8C42] rounded-sm h-[100%] relative group shadow-[0_0_20px_-5px_rgba(255,140,66,0.4)]"></div>
+
+                    {/* Payout Speed */}
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <label className="text-[13px] text-[#888] font-medium">Payout Velocity</label>
+                        <span className="text-[11px] font-mono text-[#FF8C42] bg-[#FF8C42]/5 border border-[#FF8C42]/20 px-2 py-1 rounded-md shadow-[0_0_10px_rgba(255,140,66,0.1)]">
+                          <Clock className="w-3 h-3 inline mr-1.5" />
+                          48 Hours
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-1.5 h-20">
+                        {[30, 45, 55, 65, 75, 85].map((h, i) => (
+                          <div key={i} className="flex-1 bg-[#151515] rounded-sm relative overflow-hidden group/bar hover:bg-[#1A1A1A] transition-colors">
+                            <div className="absolute bottom-0 left-0 w-full bg-[#333]" style={{ height: `${h}%` }}></div>
+                            {/* Hover Effect */}
+                            <div className="absolute bottom-0 left-0 w-full bg-[#FF8C42] opacity-0 group-hover/bar:opacity-100 transition-opacity duration-300" style={{ height: `${h}%` }}></div>
+                          </div>
+                        ))}
+                        <div className="flex-1 bg-gradient-to-t from-[#FF8C42]/50 to-[#FF8C42] rounded-sm h-[100%] relative shadow-[0_0_20px_-5px_rgba(255,140,66,0.4)]">
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-[9px] bg-white text-black px-1 rounded">Now</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

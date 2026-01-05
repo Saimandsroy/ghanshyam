@@ -442,6 +442,10 @@
   animation: spin 1s linear infinite;
 }
 
+.animate-spin-very-slow {
+  animation: spin 5s linear infinite;
+}
+
 /* Toast slide-in animation */
 @keyframes slideIn {
   from {

@@ -1,320 +1,232 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, Phone, Building } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, User, Phone, MessageCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import api from '../lib/api';
 
+/**
+ * SignupPage - Blogger Registration
+ * Official signup page for new blogger users (ATLAS Styled)
+ */
 export function SignupPage() {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
-    phone: '',
-    company: '',
     password: '',
-    confirmPassword: ''
+    confirm_password: '',
+    whatsapp: '',
+    skype: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userType, setUserType] = useState('blogger');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
-      return;
-    }
-    
-    if (!formData.email || !formData.password) {
-      alert('Please fill in all required fields');
-      return;
-    }
+    setError('');
 
-    // Simple demo logic - in real app, this would register with backend
-    alert('Account created successfully! You can now sign in.');
-    navigate('/login');
+    // --- Validation (Simplified for brevity, but kept functional) ---
+    if (!formData.name || formData.name.trim().length < 2) return setError('Name is required');
+    if (!formData.email || !formData.email.includes('@')) return setError('Invalid email address');
+    if (!formData.password || formData.password.length < 8) return setError('Password too short (min 8 chars)');
+    if (formData.password !== formData.confirm_password) return setError('Passwords do not match');
+    if (!formData.whatsapp) return setError('WhatsApp number is required');
+    if (!formData.skype) return setError('Skype ID is required');
+
+    try {
+      setLoading(true);
+      await api.post('/auth/register', formData);
+      navigate('/login', { state: { message: 'Registration successful! Please sign in.' } });
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#0F1724] flex items-center justify-center px-4 py-8">
-      {/* Background Effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-10 -left-10 w-40 h-40 bg-[#2D1066] rounded-full opacity-20 blur-3xl" />
-        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#6BF0FF] rounded-full opacity-20 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-[#4E2C93] rounded-full opacity-10 blur-3xl" />
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-12 relative overflow-hidden font-sans text-white">
+
+      {/* --- Background Effects --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] opacity-20"></div>
+        <div className="absolute bottom-[-20%] right-[-20%] w-[800px] h-[800px] bg-[#FF8C42]/5 blur-[120px] rounded-full"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-lg">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#6BF0FF] to-[#3ED9EB] rounded-2xl mb-4 shadow-lg shadow-[#6BF0FF]/30">
-            <User className="w-8 h-8 text-[#0F1724]" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-[#D1D5DB]">Join the Link Management platform today</p>
+
+        {/* Brand Header */}
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-flex items-center gap-3 mb-6 group">
+            <div className="w-10 h-10 rotate-45 bg-[#FF8C42] rounded-[8px] flex items-center justify-center shadow-[0_0_20px_rgba(255,140,66,0.3)] group-hover:rotate-90 transition-transform duration-500">
+              <div className="w-3 h-3 bg-white rounded-full"></div>
+            </div>
+            <span className="font-semibold text-2xl tracking-tight text-white">LinkMag</span>
+          </Link>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Create Account</h1>
+          <p className="text-[#888]">Join the exclusive network of premium publishers</p>
         </div>
 
-        {/* Signup Form */}
-        <div className="bg-[#1A2233] border border-[#2C3445] rounded-2xl p-8 shadow-xl">
-          {/* User Type Selection */}
-          <div className="flex bg-[#0F1724] rounded-lg p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setUserType('blogger')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                userType === 'blogger'
-                  ? 'bg-[#6BF0FF] text-[#0F1724] shadow-md'
-                  : 'text-[#D1D5DB] hover:text-white'
-              }`}
-            >
-              Blogger
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('admin')}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                userType === 'admin'
-                  ? 'bg-[#6BF0FF] text-[#0F1724] shadow-md'
-                  : 'text-[#D1D5DB] hover:text-white'
-              }`}
-            >
-              Admin
-            </button>
-          </div>
+        {/* Signup Card */}
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-sm relative overflow-visible">
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="firstName">
-                  First Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-[#9AA4B2]" />
-                  </div>
-                  <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    required
-                    className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                    placeholder="John"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="lastName">
-                  Last Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-[#9AA4B2]" />
-                  </div>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    required
-                    className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                    placeholder="Doe"
-                  />
-                </div>
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF8C42]/50 to-transparent"></div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+              <p className="text-sm text-red-400 font-medium">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Name */}
+            <div>
+              <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">Full Name</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
+                  placeholder="John Doe"
+                />
               </div>
             </div>
 
-            {/* Email Field */}
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="email">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-[#9AA4B2]" />
-                </div>
+              <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
                 <input
                   type="email"
-                  id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
+                  className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
                   placeholder="you@example.com"
                 />
               </div>
             </div>
 
-            {/* Phone Field */}
-            <div>
-              <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="phone">
-                Phone Number
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-[#9AA4B2]" />
-                </div>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                  placeholder="+1 (123) 456-7890"
-                />
-              </div>
-            </div>
-
-            {/* Company Field (for bloggers) */}
-            {userType === 'blogger' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* WhatsApp */}
               <div>
-                <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="company">
-                  Website/Blog URL
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Building className="h-5 w-5 text-[#9AA4B2]" />
-                  </div>
+                <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">WhatsApp</label>
+                <div className="relative group">
+                  <Phone className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
                   <input
-                    type="url"
-                    id="company"
-                    name="company"
-                    value={formData.company}
+                    type="tel"
+                    name="whatsapp"
+                    value={formData.whatsapp}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                    placeholder="https://yourblog.com"
+                    required
+                    className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
+                    placeholder="+1 234..."
                   />
                 </div>
               </div>
-            )}
 
-            {/* Password Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Skype */}
               <div>
-                <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="password">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-[#9AA4B2]" />
-                  </div>
+                <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">Skype ID</label>
+                <div className="relative group">
+                  <MessageCircle className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
+                  <input
+                    type="text"
+                    name="skype"
+                    value={formData.skype}
+                    onChange={handleChange}
+                    required
+                    className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
+                    placeholder="live:skype"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    id="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className="block w-full pl-10 pr-12 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                    placeholder="Create password"
+                    className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-12 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
+                    placeholder="••••••••"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-[#9AA4B2] hover:text-[#6BF0FF] transition-colors" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-[#9AA4B2] hover:text-[#6BF0FF] transition-colors" />
-                    )}
-                  </button>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3.5 text-[#444] hover:text-white"><Eye className="h-4 w-4" /></button>
                 </div>
               </div>
+
+              {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-medium text-[#D1D5DB] mb-2" htmlFor="confirmPassword">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-[#9AA4B2]" />
-                  </div>
+                <label className="block text-xs font-mono text-[#666] uppercase tracking-wider mb-2">Confirm</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-3.5 h-5 w-5 text-[#444] group-focus-within:text-[#FF8C42] transition-colors" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
+                    name="confirm_password"
+                    value={formData.confirm_password}
                     onChange={handleChange}
                     required
-                    className="block w-full pl-10 pr-12 py-3 bg-[#0F1724] border border-[#2C3445] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6BF0FF] focus:border-transparent text-white placeholder-[#9AA4B2] transition-all duration-300"
-                    placeholder="Confirm password"
+                    className="w-full bg-[#111] border border-white/5 rounded-xl py-3 pl-12 pr-12 text-white placeholder-[#444] focus:outline-none focus:border-[#FF8C42]/50 focus:bg-[#151515] transition-all duration-300"
+                    placeholder="••••••••"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-[#9AA4B2] hover:text-[#6BF0FF] transition-colors" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-[#9AA4B2] hover:text-[#6BF0FF] transition-colors" />
-                    )}
-                  </button>
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-3.5 text-[#444] hover:text-white"><Eye className="h-4 w-4" /></button>
                 </div>
               </div>
             </div>
 
-            {/* Terms and Conditions */}
-            <div className="flex items-start">
-              <input
-                type="checkbox"
-                id="terms"
-                className="w-4 h-4 text-[#6BF0FF] bg-[#0F1724] border-[#2C3445] rounded focus:ring-[#6BF0FF] focus:ring-2 mt-1"
-                required
-              />
-              <label htmlFor="terms" className="ml-2 text-sm text-[#D1D5DB]">
-                I agree to the{' '}
-                <a href="#" className="text-[#6BF0FF] hover:text-[#3ED9EB] transition-colors">
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a href="#" className="text-[#6BF0FF] hover:text-[#3ED9EB] transition-colors">
-                  Privacy Policy
-                </a>
-              </label>
-            </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-[#6BF0FF] hover:bg-[#3ED9EB] text-[#0F1724] font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(107,240,255,0.5)]"
+              disabled={loading}
+              className="w-full bg-[#FF8C42] text-black font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-[#ff9d5e] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(255,140,66,0.2)] hover:shadow-[0_0_30px_rgba(255,140,66,0.4)] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
             >
-              Create Account
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin"></span>
+              ) : (
+                <>
+                  Register Now <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          {/* Sign In Link */}
-          <div className="mt-6 text-center">
-            <p className="text-[#D1D5DB]">
+          <div className="mt-8 text-center border-t border-white/5 pt-6">
+            <p className="text-[#666] text-sm">
               Already have an account?{' '}
-              <a href="/login" className="text-[#6BF0FF] hover:text-[#3ED9EB] font-medium transition-colors">
-                Sign in here
-              </a>
+              <Link to="/login" className="text-white hover:text-[#FF8C42] font-medium transition-colors">Sign in here</Link>
             </p>
           </div>
         </div>
 
-        {/* Demo Note */}
-        <div className="mt-6 p-4 bg-[#1A2233]/50 border border-[#2C3445] rounded-lg">
-          <p className="text-sm text-[#9AA4B2] text-center">
-            <strong className="text-[#6BF0FF]">Demo Mode:</strong> This is a showcase demo. No actual account will be created.
-          </p>
+        <div className="mt-8 flex justify-center items-center gap-2 text-[#444] text-xs">
+          <ShieldCheck className="w-4 h-4" />
+          <span>Secure Registration</span>
         </div>
+
       </div>
     </div>
   );
 }
+

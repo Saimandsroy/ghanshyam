@@ -29,11 +29,16 @@ export function LandingPage() {
       {/* --- NAVIGATION --- */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#050505]/80 backdrop-blur-md border-b border-white/5' : 'bg-transparent border-b border-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rotate-45 bg-[#FF8C42] rounded-[6px] flex items-center justify-center shadow-[0_0_15px_rgba(255,140,66,0.3)]">
-              <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity group">
+            <div className="w-10 h-10 relative overflow-hidden rounded-lg bg-white/5 flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(255,140,66,0.1)] group-hover:border-[#FF8C42]/30 transition-colors">
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-[250%] max-w-none absolute left-0 top-1/2 -translate-y-1/2 object-cover"
+                style={{ objectPosition: 'left center' }}
+              />
             </div>
-            <span className="font-semibold text-lg tracking-tight text-white">LinkMag</span>
+            <span className="font-semibold text-lg tracking-tight text-white">Link Management</span>
           </div>
 
           <div className="hidden md:flex items-center gap-10">
@@ -207,16 +212,26 @@ export function LandingPage() {
 
         {/* --- TRUSTED BY RIBBON --- */}
         <section className="py-10 border-b border-white/5 bg-[#080808] overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#080808] to-transparent z-10"></div>
-          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#080808] to-transparent z-10"></div>
+          <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#080808] to-transparent z-10 hidden md:block"></div>
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#080808] to-transparent z-10 hidden md:block"></div>
 
-          <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="max-w-7xl mx-auto px-6 mb-8">
             <p className="text-center text-[10px] font-mono font-bold tracking-[0.3em] text-[#444] uppercase">
               Trusted by Industry Leaders
             </p>
           </div>
 
-          <div className="flex animate-marquee whitespace-nowrap">
+          {/* Mobile Grid View (Cards) */}
+          <div className="md:hidden grid grid-cols-2 gap-4 px-6">
+            {logos.slice(0, 6).map((brand, i) => (
+              <div key={i} className="bg-[#0A0A0A] border border-white/5 rounded-xl p-6 flex items-center justify-center text-center">
+                <span className="text-sm font-bold font-mono text-[#666]">{brand}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Marquee View */}
+          <div className="hidden md:flex animate-marquee whitespace-nowrap">
             <div className="flex items-center gap-16 md:gap-32 mx-8">
               {logos.map((brand, i) => (
                 <div key={i} className="text-xl md:text-2xl font-bold font-mono tracking-tighter text-[#333] hover:text-[#FF8C42] transition-colors duration-500 cursor-default">
@@ -270,7 +285,7 @@ export function LandingPage() {
               <div className="space-y-8">
                 <div>
                   <span className="text-[#FF8C42] font-mono text-xs tracking-widest uppercase mb-2 block">Who We Are</span>
-                  <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-6">About <span className="text-[#FF8C42]">LinkMag</span></h2>
+                  <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-6">About <span className="text-[#FF8C42]">Link Management</span></h2>
                   <div className="w-20 h-1 bg-[#FF8C42] rounded-full"></div>
                 </div>
 
@@ -280,10 +295,11 @@ export function LandingPage() {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <button className="px-8 py-3 bg-[#FF8C42] text-black font-semibold rounded-lg hover:bg-[#ff9d5e] transition-colors shadow-[0_0_20px_rgba(255,140,66,0.3)]">
-                    About Us
+                  <button className="group relative px-8 py-3 bg-[#FF8C42] text-black font-bold rounded-full overflow-hidden transition-all duration-300 shadow-[0_0_20px_rgba(255,140,66,0.3)] hover:shadow-[0_0_30px_rgba(255,140,66,0.5)] hover:scale-105 active:scale-95">
+                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12"></div>
+                    <span className="relative">About Us</span>
                   </button>
-                  <button className="px-8 py-3 bg-transparent border border-white/10 text-white font-semibold rounded-lg hover:bg-white/5 transition-colors">
+                  <button className="group px-8 py-3 bg-transparent border border-white/10 text-white font-semibold rounded-full hover:bg-white/5 transition-all duration-300 hover:border-[#FF8C42]/50 hover:text-[#FF8C42] hover:scale-105 active:scale-95">
                     Contact Leads
                   </button>
                 </div>
@@ -315,7 +331,7 @@ export function LandingPage() {
         <section id="features" className="py-24 bg-[#050505] relative">
           <div className="max-w-7xl mx-auto px-6">
             <div className="max-w-2xl mx-auto text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-6">Why Publishers Choose LinkMag</h2>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-6">Why Publishers Choose Link Management</h2>
               <p className="text-[#888888] text-lg font-light">Most platforms hit a glass ceiling. Our infrastructure is built to scale your content business.</p>
             </div>
 
@@ -354,7 +370,7 @@ export function LandingPage() {
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="mb-24">
               <span className="text-[#FF8C42] font-mono text-xs tracking-widest uppercase mb-2 block">The Protocol</span>
-              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">The LinkMag System</h2>
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">The Link Management System</h2>
               <p className="text-[#666] mt-4 max-w-xl">A streamlined 4-step transformation to monetize your traffic.</p>
             </div>
 

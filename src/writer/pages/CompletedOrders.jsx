@@ -1,194 +1,195 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RefreshCw, CheckCircle, DollarSign, Calendar, Globe } from 'lucide-react';
-import { Pagination } from '../../components/Pagination.jsx';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw, CheckCircle, Eye, Search } from 'lucide-react';
 import { writerAPI } from '../../lib/api';
+import { useToast } from '../../context/ToastContext';
+
+import { Pagination } from '../../components/Pagination.jsx';
 
 /**
- * CompletedOrders - Writer's completed tasks
- * Integrated with backend API
+ * Writer Completed Orders Page
+ * Shows all completed orders for the writer with columns: Order ID, Manager, Order Type, Pushed Date
  */
 export function CompletedOrders() {
-  // State for data
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const { showError } = useToast();
+    const [loading, setLoading] = useState(true);
+    const [orders, setOrders] = useState([]);
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
-  // State for pagination
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+    // Fetch completed orders
+    const fetchCompletedOrders = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await writerAPI.getCompletedOrders();
+            setOrders(response.orders || []);
+        } catch (err) {
+            console.error('Error fetching completed orders:', err);
+            showError('Failed to load completed orders');
+        } finally {
+            setLoading(false);
+        }
+    }, [showError]);
 
-  // Fetch tasks
-  const fetchTasks = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    useEffect(() => {
+        fetchCompletedOrders();
+    }, [fetchCompletedOrders]);
 
-      const response = await writerAPI.getTasks();
-      // Filter for completed tasks only
-      const completedTasks = (response.tasks || []).filter(t =>
-        t.current_status === 'COMPLETED' || t.current_status === 'CREDITED'
-      );
-      setTasks(completedTasks);
-    } catch (err) {
-      console.error('Error fetching tasks:', err);
-      setError(err.message || 'Failed to load tasks');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    // Filter orders by search
+    const filteredOrders = orders.filter(order => {
+        if (!search) return true;
+        const searchLower = search.toLowerCase();
+        return (
+            (order.manual_order_id || '').toLowerCase().includes(searchLower) ||
+            (order.manager_name || '').toLowerCase().includes(searchLower) ||
+            (order.order_type || '').toLowerCase().includes(searchLower)
+        );
+    });
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    // Paginate
+    const total = filteredOrders.length;
+    const paginatedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
 
-  // Calculate totals
-  const totalEarned = useMemo(() => {
-    return tasks.reduce((sum, t) => sum + parseFloat(t.payment_amount || 0), 0);
-  }, [tasks]);
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '-';
+        try {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch {
+            return '-';
+        }
+    };
 
-  // Paginated tasks
-  const paginatedTasks = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return tasks.slice(startIndex, startIndex + pageSize);
-  }, [tasks, page, pageSize]);
-
-  return (
-    <div className="space-y-4">
-      {/* Breadcrumb */}
-      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-        Tasks {'>'} Completed
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <CheckCircle className="h-6 w-6" style={{ color: '#22C55E' }} />
-          Completed Orders
-        </h2>
-        <button
-          onClick={fetchTasks}
-          disabled={loading}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
-          title="Refresh"
-        >
-          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
-              <CheckCircle className="h-6 w-6" style={{ color: '#22C55E' }} />
+    return (
+        <div className="space-y-6 animate-fadeIn">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2 text-[var(--text-primary)]">
+                        Completed Orders
+                    </h2>
+                    <p className="text-[var(--text-secondary)] mt-1">
+                        View and track your entire history of completed work.
+                    </p>
+                </div>
+                <button
+                    onClick={fetchCompletedOrders}
+                    disabled={loading}
+                    className="premium-btn premium-btn-accent"
+                >
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                </button>
             </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Completed</p>
-              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{tasks.length}</p>
+
+            {/* Search Bar */}
+            <div className="premium-card p-4">
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                        <input
+                            type="text"
+                            placeholder="Search by Order ID, Manager, or Order Type..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            className="premium-input pl-10"
+                        />
+                    </div>
+                    <div className="px-4 py-2 bg-[var(--background-dark)] rounded-lg text-sm text-[var(--text-secondary)] font-medium border border-[var(--border)]">
+                        {total} orders found
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)' }}>
-              <DollarSign className="h-6 w-6" style={{ color: '#6BF0FF' }} />
-            </div>
-            <div>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Earned</p>
-              <p className="text-2xl font-bold" style={{ color: '#22C55E' }}>${totalEarned.toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Error State */}
-      {error && (
-        <div
-          className="rounded-2xl p-4 flex items-center justify-between"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-        >
-          <p className="text-red-400">{error}</p>
-          <button onClick={fetchTasks} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
-            <RefreshCw className="h-4 w-4" /> Retry
-          </button>
-        </div>
-      )}
+            {/* Loading State */}
+            {loading && orders.length === 0 && (
+                <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-[var(--border)] border-t-[var(--primary-cyan)]"></div>
+                    <p className="mt-4 text-[var(--text-muted)] font-medium">Loading history...</p>
+                </div>
+            )}
 
-      {/* Loading */}
-      {loading && tasks.length === 0 && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
-          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading completed tasks...</p>
-        </div>
-      )}
+            {/* Table */}
+            {!loading && (
+                <div className="premium-table-container">
+                    <table className="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Manager</th>
+                                <th>Order Type</th>
+                                <th>Pushed Date</th>
+                                <th className="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedOrders.map((order) => (
+                                <tr key={order.id} className="group">
+                                    <td className="font-medium">
+                                        <span className="text-[var(--primary-cyan)]">
+                                            {order.manual_order_id || `ORD-${order.id}`}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-[var(--background-dark)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] border border-[var(--border)]">
+                                                {(order.manager_name || 'M')[0]}
+                                            </div>
+                                            {order.manager_name || 'Manager'}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span
+                                            className="premium-badge"
+                                            style={{
+                                                backgroundColor: order.order_type === 'GP' ? 'rgba(249, 115, 22, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                                color: order.order_type === 'GP' ? '#F97316' : '#22C55E'
+                                            }}
+                                        >
+                                            {order.order_type || 'Guest Post'}
+                                        </span>
+                                    </td>
+                                    <td className="text-[var(--text-secondary)]">
+                                        {formatDate(order.pushed_date || order.completed_at || order.created_at)}
+                                    </td>
+                                    <td className="text-right">
+                                        <button
+                                            onClick={() => navigate(`/writer/completed-orders/${order.id}/detail`)}
+                                            className="premium-btn premium-btn-secondary text-xs py-1.5 px-3 inline-flex items-center gap-1"
+                                        >
+                                            View <Eye className="h-3 w-3" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {paginatedOrders.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-5 py-12 text-center text-[var(--text-muted)]">
+                                        {search ? 'No orders match your search' : 'No completed orders found'}
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-      {/* Table */}
-      {!loading && (
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-              <tr>
-                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Task ID</th>
-                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Website</th>
-                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Completed</th>
-                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Status</th>
-                <th className="text-left px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Payment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedTasks.map((task) => (
-                <tr key={task.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: '#6BF0FF' }}>
-                      TASK-{task.id}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <Globe className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                    <span style={{ color: 'var(--text-primary)' }}>{task.website_domain || 'N/A'}</span>
-                  </td>
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                    <span style={{ color: 'var(--text-secondary)' }}>{new Date(task.updated_at || task.created_at).toLocaleDateString()}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22C55E' }}>
-                      {task.current_status === 'CREDITED' ? 'Credited' : 'Completed'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold" style={{ color: '#22C55E' }}>
-                      ${parseFloat(task.payment_amount || 0).toFixed(2)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {paginatedTasks.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
-                    No completed tasks yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            {/* Pagination */}
+            {total > 0 && (
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    total={total}
+                    pageSizeOptions={[20, 50]}
+                    onPageChange={(p) => setPage(p)}
+                    onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+                />
+            )}
         </div>
-      )}
-
-      {/* Pagination */}
-      {tasks.length > pageSize && (
-        <Pagination
-          page={page}
-          pageSize={pageSize}
-          total={tasks.length}
-          pageSizeOptions={[20, 50]}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
-        />
-      )}
-    </div>
-  );
+    );
 }

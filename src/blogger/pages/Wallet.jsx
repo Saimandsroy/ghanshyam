@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RefreshCw, Wallet as WalletIcon, ArrowDownToLine } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, Wallet as WalletIcon, ArrowDownToLine, Search, Calendar, Filter } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
 import { bloggerAPI } from '../../lib/api';
-import {
-  WalletSummary,
-  TransactionsTable,
-  WithdrawalModal
-} from '../components';
+import { TransactionsTable } from '../components';
 
 /**
  * Wallet Page - Displays blogger's wallet, transactions, and withdrawal functionality
@@ -26,24 +23,19 @@ export function Wallet() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // State for withdrawal modal
-  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch wallet and withdrawals in parallel
-      const [walletResponse, withdrawalsResponse] = await Promise.all([
-        bloggerAPI.getWallet(),
-        bloggerAPI.getWithdrawals()
-      ]);
+      // Fetch wallet data (includes wallet_history with root_domain)
+      const walletResponse = await bloggerAPI.getWallet();
 
-      setWallet(walletResponse);
-      setWithdrawals(withdrawalsResponse.withdrawals || []);
+      // Extract wallet data - API returns { wallet: {...}, wallet_history: [...] }
+      setWallet(walletResponse.wallet || walletResponse);
+      // Use wallet_history directly from API (has root_domain, credit_debit, date)
+      setWithdrawals(walletResponse.wallet_history || []);
     } catch (err) {
       console.error('Error fetching wallet data:', err);
       setError(err.message || 'Failed to load wallet data');
@@ -56,47 +48,33 @@ export function Wallet() {
     fetchWalletData();
   }, [fetchWalletData]);
 
-  // Combine transactions and withdrawals for display
+  // Use wallet_history directly (already has: id, amount, root_domain, type, credit_debit, date)
   const allTransactions = useMemo(() => {
-    const transactions = wallet?.transactions || [];
-
-    // Convert withdrawals to transaction format
-    const withdrawalTransactions = withdrawals.map(w => ({
-      id: `W-${w.id}`,
-      transaction_type: 'DEBIT',
-      type: 'withdrawal',
-      amount: w.amount,
-      status: w.status,
-      created_at: w.created_at,
-      description: 'Withdrawal Request'
-    }));
-
-    // Combine and sort by date
-    return [...transactions, ...withdrawalTransactions].sort((a, b) =>
-      new Date(b.created_at) - new Date(a.created_at)
+    return withdrawals.sort((a, b) =>
+      new Date(b.date) - new Date(a.date)
     );
-  }, [wallet, withdrawals]);
+  }, [withdrawals]);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     let result = allTransactions;
 
-    // Filter by search
+    // Filter by search (search ID, root_domain, or type)
     if (filters.search) {
       const search = filters.search.toLowerCase();
       result = result.filter(tx =>
         String(tx.id).toLowerCase().includes(search) ||
-        (tx.description || '').toLowerCase().includes(search) ||
-        (tx.type || tx.transaction_type || '').toLowerCase().includes(search)
+        (tx.root_domain || '').toLowerCase().includes(search) ||
+        (tx.type || '').toLowerCase().includes(search)
       );
     }
 
     // Filter by date range
     if (filters.startDate) {
-      result = result.filter(tx => new Date(tx.created_at) >= new Date(filters.startDate));
+      result = result.filter(tx => new Date(tx.date) >= new Date(filters.startDate));
     }
     if (filters.endDate) {
-      result = result.filter(tx => new Date(tx.created_at) <= new Date(filters.endDate));
+      result = result.filter(tx => new Date(tx.date) <= new Date(filters.endDate));
     }
 
     return result;
@@ -108,127 +86,121 @@ export function Wallet() {
     return filteredTransactions.slice(startIndex, startIndex + pageSize);
   }, [filteredTransactions, page, pageSize]);
 
-  // Handle withdrawal request
-  const handleWithdrawal = async (amount) => {
-    try {
-      setSubmitting(true);
-      await bloggerAPI.requestWithdrawal(amount);
-
-      // Close modal and refresh data
-      setIsWithdrawalModalOpen(false);
-      await fetchWalletData();
-
-      // TODO: Add toast notification for success
-    } catch (err) {
-      console.error('Error requesting withdrawal:', err);
-      alert('Failed to request withdrawal: ' + err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Reset filters
   const handleResetFilters = () => {
     setFilters({ search: '', startDate: '', endDate: '' });
     setPage(1);
   };
 
-  const availableBalance = parseFloat(wallet?.available_balance || wallet?.balance || 0);
+  // Use current_balance (unapproved credits) as the main balance display
+  const currentBalance = parseFloat(wallet?.current_balance || 0);
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fadeIn max-w-7xl mx-auto pb-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <WalletIcon className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
-          Wallet
-        </h2>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)]">
+              <WalletIcon className="h-8 w-8" />
+            </div>
+            Wallet
+          </h1>
+          <p className="text-[var(--text-secondary)] mt-2 ml-1">Track your earnings and withdrawal history.</p>
+        </div>
+
+        <div className="flex items-center gap-3 self-start md:self-auto">
           <button
             onClick={fetchWalletData}
             disabled={loading}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
-            title="Refresh"
+            className="p-2.5 rounded-xl hover:bg-[var(--card-background)] border border-transparent hover:border-[var(--border)] transition-all shadow-sm hover:shadow text-[var(--text-secondary)]"
+            title="Refresh Data"
           >
-            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={() => setIsWithdrawalModalOpen(true)}
-            disabled={loading || availableBalance < 50}
-            className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all hover:opacity-80 disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)',
-              color: 'var(--background-dark)'
-            }}
+
+          <Link
+            to="/blogger/request-withdrawal"
+            className="premium-btn premium-btn-accent shadow-lg shadow-orange-500/20"
           >
             <ArrowDownToLine className="h-4 w-4" />
             Request Withdrawal
-          </button>
+          </Link>
         </div>
       </div>
 
       {/* Error State */}
       {error && (
-        <div
-          className="rounded-2xl p-4 flex items-center justify-between"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-        >
-          <p className="text-red-400">{error}</p>
+        <div className="mb-8 p-4 rounded-xl bg-[var(--error)]/10 border border-[var(--error)]/20 flex items-center justify-between animate-slideUp">
+          <div className="flex items-center gap-3 text-[var(--error)]">
+            <div className="h-2 w-2 rounded-full bg-[var(--error)] animate-pulse"></div>
+            <p className="font-medium">{error}</p>
+          </div>
           <button
             onClick={fetchWalletData}
-            className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            style={{
-              background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)',
-              color: 'var(--background-dark)'
-            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--error)]/10 hover:bg-[var(--error)]/20 text-[var(--error)] transition-colors"
           >
-            <RefreshCw className="h-4 w-4" />
             Retry
           </button>
         </div>
       )}
 
-      {/* Wallet Summary Cards */}
-      <WalletSummary wallet={wallet} loading={loading && !wallet} />
+      {/* Balance Card - Featured */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="md:col-span-1 premium-card p-6 bg-gradient-to-br from-[var(--card-background)] to-[var(--background-dark)] border-[var(--primary-cyan)]/20 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+            <WalletIcon size={80} />
+          </div>
+          <h3 className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Available Balance</h3>
+          <div className="text-4xl font-bold text-[var(--text-primary)] mb-1 flex items-baseline">
+            <span className="text-xl mr-1 text-[var(--text-muted)]">$</span>
+            {currentBalance.toFixed(2)}
+          </div>
+          <div className="text-xs text-[var(--primary-cyan)] font-medium bg-[var(--primary-cyan)]/5 inline-block px-2 py-1 rounded-md border border-[var(--primary-cyan)]/10">
+            Ready for Payout
+          </div>
+        </div>
 
-      {/* Filters */}
-      <div
-        className="rounded-2xl p-4"
-        style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-medium" style={{ color: 'var(--text-secondary)' }}>Transaction History</div>
+        {/* Could add more stats cards here like "Total Earned", "Pending Withdrawals" if data available */}
+      </div>
+
+      {/* Filters Section */}
+      <div className="premium-card p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-bold flex items-center gap-2 text-[var(--text-primary)]">
+            <Filter className="h-4 w-4 text-[var(--primary-cyan)]" />
+            Filter Transactions
+          </div>
           {(filters.search || filters.startDate || filters.endDate) && (
             <button
-              className="text-sm hover:opacity-80"
-              style={{ color: 'var(--error)' }}
+              className="text-xs font-bold uppercase tracking-wider text-[var(--error)] hover:bg-[var(--error)]/10 px-2 py-1 rounded transition-colors"
               onClick={handleResetFilters}
             >
-              Reset Filters
+              Reset
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Search</label>
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+              <Search className="h-3 w-3 inline mr-1 mb-0.5" /> Search
+            </label>
             <input
               type="text"
-              placeholder="Search transactions..."
+              placeholder="Order ID..."
               value={filters.search}
               onChange={(e) => {
                 setFilters({ ...filters, search: e.target.value });
                 setPage(1);
               }}
-              className="w-full rounded-xl px-3 py-2"
-              style={{
-                backgroundColor: 'var(--background-dark)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)'
-              }}
+              className="premium-input"
             />
           </div>
           <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>From Date</label>
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+              <Calendar className="h-3 w-3 inline mr-1 mb-0.5" /> From
+            </label>
             <input
               type="date"
               value={filters.startDate}
@@ -236,16 +208,13 @@ export function Wallet() {
                 setFilters({ ...filters, startDate: e.target.value });
                 setPage(1);
               }}
-              className="w-full rounded-xl px-3 py-2"
-              style={{
-                backgroundColor: 'var(--background-dark)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)'
-              }}
+              className="premium-input"
             />
           </div>
           <div>
-            <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>To Date</label>
+            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+              <Calendar className="h-3 w-3 inline mr-1 mb-0.5" /> To
+            </label>
             <input
               type="date"
               value={filters.endDate}
@@ -253,20 +222,17 @@ export function Wallet() {
                 setFilters({ ...filters, endDate: e.target.value });
                 setPage(1);
               }}
-              className="w-full rounded-xl px-3 py-2"
-              style={{
-                backgroundColor: 'var(--background-dark)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)'
-              }}
+              className="premium-input"
             />
           </div>
         </div>
       </div>
 
       {/* Results Summary */}
-      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        Showing {paginatedTransactions.length} of {filteredTransactions.length} transactions
+      <div className="flex items-center justify-between mb-4 px-1">
+        <div className="text-sm font-medium text-[var(--text-secondary)]">
+          Found <span className="text-[var(--text-primary)] font-bold">{filteredTransactions.length}</span> transaction{filteredTransactions.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
       {/* Transactions Table */}
@@ -277,28 +243,20 @@ export function Wallet() {
 
       {/* Pagination */}
       {filteredTransactions.length > 0 && (
-        <Pagination
-          page={page}
-          pageSize={pageSize}
-          total={filteredTransactions.length}
-          pageSizeOptions={[20, 50]}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
-          }}
-        />
+        <div className="mt-6">
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={filteredTransactions.length}
+            pageSizeOptions={[20, 50]}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
+        </div>
       )}
-
-      {/* Withdrawal Modal */}
-      <WithdrawalModal
-        isOpen={isWithdrawalModalOpen}
-        onClose={() => setIsWithdrawalModalOpen(false)}
-        onSubmit={handleWithdrawal}
-        availableBalance={availableBalance}
-        minAmount={50}
-        submitting={submitting}
-      />
     </div>
   );
 }

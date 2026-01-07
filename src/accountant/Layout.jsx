@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
 import { DollarSign, LayoutGrid } from 'lucide-react';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 export function AccountantLayout() {
@@ -20,17 +19,16 @@ export function AccountantLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--background-dark)' }}>
+    <div className="h-screen overflow-hidden flex bg-[var(--background-dark)] bg-grid-pattern">
       <ModernSidebar navItems={navItems} userName="Accountant" userRole="Accounts" onLogout={handleLogout} />
-      <div className="flex-1 flex flex-col">
-        <header className="p-6" style={{ backgroundColor: 'var(--card-background)', borderBottom: '1px solid var(--border)' }}>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Accountant</h1>
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        <header className="px-8 py-6 border-b border-[var(--border)] bg-[var(--background-dark)]/80 backdrop-blur-md sticky top-0 z-30">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Accountant</h1>
         </header>
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
           <Outlet />
         </main>
       </div>
-      <ThemeToggle />
     </div>
   );
 }

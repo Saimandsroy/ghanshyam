@@ -53,31 +53,35 @@ export function RejectedNotifications() {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <XCircle className="h-6 w-6" style={{ color: '#EF4444' }} />
-          Rejected Notifications
-        </h2>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-[var(--text-primary)]">
+            <XCircle className="h-6 w-6 text-[var(--error)]" />
+            Rejected Notifications
+          </h2>
+          <p className="text-[var(--text-secondary)] mt-1">
+            Review tasks that were rejected by the manager.
+          </p>
+        </div>
         <button
           onClick={fetchTasks}
           disabled={loading}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
-          title="Refresh"
+          className="premium-btn premium-btn-accent"
         >
-          <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
         </button>
       </div>
 
       {/* Error State */}
       {error && (
-        <div
-          className="rounded-2xl p-4 flex items-center justify-between"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-        >
-          <p className="text-red-400">{error}</p>
-          <button onClick={fetchTasks} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
-            <RefreshCw className="h-4 w-4" /> Retry
+        <div className="premium-card p-4 flex items-center justify-between border-l-4 border-[var(--error)]">
+          <p className="text-[var(--error)] font-medium">{error}</p>
+          <button
+            onClick={fetchTasks}
+            className="text-sm font-semibold underline text-[var(--text-primary)] hover:text-[var(--primary-cyan)]"
+          >
+            Retry
           </button>
         </div>
       )}
@@ -85,8 +89,8 @@ export function RejectedNotifications() {
       {/* Loading */}
       {loading && tasks.length === 0 && (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
-          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading rejected tasks...</p>
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-[var(--border)] border-t-[var(--primary-cyan)]"></div>
+          <p className="mt-4 text-[var(--text-muted)] font-medium">Loading rejected tasks...</p>
         </div>
       )}
 
@@ -96,64 +100,61 @@ export function RejectedNotifications() {
           {paginatedTasks.map((task) => (
             <div
               key={task.id}
-              className="rounded-2xl p-5"
-              style={{ backgroundColor: 'var(--card-background)', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+              className="premium-card p-6 border-l-4 border-l-[var(--error)]"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
-                    <XCircle className="h-5 w-5" style={{ color: '#EF4444' }} />
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[rgba(239,68,68,0.1)] flex items-center justify-center flex-shrink-0">
+                    <XCircle className="h-6 w-6 text-[var(--error)]" />
                   </div>
                   <div>
-                    <span className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: '#6BF0FF' }}>
-                      TASK-{task.id}
-                    </span>
-                    <h3 className="text-lg font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="premium-badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>
+                        TASK-{task.id}
+                      </span>
+                      <span className="text-sm text-[var(--text-secondary)]">
+                        {new Date(task.updated_at || task.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]">
                       {task.website_domain || 'Task Rejected'}
                     </h3>
                   </div>
                 </div>
-                <span className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                <span className="premium-badge self-start"
                   style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' }}>
                   Rejected
                 </span>
               </div>
 
               {task.rejection_reason && (
-                <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 mt-0.5" style={{ color: '#EF4444' }} />
+                <div className="p-4 rounded-xl bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.1)]">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 mt-0.5 text-[var(--error)] flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium mb-1" style={{ color: '#EF4444' }}>Rejection Reason</p>
-                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{task.rejection_reason}</p>
+                      <p className="text-sm font-bold mb-1 text-[var(--error)]">Rejection Reason</p>
+                      <p className="text-sm text-[var(--text-primary)] leading-relaxed">{task.rejection_reason}</p>
                     </div>
                   </div>
                 </div>
               )}
-
-              <div className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-                Rejected on: {new Date(task.updated_at || task.created_at).toLocaleString()}
-              </div>
             </div>
           ))}
 
           {paginatedTasks.length === 0 && (
-            <div
-              className="rounded-2xl flex items-center justify-center py-16"
-              style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}
-            >
-              <div className="text-center">
-                <XCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No rejected tasks</p>
+            <div className="premium-card p-12 text-center">
+              <div className="w-16 h-16 bg-[var(--background-dark)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
+                <XCircle className="h-8 w-8 text-[var(--text-muted)]" />
               </div>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">No Rejected Tasks</h3>
+              <p className="text-[var(--text-muted)] mt-1">Great job! You have no rejected tasks.</p>
             </div>
           )}
         </div>
       )}
 
       {/* Pagination */}
-      {tasks.length > pageSize && (
+      {tasks.length > 0 && (
         <Pagination
           page={page}
           pageSize={pageSize}

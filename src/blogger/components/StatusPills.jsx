@@ -10,36 +10,39 @@ import React from 'react';
 export function StatusPills({ statuses, activeStatus, counts, onStatusChange }) {
     const getStatusColor = (status) => {
         switch (status) {
-            case 'completed': return '#22C55E';
-            case 'rejected': return '#EF4444';
-            case 'pending': return '#F59E0B';
-            case 'waiting': return '#3B82F6';
-            default: return '#6B7280';
+            case 'completed': return 'var(--success)';
+            case 'rejected': return 'var(--error)';
+            case 'pending': return 'var(--warning)';
+            case 'waiting': return 'var(--primary-cyan)'; // Using primary-cyan for waiting/blue
+            default: return 'var(--text-secondary)';
         }
     };
 
     return (
-        <div
-            className="inline-flex gap-2 rounded-xl p-2"
-            style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}
-        >
+        <div className="premium-card p-2 inline-flex gap-2 animate-fadeIn flex-wrap">
             {statuses.map((status) => {
                 const isActive = activeStatus === status;
-                const color = getStatusColor(status);
+
+                // Determine active style dynamically based on status color
+                // Ideally this would be cleaner with CSS modules or styled components but inline style works for dynamic colors
+                const activeStyle = isActive ? {
+                    backgroundColor: `color-mix(in srgb, ${getStatusColor(status)}, white 10%)`,
+                    color: 'white',
+                    boxShadow: `0 4px 12px -2px ${getStatusColor(status)}`
+                } : {
+                    color: 'var(--text-secondary)'
+                };
 
                 return (
                     <button
                         key={status}
                         onClick={() => onStatusChange(status)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive ? 'text-white shadow-md' : 'hover:bg-white/5'
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 flex items-center gap-2 ${isActive ? 'scale-105' : 'hover:bg-[var(--text-primary)]/5'
                             }`}
-                        style={isActive
-                            ? { backgroundColor: color }
-                            : { color: 'var(--text-secondary)' }
-                        }
+                        style={activeStyle}
                     >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                        <span className="ml-1.5 opacity-80">
+                        {status === 'all' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/20' : 'bg-[var(--background-dark)] border border-[var(--border)]'}`}>
                             {counts[status] ?? 0}
                         </span>
                     </button>

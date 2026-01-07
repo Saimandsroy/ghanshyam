@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FileText } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
+import { RejectModal } from '../../components/RejectModal.jsx';
 import { bloggerAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -20,6 +22,9 @@ const STATUS_OPTIONS = ['all', 'pending', 'waiting', 'rejected', 'completed'];
  * Integrated with backend API for real data
  */
 export function Orders() {
+  // Navigation
+  const navigate = useNavigate();
+
   // Toast notifications
   const { showSuccess, showError } = useToast();
 
@@ -40,7 +45,9 @@ export function Orders() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
@@ -132,9 +139,9 @@ export function Orders() {
     setPage(1);
   };
 
+  // Navigate to order details page on eye click
   const handleViewDetails = (task) => {
-    setSelectedTask(task);
-    setIsDetailModalOpen(true);
+    navigate(`/blogger/orders/${task.id}`);
   };
 
   const handleOpenSubmitModal = (task) => {
@@ -159,6 +166,33 @@ export function Orders() {
       showError('Failed to submit link: ' + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Open reject modal
+  const handleOpenRejectModal = (task) => {
+    setSelectedTask(task);
+    setIsRejectModalOpen(true);
+  };
+
+  // Handle task rejection
+  const handleRejectTask = async (reason) => {
+    if (!selectedTask) return;
+    try {
+      setRejecting(true);
+      await bloggerAPI.rejectTask(selectedTask.id, reason);
+
+      // Close modal and refresh tasks
+      setIsRejectModalOpen(false);
+      setSelectedTask(null);
+      await fetchTasks();
+
+      showSuccess('Task rejected successfully!');
+    } catch (err) {
+      console.error('Error rejecting task:', err);
+      showError('Failed to reject task: ' + err.message);
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -231,6 +265,7 @@ export function Orders() {
         data={paginatedTasks}
         onViewDetails={handleViewDetails}
         onSubmitLink={handleOpenSubmitModal}
+        onRejectTask={handleOpenRejectModal}
         loading={loading && tasks.length === 0}
       />
 
@@ -270,6 +305,20 @@ export function Orders() {
         }}
         onSubmit={handleSubmitLink}
         submitting={submitting}
+      />
+
+      {/* Reject Task Modal */}
+      <RejectModal
+        isOpen={isRejectModalOpen}
+        onClose={() => {
+          setIsRejectModalOpen(false);
+          setSelectedTask(null);
+        }}
+        onConfirm={handleRejectTask}
+        title="Reject Task"
+        description={`Are you sure you want to reject this task for ${selectedTask?.website_domain || 'this website'}? Please provide a reason.`}
+        confirmText="Reject Task"
+        loading={rejecting}
       />
     </div>
   );

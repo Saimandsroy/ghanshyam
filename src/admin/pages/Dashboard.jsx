@@ -1,10 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Users, Users2, User, BarChart3, Bell, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Users2, User, BarChart3, Bell, Filter, Eye } from 'lucide-react';
 import { ChartCard } from '../components/ChartCard';
+import { PremiumStatsCard } from '../../components/PremiumStatsCard';
 import { BarChart } from '../components/BarChart';
-import { adminAPI, managerAPI } from '../../lib/api';
+import { adminAPI } from '../../lib/api';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [yearOrders, setYearOrders] = useState('2024');
   const [yearPayment, setYearPayment] = useState('2024');
   const [yearBloggers, setYearBloggers] = useState('2024');
@@ -27,7 +30,7 @@ export function Dashboard() {
         // Fetch admin stats and withdrawal requests in parallel
         const [statsResponse, withdrawalsResponse] = await Promise.all([
           adminAPI.getStats(),
-          managerAPI.getWithdrawals()
+          adminAPI.getWithdrawalRequests()
         ]);
 
         setStatsData(statsResponse.statistics);
@@ -90,13 +93,15 @@ export function Dashboard() {
   }, [statsData, withdrawalRequests]);
 
   const filteredRequests = useMemo(() => {
-    if (!search) return withdrawalRequests.filter(r => r.status === 'Requested');
+    // Filter to show only pending (status null or 'pending' typically means pending)
+    const pending = withdrawalRequests.filter(r =>
+      !r.status || r.status === 'pending' || r.status === 'Requested'
+    );
+    if (!search) return pending;
     const q = search.toLowerCase();
-    return withdrawalRequests.filter(r =>
-      r.status === 'Requested' && (
-        r.username?.toLowerCase().includes(q) ||
-        r.email?.toLowerCase().includes(q)
-      )
+    return pending.filter(r =>
+      r.user_name?.toLowerCase().includes(q) ||
+      r.user_email?.toLowerCase().includes(q)
     );
   }, [search, withdrawalRequests]);
 
@@ -189,20 +194,31 @@ export function Dashboard() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {stats.map((stat, index) => {
-              const Icon = stat.icon;
+              // Assign distinct colors based on index or label
+              const colors = ['#06b6d4', '#8b5cf6', '#3b82f6', '#ec4899', '#f97316'];
+              const color = colors[index % colors.length];
+
+              // Determine trend direction
+              let trend = 'neutral';
+              if (stat.change.includes('+') || stat.change.toLocaleLowerCase().includes('new') || stat.change.toLocaleLowerCase().includes('active')) trend = 'up';
+              else if (stat.change.includes('-')) trend = 'down';
+
               return (
-                <div key={index} className="rounded-2xl p-6 relative overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <div className="text-sm font-medium uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>{stat.label}</div>
-                      <div className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{stat.value}</div>
-                      <div className="text-sm" style={{ color: stat.change.includes('+') || stat.change.includes('new') ? 'var(--success)' : 'var(--error)' }}>{stat.change}</div>
-                    </div>
-                    <div className={`w-12 h-12 rounded-xl bg-[rgba(107,240,255,0.1)] flex items-center justify-center`}>
-                      <Icon className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
-                    </div>
-                  </div>
-                </div>
+                <PremiumStatsCard
+                  key={index}
+                  icon={stat.icon}
+                  label={stat.label}
+                  value={stat.value}
+                  trendValue={stat.change}
+                  trend={trend}
+                  color={color}
+                  onClick={() => {
+                    // Navigate based on label if needed
+                    if (stat.label === 'Bloggers') navigate('/admin/bloggers');
+                    if (stat.label === 'Orders') navigate('/admin/orders');
+                    if (stat.label === 'Pending Requests') navigate('/admin/wallet/withdrawal-requests');
+                  }}
+                />
               );
             })}
           </div>
@@ -213,14 +229,14 @@ export function Dashboard() {
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Pending Withdrawal Requests</h2>
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--primary-cyan)' }} />
               </div>
-              <button onClick={() => setShowFilter(v => !v)} className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] px-4 py-2 rounded-lg font-semibold" style={{ color: 'var(--icon-on-gradient)' }}>
-                <Filter className="inline mr-2" size={16} /> Filter
+              <button onClick={() => setShowFilter(v => !v)} className="premium-btn premium-btn-accent text-sm py-2 px-4">
+                <Filter className="h-4 w-4" />Filter
               </button>
             </div>
 
             {showFilter && (
               <div className="mb-4 flex gap-3">
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, email, method..." className="rounded-xl px-4 py-2 min-w-[280px]" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, email..." className="rounded-xl px-4 py-2 min-w-[280px]" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
                 <button onClick={() => setSearch('')} className="px-3 rounded-lg" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Reset</button>
               </div>
             )}
@@ -244,38 +260,44 @@ export function Dashboard() {
                       </td>
                     </tr>
                   ) : (
-                    filteredRequests.map((request) => (
+                    filteredRequests.slice(0, 10).map((request) => (
                       <tr key={request.id} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="px-4 py-4">
                           <div>
-                            <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{request.username || 'N/A'}</div>
-                            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{request.email || 'N/A'}</div>
+                            <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{request.user_name || 'N/A'}</div>
+                            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{request.user_email || 'N/A'}</div>
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <div>
-                            <div className="font-medium" style={{ color: 'var(--text-primary)' }}>Bank Transfer</div>
-                            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{request.notes || 'No details'}</div>
+                          {request.payment_method === 'bank' || request.beneficiary_account_number ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'rgba(249, 115, 22, 0.1)', color: 'rgb(249, 115, 22)', border: '1px solid rgb(249, 115, 22)' }}>Bank Transfer</span>
+                          ) : request.payment_method === 'upi' || request.upi_id ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', color: 'rgb(168, 85, 247)', border: '1px solid rgb(168, 85, 247)' }}>UPI</span>
+                          ) : request.payment_method === 'qr' || request.qr_code_image ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', color: 'rgb(34, 197, 94)', border: '1px solid rgb(34, 197, 94)' }}>QR Code</span>
+                          ) : request.payment_method === 'paypal' || request.paypal_email ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'rgb(59, 130, 246)', border: '1px solid rgb(59, 130, 246)' }}>PayPal</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-bold" style={{ color: 'var(--success)' }}>${request.amount || 0}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            {request.datetime ? new Date(request.datetime).toLocaleString() : 'N/A'}
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="font-bold" style={{ color: 'var(--success)' }}>${request.amount}</div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="space-y-1">
-                            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                              {new Date(request.request_date).toLocaleString()}
-                            </div>
-                            <div className="text-xs px-2 py-1 rounded inline-block" style={{
-                              backgroundColor: request.status === 'Requested' ? 'rgba(251, 191, 36, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                              color: request.status === 'Requested' ? '#FBBF24' : '#22C55E'
-                            }}>
-                              {request.status}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <button className="bg-gradient-to-r from-[#6BF0FF] to-[#3ED9EB] px-4 py-2 rounded-lg font-semibold text-sm" style={{ color: 'var(--icon-on-gradient)' }}>Detail</button>
+                          <button
+                            onClick={() => navigate(`/admin/wallet/withdrawal-requests/${request.id}`)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:opacity-80"
+                            style={{ backgroundColor: 'var(--warning)', color: 'white' }}
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -283,6 +305,17 @@ export function Dashboard() {
                 </tbody>
               </table>
             </div>
+            {filteredRequests.length > 10 && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => navigate('/admin/wallet/withdrawal-requests')}
+                  className="text-sm hover:underline"
+                  style={{ color: 'var(--primary-cyan)' }}
+                >
+                  View all {filteredRequests.length} pending requests
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

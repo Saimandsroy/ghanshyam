@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  ChevronDown, 
-  Settings, 
-  LogOut, 
+import {
+  ChevronDown,
+  Key,
+  LogOut,
   User,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  Moon,
+  Sun,
+  Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Modern Sidebar Component
- * 
+ *
  * Features:
- * - Clean aqua transparent highlight for active items
- * - Profile section at bottom with settings and logout
- * - Collapsible dropdown menus
- * - Smooth animations
- * - Responsive design
+ * - Premium Glassmorphism Design
+ * - Collapsible (Rail/Drawer)
+ * - Interactive Active States
+ * - Smooth Animations
+ * - Integrated Theme Toggle
  */
 
 const NavItem = ({
@@ -27,33 +32,51 @@ const NavItem = ({
   active = false,
   hasDropdown = false,
   dropdownItems = [],
-  onClick
+  onClick,
+  collapsed = false
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  
+
+  // If collapsed, we don't show dropdown inline, but maybe tooltip (omitted for brevity, just icon)
+  // For strictly collapsed view, we might disable dropdown or show it as hover menu.
+  // For now, if collapsed, we disable dropdown expansion logic in UI or expand sidebar on click.
+
   const content = (
     <>
-      <div className="flex items-center gap-3 flex-1">
-        <span className={`transition-colors duration-200 ${active ? 'text-[var(--primary-cyan)]' : 'text-[var(--text-secondary)]'}`}>
-          {icon}
+      <div className={`flex items-center gap-3 flex-1 ${collapsed ? 'justify-center' : ''}`}>
+        <span className={`transition-all duration-200 ${active ? 'text-[#EA580C]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}`}>
+          {/* Make icon slightly bolder when active */}
+          {React.cloneElement(icon, { strokeWidth: active ? 3 : 2 })}
         </span>
-        <span className={`font-medium transition-colors duration-200 ${active ? 'text-white' : 'text-[var(--text-secondary)]'}`}>
-          {label}
-        </span>
+        {!collapsed && (
+          <motion.span
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            className={`transition-colors duration-200 whitespace-nowrap ${active ? 'text-[#EA580C] font-bold tracking-wide' : 'font-medium text-[var(--text-secondary)]'} group-hover:text-[var(--text-primary)]`}
+          >
+            {label}
+          </motion.span>
+        )}
       </div>
-      {hasDropdown && (
+      {!collapsed && hasDropdown && (
         <motion.div
           animate={{ rotate: showDropdown ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown size={16} className="text-[var(--text-muted)]" />
+          <ChevronDown size={16} className={`transition-colors ${active ? 'text-[#EA580C]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-primary)]'}`} />
         </motion.div>
       )}
     </>
   );
 
   const handleClick = (e) => {
-    if (hasDropdown) {
+    if (collapsed && hasDropdown) {
+      // Option: Expand sidebar if user clicks a dropdown item while collapsed
+      // But parent handles expansion.
+    }
+
+    if (hasDropdown && !collapsed) {
       e.preventDefault();
       setShowDropdown(!showDropdown);
     } else if (onClick) {
@@ -62,32 +85,39 @@ const NavItem = ({
     }
   };
 
+  const buttonClasses = `w-full flex items-center ${collapsed ? 'px-2 py-3 justify-center' : 'px-4 py-3'} rounded-xl transition-all duration-200 relative group overflow-hidden ${active ? '' : 'hover:bg-[var(--text-primary)]/5'}`;
+
   return (
     <div className="mb-1">
       {hasDropdown || onClick ? (
         <button
-          className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 relative group ${
-            active ? 'text-white' : 'hover:bg-[var(--card-background)]'
-          }`}
+          className={buttonClasses}
           onClick={handleClick}
+          title={collapsed ? label : ''}
         >
-          {/* Active highlight - aqua transparent layer */}
+          {/* Active highlight - Glowing Pill */}
           {active && (
             <motion.div
               layoutId="activeNav"
-              className="absolute inset-0 rounded-lg"
+              className="absolute inset-0 rounded-xl bg-[#EA580C]"
               style={{
-                background: 'rgba(107, 240, 255, 0.1)',
-                border: '1px solid rgba(107, 240, 255, 0.2)',
+                opacity: 0.12,
+                border: '1px solid rgba(234, 88, 12, 0.3)'
               }}
               initial={false}
               transition={{
                 type: "spring",
-                stiffness: 380,
+                stiffness: 300,
                 damping: 30,
               }}
             />
           )}
+
+          {/* Side Accent for Active */}
+          {active && !collapsed && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-r-full bg-[#EA580C] shadow-[0_0_15px_rgba(234,88,12,0.8)]"></div>
+          )}
+
           <div className="relative z-10 flex items-center w-full">
             {content}
           </div>
@@ -95,36 +125,38 @@ const NavItem = ({
       ) : (
         <Link
           to={to}
-          className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 relative group ${
-            active ? 'text-white' : 'hover:bg-[var(--card-background)]'
-          }`}
+          className={buttonClasses}
+          title={collapsed ? label : ''}
         >
-          {/* Active highlight - aqua transparent layer */}
           {active && (
             <motion.div
               layoutId="activeNav"
-              className="absolute inset-0 rounded-lg"
+              className="absolute inset-0 rounded-xl bg-[#EA580C]"
               style={{
-                background: 'rgba(107, 240, 255, 0.1)',
-                border: '1px solid rgba(107, 240, 255, 0.2)',
+                opacity: 0.12,
+                border: '1px solid rgba(234, 88, 12, 0.3)'
               }}
               initial={false}
               transition={{
                 type: "spring",
-                stiffness: 380,
+                stiffness: 300,
                 damping: 30,
               }}
             />
+          )}
+          {/* Side Accent for Active */}
+          {active && !collapsed && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-r-full bg-[#EA580C] shadow-[0_0_15px_rgba(234,88,12,0.8)]"></div>
           )}
           <div className="relative z-10 flex items-center w-full">
             {content}
           </div>
         </Link>
       )}
-      
-      {/* Dropdown Menu */}
+
+      {/* Dropdown Menu - Only show if not collapsed */}
       <AnimatePresence>
-        {hasDropdown && showDropdown && (
+        {hasDropdown && showDropdown && !collapsed && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -132,17 +164,19 @@ const NavItem = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pl-12 pr-4 py-2 space-y-1">
-              {dropdownItems.map((item, index) => (
-                <Link
-                  key={index}
-                  to={item.to}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-[var(--text-secondary)] hover:text-white hover:bg-[var(--card-background)] transition-all duration-200"
-                >
-                  <ChevronRight size={14} />
-                  {item.label}
-                </Link>
-              ))}
+            <div className="pl-4 pr-2 py-1 space-y-1 mt-1">
+              <div className="pl-4 border-l border-[var(--border)] space-y-1">
+                {dropdownItems.map((item, index) => (
+                  <Link
+                    key={index}
+                    to={item.to}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--border)] group-hover:bg-[var(--primary-cyan)] transition-colors"></div>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
@@ -156,16 +190,22 @@ export const ModernSidebar = ({
   userName = "John Doe",
   userRole = "Admin",
   userAvatar = null,
+  userImage = null,
+  profileLink = "/profile",
+  changePasswordLink = "/change-password",
   onLogout,
   isMobileOpen = false,
   onMobileClose
 }) => {
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   const sidebarClasses = `
     h-screen flex flex-col
-    fixed lg:static top-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out
+    fixed lg:static top-0 left-0 z-40 transition-all duration-300 ease-in-out
+    ${collapsed ? 'w-20' : 'w-72'}
     ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
   `;
 
@@ -173,40 +213,60 @@ export const ModernSidebar = ({
     <>
       {/* Mobile overlay */}
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden" 
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
           onClick={onMobileClose}
         />
       )}
 
-      <aside 
+      <aside
         className={sidebarClasses}
         style={{
-          backgroundColor: 'var(--background-dark)',
+          backgroundColor: 'var(--sidebar-background)',
           borderRight: '1px solid var(--border)',
         }}
       >
         {/* Logo Section */}
-        <div 
-          className="flex items-center gap-3 p-6"
+        <div
+          className={`flex items-center gap-3 ${collapsed ? 'justify-center p-4' : 'p-8'} relative`}
           style={{ borderBottom: '1px solid var(--border)' }}
         >
-          <div 
-            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg"
-            style={{
-              background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--bright-cyan) 100%)',
-              color: 'var(--background-dark)'
-            }}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 bg-[var(--primary-cyan)] blur-md opacity-20 rounded-xl"></div>
+            <div
+              className={`relative rounded-xl flex items-center justify-center font-bold text-lg shadow-lg ${collapsed ? 'w-10 h-10' : 'w-10 h-10'}`}
+              style={{
+                background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--bright-cyan) 100%)',
+                color: 'black'
+              }}
+            >
+              L
+            </div>
+          </div>
+
+          {!collapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col whitespace-nowrap overflow-hidden"
+            >
+              <span className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Link Management</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Workspace</span>
+            </motion.div>
+          )}
+
+          {/* Collapse Toggle Button (Desktop Only) */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[var(--card-background)] border border-[var(--border)] rounded-full items-center justify-center text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] hover:border-[var(--primary-cyan)] transition-all z-50"
           >
-            L
-          </div>
-          <div className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            LINKS
-          </div>
+            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
         </div>
 
         {/* Navigation Section */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar overflow-x-hidden">
           <nav className="space-y-1">
             {navItems.map((item, index) => (
               <NavItem
@@ -217,103 +277,129 @@ export const ModernSidebar = ({
                 active={item.active}
                 hasDropdown={item.hasDropdown}
                 dropdownItems={item.dropdownItems}
+                collapsed={collapsed}
+                onClick={collapsed && item.hasDropdown ? () => setCollapsed(false) : undefined} // Auto-expand on click if has dropdown
               />
             ))}
           </nav>
         </div>
 
         {/* Profile Section at Bottom */}
-        <div 
+        <div
           className="p-4"
           style={{ borderTop: '1px solid var(--border)' }}
         >
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--card-background)] transition-all duration-200"
+              className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-[var(--border)] ${collapsed ? 'justify-center' : ''}`}
             >
               {/* Avatar */}
-              <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm"
-                style={{
-                  background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--bright-cyan) 100%)',
-                  color: 'var(--background-dark)'
-                }}
-              >
-                {userAvatar || userName.split(' ').map(n => n[0]).join('')}
-              </div>
+              {userImage ? (
+                <img
+                  src={userImage}
+                  alt={userName}
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-[var(--border)] shrink-0"
+                />
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-[var(--border)] shadow-inner shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--bright-cyan) 100%)',
+                    color: 'black'
+                  }}
+                >
+                  {userAvatar || userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                </div>
+              )}
 
               {/* User Info */}
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {userName}
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {userRole}
-                </div>
-              </div>
+              {!collapsed && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="flex-1 text-left overflow-hidden"
+                >
+                  <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    {userName}
+                  </div>
+                  <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    {userRole}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Dropdown Arrow */}
-              <motion.div
-                animate={{ rotate: showProfileMenu ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
-              </motion.div>
+              {!collapsed && (
+                <motion.div
+                  animate={{ rotate: showProfileMenu ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
+                </motion.div>
+              )}
             </button>
 
             {/* Profile Dropdown Menu */}
             <AnimatePresence>
               {showProfileMenu && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute bottom-full left-0 right-0 mb-2 card p-2 shadow-xl"
-                  style={{
-                    backgroundColor: 'var(--card-background)',
-                    border: '1px solid var(--border)',
-                  }}
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className={`absolute bottom-full left-0 mb-3 glass-panel p-2 z-50 overflow-hidden ${collapsed ? 'w-56 left-full ml-2' : 'left-0 right-0'}`}
                 >
+                  {/* Appearance Toggle */}
+                  <button
+                    onClick={toggleTheme}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all duration-200"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isDark ? <Moon size={16} /> : <Sun size={16} />}
+                      <span className="text-sm font-medium">Appearance</span>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded bg-[var(--background-dark)] border border-[var(--border)]">
+                      {isDark ? 'Dark' : 'Light'}
+                    </span>
+                  </button>
+
+                  <div className="my-1.5 h-px bg-[var(--border)]" />
+
                   <Link
-                    to="/profile"
-                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[var(--background-dark)] transition-all duration-200"
+                    to={profileLink}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all duration-200"
                     style={{ color: 'var(--text-secondary)' }}
                     onClick={() => setShowProfileMenu(false)}
                   >
                     <User size={16} />
-                    <span className="text-sm">Profile</span>
+                    <span className="text-sm font-medium">Profile</span>
                   </Link>
-                  
+
                   <Link
-                    to="/settings"
-                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[var(--background-dark)] transition-all duration-200"
+                    to={changePasswordLink}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-all duration-200"
                     style={{ color: 'var(--text-secondary)' }}
                     onClick={() => setShowProfileMenu(false)}
                   >
-                    <Settings size={16} />
-                    <span className="text-sm">Settings</span>
+                    <Key size={16} />
+                    <span className="text-sm font-medium">Change Password</span>
                   </Link>
 
-                  <div 
-                    className="my-1"
-                    style={{
-                      height: '1px',
-                      backgroundColor: 'var(--border)',
-                    }}
-                  />
+                  <div className="my-1.5 h-px bg-[var(--border)]" />
 
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
                       if (onLogout) onLogout();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-[var(--error)] hover:text-white"
                     style={{ color: 'var(--error)' }}
                   >
                     <LogOut size={16} />
-                    <span className="text-sm">Logout</span>
+                    <span className="text-sm font-medium">Logout</span>
                   </button>
                 </motion.div>
               )}

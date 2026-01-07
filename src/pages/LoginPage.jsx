@@ -47,22 +47,28 @@ export function LoginPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FF8C42]/5 blur-[120px] rounded-full"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-[520px]">
 
         {/* Brand Header */}
-        <div className="text-center mb-10">
-          <a href="/" className="inline-flex items-center gap-3 mb-6 group">
-            <div className="w-10 h-10 rotate-45 bg-[#FF8C42] rounded-[8px] flex items-center justify-center shadow-[0_0_20px_rgba(255,140,66,0.3)] group-hover:rotate-90 transition-transform duration-500">
-              <div className="w-3 h-3 bg-white rounded-full"></div>
+        {/* Brand Header */}
+        <div className="text-center mb-12">
+          <a href="/" className="inline-flex items-center gap-4 mb-8 group">
+            <div className="w-14 h-14 relative overflow-hidden rounded-xl bg-white/5 flex items-center justify-center p-1 border border-white/10 shadow-[0_0_20px_rgba(255,140,66,0.2)]">
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-[250%] max-w-none absolute left-0 top-1/2 -translate-y-1/2 object-cover"
+                style={{ objectPosition: 'left center' }}
+              />
             </div>
-            <span className="font-semibold text-2xl tracking-tight text-white">LinkMag</span>
+            <span className="font-bold text-3xl tracking-tight text-white">Link Management</span>
           </a>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome Back</h1>
-          <p className="text-[#888]">Sign in to access your dashboard</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-3">Welcome Back</h1>
+          <p className="text-[#888] text-lg">Sign in to access your dashboard</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-sm relative overflow-hidden">
+        <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl p-6 md:p-12 shadow-2xl backdrop-blur-sm relative overflow-hidden min-h-[500px]">
 
           {/* Top Border Gradient */}
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF8C42]/50 to-transparent"></div>

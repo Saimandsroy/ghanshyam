@@ -5,7 +5,13 @@ import { teamAPI } from '../../../lib/api';
 export function KPICards() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [tasks, setTasks] = useState([]);
+  const [stats, setStats] = useState({
+    pending_tasks: 0,
+    completed_tasks: 0,
+    rejected_tasks: 0,
+    total_tasks: 0,
+    available_websites: 0
+  });
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -13,8 +19,14 @@ export function KPICards() {
       setLoading(true);
       setError(null);
 
-      const { tasks: fetchedTasks } = await teamAPI.getTasks();
-      setTasks(fetchedTasks || []);
+      const response = await teamAPI.getDashboard();
+      setStats(response.stats || {
+        pending_tasks: 0,
+        completed_tasks: 0,
+        rejected_tasks: 0,
+        total_tasks: 0,
+        available_websites: 0
+      });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
@@ -27,61 +39,43 @@ export function KPICards() {
     fetchDashboardData();
   }, []);
 
-  // Calculate metrics from tasks
-  const completedOrders = tasks.filter(t =>
-    t.current_status === 'COMPLETED' || t.current_status === 'CREDITED'
-  ).length;
-
-  const pendingOrders = tasks.filter(t =>
-    t.current_status === 'DRAFT' ||
-    t.current_status === 'PENDING_MANAGER_APPROVAL_1'
-  ).length;
-
-  const rejectedOrders = tasks.filter(t =>
-    t.current_status === 'REJECTED'
-  ).length;
-
   const metrics = [
     {
       title: 'Completed Orders',
-      value: String(completedOrders),
-      change: `${tasks.length} total`,
+      value: String(stats.completed_tasks),
+      change: `${stats.total_tasks} total`,
       icon: <CheckCircle className="text-success" size={24} />,
       color: 'from-success/20 to-transparent',
       textColor: 'text-success'
     },
     {
-      title: 'Pending Tasks',
-      value: String(pendingOrders),
-      change: 'Awaiting approval',
+      title: 'Order Added Notifications',
+      value: String(stats.pending_tasks),
+      change: 'Awaiting action',
       icon: <Bell className="text-primary" size={24} />,
       color: 'from-primary/20 to-transparent',
       textColor: 'text-primary'
     },
     {
-      title: 'Rejected',
-      value: String(rejectedOrders),
+      title: 'Rejected Links',
+      value: String(stats.rejected_tasks),
       change: 'Needs review',
       icon: <AlertTriangle className="text-error" size={24} />,
       color: 'from-error/20 to-transparent',
       textColor: 'text-error'
     },
     {
-      title: 'Total Tasks',
-      value: String(tasks.length),
-      change: 'All time',
+      title: 'New Sites',
+      value: String(stats.available_websites),
+      change: 'In inventory',
       icon: <Globe className="text-warning" size={24} />,
       color: 'from-warning/20 to-transparent',
       textColor: 'text-warning'
     },
     {
-      title: 'In Progress',
-      value: String(tasks.filter(t =>
-        t.current_status === 'ASSIGNED_TO_WRITER' ||
-        t.current_status === 'WRITING_IN_PROGRESS' ||
-        t.current_status === 'ASSIGNED_TO_BLOGGER'
-      ).length),
-      change: 'Active now',
+      title: 'Threads',
+      value: 'View',
+      change: 'Inbox',
       icon: <MessageSquare className="text-primary" size={24} />,
       color: 'from-primary/20 to-transparent',
       textColor: 'text-primary'
@@ -136,7 +130,7 @@ export function KPICards() {
           </div>
           <div className="mt-4 h-2 bg-border rounded-full overflow-hidden">
             <div className={`h-full ${metric.textColor} bg-current`} style={{
-              width: `${tasks.length > 0 ? (parseInt(metric.value) / tasks.length * 100) : 0}%`
+              width: `${(parseInt(metric.value) / (stats.total_tasks || 1)) * 100}%`
             }}></div>
           </div>
         </div>

@@ -10,9 +10,9 @@ export function PriceCharts() {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({ q: '' });
   const [form, setForm] = useState({
-    rd_min: '', rd_max: '', traffic_min: '', traffic_max: '',
-    dr_min: '', dr_max: '', da_min: '', da_max: '',
-    niche_price_min: '', niche_price_max: '', gp_price_min: '', gp_price_max: ''
+    rd_start_range: '', rd_end_range: '', traffic_start_range: '', traffic_end_range: '',
+    dr_start_range: '', dr_end_range: '', da_start_range: '', da_end_range: '',
+    niche_start_range: '', niche_end_range: '', gp_start_range: '', gp_end_range: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -48,7 +48,7 @@ export function PriceCharts() {
   // Handle form submission
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!form.rd_min || !form.traffic_min) {
+    if (!form.rd_start_range || !form.traffic_start_range) {
       showError('RD and Traffic ranges are required');
       return;
     }
@@ -56,25 +56,25 @@ export function PriceCharts() {
     try {
       setSubmitting(true);
       await adminAPI.createPriceChart({
-        rd_min: parseInt(form.rd_min) || 0,
-        rd_max: parseInt(form.rd_max) || 0,
-        traffic_min: parseInt(form.traffic_min) || 0,
-        traffic_max: parseInt(form.traffic_max) || 0,
-        dr_min: parseInt(form.dr_min) || 0,
-        dr_max: parseInt(form.dr_max) || 0,
-        da_min: parseInt(form.da_min) || 0,
-        da_max: parseInt(form.da_max) || 0,
-        niche_price_min: parseFloat(form.niche_price_min) || 0,
-        niche_price_max: parseFloat(form.niche_price_max) || 0,
-        gp_price_min: parseFloat(form.gp_price_min) || 0,
-        gp_price_max: parseFloat(form.gp_price_max) || 0
+        rd_start_range: parseInt(form.rd_start_range) || 0,
+        rd_end_range: parseInt(form.rd_end_range) || 0,
+        traffic_start_range: parseInt(form.traffic_start_range) || 0,
+        traffic_end_range: parseInt(form.traffic_end_range) || 0,
+        dr_start_range: parseInt(form.dr_start_range) || 0,
+        dr_end_range: parseInt(form.dr_end_range) || 0,
+        da_start_range: parseInt(form.da_start_range) || 0,
+        da_end_range: parseInt(form.da_end_range) || 0,
+        niche_start_range: parseFloat(form.niche_start_range) || 0,
+        niche_end_range: parseFloat(form.niche_end_range) || 0,
+        gp_start_range: parseFloat(form.gp_start_range) || 0,
+        gp_end_range: parseFloat(form.gp_end_range) || 0
       });
 
       showSuccess('Price chart entry added successfully!');
       setForm({
-        rd_min: '', rd_max: '', traffic_min: '', traffic_max: '',
-        dr_min: '', dr_max: '', da_min: '', da_max: '',
-        niche_price_min: '', niche_price_max: '', gp_price_min: '', gp_price_max: ''
+        rd_start_range: '', rd_end_range: '', traffic_start_range: '', traffic_end_range: '',
+        dr_start_range: '', dr_end_range: '', da_start_range: '', da_end_range: '',
+        niche_start_range: '', niche_end_range: '', gp_start_range: '', gp_end_range: ''
       });
       fetchPriceCharts();
     } catch (err) {
@@ -126,9 +126,8 @@ export function PriceCharts() {
       {error && (
         <div className="rounded-2xl p-4 flex items-center justify-between" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
           <p className="text-red-400">{error}</p>
-          <button onClick={fetchPriceCharts} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
-            <RefreshCw className="h-4 w-4" /> Retry
+          <button onClick={fetchPriceCharts} className="premium-btn premium-btn-accent py-2 px-4 text-xs">
+            <RefreshCw className="h-3 w-3" /> Retry
           </button>
         </div>
       )}
@@ -174,12 +173,12 @@ export function PriceCharts() {
             <tbody>
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.rd_min, r.rd_max)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.traffic_min, r.traffic_max)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.dr_min, r.dr_max)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.da_min, r.da_max)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--success)' }}>${formatRange(r.niche_price_min, r.niche_price_max)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--success)' }}>${formatRange(r.gp_price_min, r.gp_price_max)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.rd_start_range, r.rd_end_range)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.traffic_start_range, r.traffic_end_range)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.dr_start_range, r.dr_end_range)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.da_start_range, r.da_end_range)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.niche_start_range, r.niche_end_range)}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{formatRange(r.gp_start_range, r.gp_end_range)}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleDelete(r.id)}
@@ -209,26 +208,25 @@ export function PriceCharts() {
         </h3>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <input value={form.rd_min} onChange={e => setForm({ ...form, rd_min: e.target.value })} placeholder="RD Min *" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.rd_max} onChange={e => setForm({ ...form, rd_max: e.target.value })} placeholder="RD Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.traffic_min} onChange={e => setForm({ ...form, traffic_min: e.target.value })} placeholder="Traffic Min *" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.traffic_max} onChange={e => setForm({ ...form, traffic_max: e.target.value })} placeholder="Traffic Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.dr_min} onChange={e => setForm({ ...form, dr_min: e.target.value })} placeholder="DR Min" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.dr_max} onChange={e => setForm({ ...form, dr_max: e.target.value })} placeholder="DR Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+            <input value={form.rd_start_range} onChange={e => setForm({ ...form, rd_start_range: e.target.value })} placeholder="RD Min *" className="premium-input" />
+            <input value={form.rd_end_range} onChange={e => setForm({ ...form, rd_end_range: e.target.value })} placeholder="RD Max" className="premium-input" />
+            <input value={form.traffic_start_range} onChange={e => setForm({ ...form, traffic_start_range: e.target.value })} placeholder="Traffic Min *" className="premium-input" />
+            <input value={form.traffic_end_range} onChange={e => setForm({ ...form, traffic_end_range: e.target.value })} placeholder="Traffic Max" className="premium-input" />
+            <input value={form.dr_start_range} onChange={e => setForm({ ...form, dr_start_range: e.target.value })} placeholder="DR Min" className="premium-input" />
+            <input value={form.dr_end_range} onChange={e => setForm({ ...form, dr_end_range: e.target.value })} placeholder="DR Max" className="premium-input" />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <input value={form.da_min} onChange={e => setForm({ ...form, da_min: e.target.value })} placeholder="DA Min" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.da_max} onChange={e => setForm({ ...form, da_max: e.target.value })} placeholder="DA Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.niche_price_min} onChange={e => setForm({ ...form, niche_price_min: e.target.value })} placeholder="Niche $ Min" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.niche_price_max} onChange={e => setForm({ ...form, niche_price_max: e.target.value })} placeholder="Niche $ Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.gp_price_min} onChange={e => setForm({ ...form, gp_price_min: e.target.value })} placeholder="GP $ Min" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <input value={form.gp_price_max} onChange={e => setForm({ ...form, gp_price_max: e.target.value })} placeholder="GP $ Max" className="rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+            <input value={form.da_start_range} onChange={e => setForm({ ...form, da_start_range: e.target.value })} placeholder="DA Min" className="premium-input" />
+            <input value={form.da_end_range} onChange={e => setForm({ ...form, da_end_range: e.target.value })} placeholder="DA Max" className="premium-input" />
+            <input value={form.niche_start_range} onChange={e => setForm({ ...form, niche_start_range: e.target.value })} placeholder="Niche $ Min" className="premium-input" />
+            <input value={form.niche_end_range} onChange={e => setForm({ ...form, niche_end_range: e.target.value })} placeholder="Niche $ Max" className="premium-input" />
+            <input value={form.gp_start_range} onChange={e => setForm({ ...form, gp_start_range: e.target.value })} placeholder="GP $ Min" className="premium-input" />
+            <input value={form.gp_end_range} onChange={e => setForm({ ...form, gp_end_range: e.target.value })} placeholder="GP $ Max" className="premium-input" />
           </div>
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-2 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--primary-cyan) 0%, var(--bright-cyan) 100%)', color: 'var(--icon-on-gradient)' }}
+            className="premium-btn premium-btn-accent w-full justify-center"
           >
             {submitting ? (
               <>

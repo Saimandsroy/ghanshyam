@@ -44,17 +44,19 @@ export function PendingBloggers() {
     // navigate(`/manager/pending/bloggers/${detailId}`);
   };
 
-  // Handle rejection (placeholder)
+  // Handle rejection
   const handleReject = async (detailId) => {
     const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
+    if (!reason || !reason.trim()) return;
 
     try {
       setProcessing(detailId);
-      // TODO: Add reject endpoint
-      showError('Rejection functionality not yet implemented');
+      await managerAPI.rejectBloggerSubmission(detailId, reason.trim());
+      showSuccess('Blogger submission rejected successfully');
+      // Refresh the list to remove the rejected item
+      fetchApprovals();
     } catch (err) {
-      showError('Failed to reject: ' + err.message);
+      showError('Failed to reject: ' + (err.message || 'Unknown error'));
     } finally {
       setProcessing(null);
     }

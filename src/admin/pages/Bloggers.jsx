@@ -1,66 +1,155 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Users, Plus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { RefreshCw, Users, Lock, BarChart2, SlidersHorizontal, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../components/Pagination.jsx';
 import { adminAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 
 export function Bloggers() {
+  const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({ q: '' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
 
-  // Fetch users from API
-  const fetchUsers = useCallback(async () => {
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    name: '',
+    email: '',
+    walletMin: '',
+    walletMax: ''
+  });
+
+  // Debounce timer ref
+  const debounceTimer = useRef(null);
+
+  // Fetch users from API with pagination
+  const fetchUsers = useCallback(async (currentPage = page, currentPageSize = pageSize, currentFilters = filters) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await adminAPI.getUsers();
-      // Filter for Blogger role only
-      const bloggers = (response.users || []).filter(u => u.role === 'Blogger');
-      setUsers(bloggers);
+
+      // Build params for server-side pagination
+      const params = {
+        page: currentPage,
+        limit: currentPageSize,
+      };
+
+      // Add filters if they have values
+      if (currentFilters.name) params.name = currentFilters.name;
+      if (currentFilters.email) params.email = currentFilters.email;
+      if (currentFilters.walletMin) params.walletMin = currentFilters.walletMin;
+      if (currentFilters.walletMax) params.walletMax = currentFilters.walletMax;
+
+      const response = await adminAPI.getBloggerStats(params);
+      setUsers(response.users || []);
+      setTotal(response.pagination?.total || 0);
     } catch (err) {
       console.error('Error fetching bloggers:', err);
       setError(err.message || 'Failed to load bloggers');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, filters]);
 
+  // Initial fetch
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchUsers(page, pageSize, filters);
+  }, [page, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Filter users
-  const rows = useMemo(() => {
-    const q = filters.q.toLowerCase();
-    let r = users;
-    if (q) {
-      r = r.filter(b =>
-        (b.name || '').toLowerCase().includes(q) ||
-        (b.email || '').toLowerCase().includes(q)
-      );
+  // Debounced filter fetch
+  useEffect(() => {
+    // Clear previous timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
-    return r;
-  }, [users, filters]);
 
-  const total = rows.length;
-  const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
+    // Set new timer for filter changes
+    debounceTimer.current = setTimeout(() => {
+      setPage(1); // Reset to first page when filters change
+      fetchUsers(1, pageSize, filters);
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle Reset Password
+  const handleResetPassword = async (userId, name) => {
+    if (window.confirm(`Are you sure you want to reset password for ${name} to '12345678'?`)) {
+      try {
+        await adminAPI.resetUserPassword(userId);
+        showSuccess('Password reset successfully');
+      } catch (err) {
+        showError(err.message || 'Failed to reset password');
+      }
+    }
+  };
+
+  // Navigate to Performance
+  const handlePerformance = (userId) => {
+    navigate(`/admin/bloggers/${userId}/performance`);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({ name: '', email: '', walletMin: '', walletMax: '' });
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = filters.name || filters.email || filters.walletMin || filters.walletMax;
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setPage(1);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Users className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
-          Bloggers
+          Bloggers List
         </h2>
         <div className="flex items-center gap-3">
+          {/* Animated Filter Button */}
           <button
-            onClick={fetchUsers}
+            onClick={() => setShowFilters(!showFilters)}
+            className={`relative p-2.5 rounded-xl transition-all duration-300 group ${showFilters
+              ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 shadow-lg shadow-cyan-500/20'
+              : 'hover:bg-white/10'
+              }`}
+            title="Toggle Filters"
+            style={{ border: showFilters ? '1px solid rgba(107, 240, 255, 0.3)' : '1px solid transparent' }}
+          >
+            <SlidersHorizontal
+              className={`h-5 w-5 transition-all duration-300 ${showFilters
+                ? 'rotate-180 text-cyan-400'
+                : 'group-hover:rotate-45 group-hover:scale-110'
+                }`}
+              style={{ color: showFilters ? 'var(--primary-cyan)' : 'var(--text-muted)' }}
+            />
+            {hasActiveFilters && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+            )}
+          </button>
+
+          <button
+            onClick={() => fetchUsers(page, pageSize, filters)}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
             title="Refresh"
@@ -70,31 +159,157 @@ export function Bloggers() {
         </div>
       </div>
 
+      {/* Collapsible Filters Panel */}
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+      >
+        <div
+          className="card p-5 rounded-2xl animate-in slide-in-from-top-4 duration-300"
+          style={{
+            backgroundColor: 'var(--card-background)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+              <SlidersHorizontal size={16} style={{ color: 'var(--primary-cyan)' }} />
+              Filters
+            </h3>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.2)'
+                }}
+              >
+                <X size={12} />
+                Clear All
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Name Filter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Name</label>
+              <input
+                type="text"
+                value={filters.name}
+                onChange={e => setFilters(f => ({ ...f, name: e.target.value }))}
+                placeholder="Search by name..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30"
+                style={{
+                  backgroundColor: 'var(--background-dark)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+
+            {/* Email Filter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Email</label>
+              <input
+                type="text"
+                value={filters.email}
+                onChange={e => setFilters(f => ({ ...f, email: e.target.value }))}
+                placeholder="Search by email..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30"
+                style={{
+                  backgroundColor: 'var(--background-dark)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+
+            {/* Wallet Min Filter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Wallet Min</label>
+              <input
+                type="number"
+                value={filters.walletMin}
+                onChange={e => setFilters(f => ({ ...f, walletMin: e.target.value }))}
+                placeholder="Min balance..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30"
+                style={{
+                  backgroundColor: 'var(--background-dark)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+
+            {/* Wallet Max Filter */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Wallet Max</label>
+              <input
+                type="number"
+                value={filters.walletMax}
+                onChange={e => setFilters(f => ({ ...f, walletMax: e.target.value }))}
+                placeholder="Max balance..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30"
+                style={{
+                  backgroundColor: 'var(--background-dark)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Active filters summary */}
+          {hasActiveFilters && (
+            <div className="mt-4 pt-3 border-t flex items-center gap-2 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Active:</span>
+              {filters.name && (
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: 'var(--primary-cyan)' }}>
+                  Name: {filters.name}
+                </span>
+              )}
+              {filters.email && (
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: 'var(--primary-cyan)' }}>
+                  Email: {filters.email}
+                </span>
+              )}
+              {filters.walletMin && (
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#4ade80' }}>
+                  Min: {filters.walletMin}
+                </span>
+              )}
+              {filters.walletMax && (
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }}>
+                  Max: {filters.walletMax}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Error State */}
       {error && (
         <div className="rounded-2xl p-4 flex items-center justify-between" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
           <p className="text-red-400">{error}</p>
-          <button onClick={fetchUsers} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+          <button onClick={() => fetchUsers(page, pageSize, filters)} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
             style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
             <RefreshCw className="h-4 w-4" /> Retry
           </button>
         </div>
       )}
 
-      {/* Search Filter */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div className="flex-1 min-w-[220px]">
-          <label className="text-sm block mb-1" style={{ color: 'var(--text-secondary)' }}>Search</label>
-          <input
-            value={filters.q}
-            onChange={e => { setFilters({ q: e.target.value }); setPage(1); }}
-            placeholder="Search name or email"
-            className="rounded-xl px-3 py-2 w-full"
-            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          />
-        </div>
+      {/* Results Count Bar */}
+      <div className="flex items-center justify-between px-1">
         <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {total} blogger(s)
+          Showing <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{users.length}</span> of <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{total.toLocaleString()}</span> bloggers
+          {hasActiveFilters && (
+            <span style={{ color: 'var(--primary-cyan)' }}> (filtered)</span>
+          )}
         </div>
       </div>
 
@@ -109,44 +324,81 @@ export function Bloggers() {
       {/* Table */}
       {!loading && (
         <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-              <tr>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Name</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Email</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Account Status</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.map((b) => (
-                <tr key={b.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{b.name || 'N/A'}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{b.email}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="px-2 py-1 rounded text-xs"
-                      style={{
-                        backgroundColor: 'var(--background-dark)',
-                        border: '1px solid var(--border)',
-                        color: b.is_active ? 'var(--success)' : 'var(--error)'
-                      }}
-                    >
-                      {b.is_active ? 'Active' : 'Blocked'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>
-                    {b.created_at ? new Date(b.created_at).toLocaleDateString() : 'N/A'}
-                  </td>
-                </tr>
-              ))}
-              {pageData.length === 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead style={{ backgroundColor: 'var(--background-dark)' }}>
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No bloggers found</td>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Account Status</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Orders</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Pending Orders</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Completed Orders</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Wallet</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Last Login</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Login Counts</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody style={{ backgroundColor: 'var(--card-background)' }}>
+                {users.map((b) => (
+                  <tr key={b.id} className="hover:bg-white/5 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{b.name || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--text-secondary)' }}>{b.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className="px-2 py-1 rounded-full text-xs font-medium"
+                        style={{
+                          backgroundColor: b.is_active ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          color: b.is_active ? 'var(--success)' : 'var(--error)',
+                          border: `1px solid ${b.is_active ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                        }}
+                      >
+                        {b.is_active ? 'Active' : 'Blocked'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ color: 'var(--text-primary)' }}>{b.total_orders || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium decoration-slice underline decoration-wavy decoration-red-500/50" style={{ color: 'var(--text-primary)' }}>{b.pending_orders || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium decoration-slice underline decoration-wavy decoration-green-500/50" style={{ color: 'var(--text-primary)' }}>{b.completed_orders || 0}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium" style={{ color: 'var(--success)' }}>
+                      {(b.wallet_balance || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--text-muted)' }}>
+                      {b.last_login ? new Date(b.last_login).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right" style={{ color: 'var(--text-primary)' }}>
+                      {b.login_count || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleResetPassword(b.id, b.name)}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
+                          title="Reset Password (12345678)"
+                        >
+                          <Lock className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
+                        </button>
+                        <button
+                          onClick={() => handlePerformance(b.id)}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
+                          title="View Performance"
+                        >
+                          <BarChart2 className="h-4 w-4 text-cyan-400 group-hover:text-cyan-300" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-12 text-center" style={{ color: 'var(--text-muted)' }}>
+                      No bloggers found matching your filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -156,9 +408,9 @@ export function Bloggers() {
           page={page}
           pageSize={pageSize}
           total={total}
-          pageSizeOptions={[20, 50]}
-          onPageChange={(p) => setPage(p)}
-          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          pageSizeOptions={[20, 50, 100]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
       )}
     </div>

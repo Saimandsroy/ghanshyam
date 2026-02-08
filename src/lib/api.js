@@ -51,7 +51,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds
+  timeout: 30000, // 30 seconds for slow queries
   withCredentials: true, // Enable CORS credentials
 });
 
@@ -149,6 +149,15 @@ export const authAPI = {
     const response = await api.post('/auth/logout');
     return response.data;
   },
+
+  /**
+   * Change user password
+   * @param {Object} data { old_password, new_password, confirm_password }
+   */
+  changePassword: async (data) => {
+    const response = await api.put('/auth/change-password', data);
+    return response.data;
+  },
 };
 
 // ==================== Admin APIs ====================
@@ -157,6 +166,19 @@ export const adminAPI = {
   // Users
   getUsers: async (filters = {}) => {
     const response = await api.get('/admin/users', { params: filters });
+    return response.data;
+  },
+  getBloggerStats: async (params = {}) => {
+    const response = await api.get('/admin/bloggers-stats', { params });
+    return response.data;
+  },
+  getBloggerPerformance: async (id) => {
+    const response = await api.get(`/admin/bloggers/${id}/performance`);
+    return response.data;
+  },
+
+  resetUserPassword: async (id) => {
+    const response = await api.put(`/admin/users/${id}/reset-password`);
     return response.data;
   },
 
@@ -202,6 +224,35 @@ export const adminAPI = {
     const response = await api.post('/admin/websites/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return response.data;
+  },
+
+  // Bulk Upload Sites (Format 2)
+  uploadSitesExcel: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/admin/sites/upload-excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  previewSitesExcel: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/admin/sites/upload-excel-preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  confirmSitesExcel: async (sites) => {
+    const response = await api.post('/admin/sites/upload-excel-confirm', { sites });
+    return response.data;
+  },
+
+  downloadSiteFormat: async () => {
+    const response = await api.get('/admin/sites/download-format', { responseType: 'blob' });
     return response.data;
   },
 
@@ -270,6 +321,44 @@ export const adminAPI = {
     return response.data;
   },
 
+  getInvoiceDetail: async (id) => {
+    const response = await api.get(`/admin/wallet/invoices/${id}`);
+    return response.data;
+  },
+
+  downloadInvoicePdf: async (id) => {
+    const response = await api.get(`/admin/wallet/invoices/${id}/pdf`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  // Link Completed (Link Inspection)
+  getCompletedLinks: async (params = {}) => {
+    const response = await api.get('/admin/sites/link-completed', { params });
+    return response.data;
+  },
+
+  checkLinkStatus: async (data) => {
+    const response = await api.post('/admin/sites/check-link-status', data);
+    return response.data;
+  },
+
+  startBulkCheck: async () => {
+    const response = await api.post('/admin/sites/bulk-check');
+    return response.data;
+  },
+
+  getBulkCheckStatus: async () => {
+    const response = await api.get('/admin/sites/bulk-check-status');
+    return response.data;
+  },
+
+  stopBulkCheck: async () => {
+    const response = await api.post('/admin/sites/stop-bulk-check');
+    return response.data;
+  },
+
   // Orders (admin orders endpoint)
   getOrders: async (filters = {}) => {
     const response = await api.get('/admin/orders', { params: filters });
@@ -283,6 +372,27 @@ export const adminAPI = {
 
   getOrderDetails: async (orderId) => {
     const response = await api.get(`/admin/orders/${orderId}/details`);
+    return response.data;
+  },
+
+  // User Password & Permissions
+  resetUserPassword: async (userId) => {
+    const response = await api.put(`/admin/users/${userId}/reset-password`);
+    return response.data;
+  },
+
+  changeUserPassword: async (userId, password) => {
+    const response = await api.put(`/admin/users/${userId}/change-password`, { password });
+    return response.data;
+  },
+
+  getUserPermissions: async (userId) => {
+    const response = await api.get(`/admin/users/${userId}/permissions`);
+    return response.data;
+  },
+
+  updateUserPermissions: async (userId, permissions) => {
+    const response = await api.put(`/admin/users/${userId}/permissions`, { permissions });
     return response.data;
   },
 };
@@ -327,8 +437,7 @@ export const managerAPI = {
 
   // Get websites/sites for manager view (with pagination)
   getWebsites: async (params = {}) => {
-    const { page = 1, limit = 50 } = params;
-    const response = await api.get(`/manager/websites?page=${page}&limit=${limit}`);
+    const response = await api.get('/manager/websites', { params });
     return response.data;
   },
 
@@ -436,6 +545,15 @@ export const managerAPI = {
     return response.data;
   },
 
+  // Reject writer submission with website-level rejection
+  rejectWriterSubmission: async (taskId, rejectionReason, rejectedWebsites) => {
+    const response = await api.patch(`/manager/tasks/${taskId}/reject-writer`, {
+      rejection_reason: rejectionReason,
+      rejected_websites: rejectedWebsites
+    });
+    return response.data;
+  },
+
   getRejectedOrders: async (page = 1, limit = 20) => {
     const response = await api.get('/manager/rejected-orders', { params: { page, limit } });
     return response.data;
@@ -473,6 +591,18 @@ export const managerAPI = {
   rejectBloggerSubmission: async (detailId, reason) => {
     const response = await api.post(`/manager/blogger-submissions/${detailId}/reject`, {
       rejection_reason: reason
+    });
+    return response.data;
+  },
+
+  // SUPER WORKFLOW: Create order with direct push to Writer/Blogger (bypass steps)
+  createOrderChain: async (orderData, targetStage, websites = [], contentData = null, writerId = null) => {
+    const response = await api.post('/manager/orders/create/chain', {
+      ...orderData,
+      target_stage: targetStage, // 'team' | 'writer' | 'blogger'
+      websites,
+      content_data: contentData,
+      assigned_writer_id: writerId
     });
     return response.data;
   },
@@ -600,6 +730,32 @@ export const teamAPI = {
     const response = await api.post(`/team/threads/${threadId}/messages`, { message });
     return response.data;
   },
+
+  // ==================== PERMISSIONS ====================
+  getMyPermissions: async () => {
+    const response = await api.get('/team/permissions');
+    return response.data;
+  },
+
+  // ==================== PROFILE ====================
+  getProfile: async () => {
+    const response = await api.get('/team/profile');
+    return response.data;
+  },
+
+  updateProfile: async (data) => {
+    const response = await api.put('/team/profile', data);
+    return response.data;
+  },
+
+  uploadProfileImage: async (file) => {
+    const formData = new FormData();
+    formData.append('profile_image', file);
+    const response = await api.post('/team/profile/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
 };
 
 // ==================== Writer APIs ====================
@@ -693,6 +849,18 @@ export const bloggerAPI = {
   getInvoices: async (params = {}) => {
     const { page = 1, limit = 50 } = params;
     const response = await api.get(`/blogger/invoices?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+
+  getInvoiceDetail: async (invoiceId) => {
+    const response = await api.get(`/blogger/invoices/${invoiceId}`);
+    return response.data;
+  },
+
+  downloadInvoicePdf: async (invoiceId) => {
+    const response = await api.get(`/blogger/invoices/${invoiceId}/pdf`, {
+      responseType: 'blob'
+    });
     return response.data;
   },
 

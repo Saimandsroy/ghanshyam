@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Package, Clock, AlertTriangle, MessageSquare, Globe } from 'lucide-react';
+import { Home, Package, Clock, AlertTriangle, MessageSquare, Globe, User } from 'lucide-react';
 import { ModernSidebar } from '../../../components/ModernSidebar';
 export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
   const location = useLocation();
@@ -57,6 +57,12 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       label: 'Sites',
       to: '/manager/sites',
       active: location.pathname === '/manager/sites'
+    },
+    {
+      icon: <User size={18} />,
+      label: 'Profile',
+      to: '/manager/profile',
+      active: location.pathname === '/manager/profile'
     }
   ];
 
@@ -74,6 +80,7 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       onLogout={handleLogout}
       isMobileOpen={isMobileOpen}
       onMobileClose={onMobileClose}
+      profileLink="/manager/profile"
     />
   );
 };

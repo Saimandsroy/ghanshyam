@@ -193,7 +193,7 @@ export function PendingBulk() {
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table className="w-full">
                             <thead>
                                 <tr style={{ backgroundColor: 'var(--background, #0f0f1a)' }}>
                                     <th style={{ padding: '14px 20px', textAlign: 'left', color: 'var(--text-secondary, #aaa)', fontSize: '12px', textTransform: 'uppercase' }}>
@@ -321,7 +321,7 @@ export function PendingBulk() {
                     </div>
 
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table className="w-full">
                             <thead>
                                 <tr style={{ backgroundColor: 'rgba(34,197,94,0.1)' }}>
                                     <th style={{ padding: '12px 20px', textAlign: 'left', color: 'var(--text-secondary, #aaa)', fontSize: '12px' }}>Blogger</th>

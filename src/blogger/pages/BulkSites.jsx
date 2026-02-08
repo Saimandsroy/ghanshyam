@@ -232,7 +232,7 @@ export function BulkSites() {
             No uploads yet
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="w-full">
             <thead>
               <tr style={{ backgroundColor: 'var(--background, #0f0f1a)' }}>
                 <th style={{ padding: '12px 20px', textAlign: 'left', color: 'var(--text-secondary, #aaa)', fontSize: '12px' }}>File Name</th>

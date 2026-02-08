@@ -177,6 +177,32 @@ export function OrderDetails() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Rejection Alert */}
+                {(order?.current_status === 'rejected' || order?.rejection_reason) && (
+                    <div className="lg:col-span-3">
+                        <div className="premium-card bg-red-500/10 border-red-500/20 p-6 flex items-start gap-4">
+                            <div className="p-2 bg-red-500/20 rounded-full">
+                                <AlertCircle className="h-6 w-6 text-red-500" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-red-500 mb-1">Order Returned/Rejected</h3>
+                                <p className="text-[var(--text-secondary)] mb-2">
+                                    The manager has returned this order. Please address the issues below and resubmit.
+                                </p>
+                                <div className="bg-[var(--background)]/50 p-4 rounded-lg border border-red-500/10">
+                                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+                                        Reason
+                                    </span>
+                                    <p className="text-[var(--text-primary)] font-medium">
+                                        {order.rejection_reason || order.reject_reason || 'No reason provided'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Main Details Column */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="premium-card p-6">
@@ -225,7 +251,9 @@ export function OrderDetails() {
 
                             <DetailRow label="Anchor Text" value={order?.anchor_text} highlight />
                             <DetailRow label="Target URL" value={order?.target_url} isLink />
-                            <DetailRow label="Special Notes" value={order?.notes} />
+                            {!isGuestPost() && (
+                                <DetailRow label="Special Notes" value={order?.notes} />
+                            )}
                         </div>
                     </div>
 
@@ -265,6 +293,35 @@ export function OrderDetails() {
                             </div>
                         </div>
                     )}
+
+                    {/* Reject Option */}
+                    {canSubmit && (
+                        <div className="mt-4 text-center">
+                            <button
+                                onClick={async () => {
+                                    const reason = prompt('Please provide a reason for rejecting this order:');
+                                    if (reason) {
+                                        try {
+                                            setSubmitting(true);
+                                            await bloggerAPI.rejectTask(id, reason);
+                                            showSuccess('Order rejected successfully');
+                                            navigate('/blogger/orders');
+                                        } catch (err) {
+                                            console.error('Error rejecting task:', err);
+                                            showError('Failed to reject task: ' + err.message);
+                                        } finally {
+                                            setSubmitting(false);
+                                        }
+                                    }
+                                }}
+                                disabled={submitting}
+                                className="text-red-400 text-sm hover:text-red-300 transition-colors flex items-center justify-center gap-2 mx-auto"
+                            >
+                                <AlertCircle className="h-4 w-4" />
+                                Unable to complete this order? Click here to reject
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Column */}
@@ -275,10 +332,10 @@ export function OrderDetails() {
                         <div className="flex flex-col gap-3">
                             {/* Status Logic Visualized */}
                             <div className={`p-4 rounded-xl border flex items-center gap-3 ${order?.current_status === 'completed'
-                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
-                                    : order?.current_status === 'rejected'
-                                        ? 'bg-red-500/10 border-red-500/20 text-red-600'
-                                        : 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+                                : order?.current_status === 'rejected'
+                                    ? 'bg-red-500/10 border-red-500/20 text-red-600'
+                                    : 'bg-amber-500/10 border-amber-500/20 text-amber-600'
                                 }`}>
                                 <CheckCircle2 className="h-5 w-5" />
                                 <span className="font-bold capitalize">{order?.current_status || 'Pending'}</span>

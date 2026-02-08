@@ -15,18 +15,15 @@ export function PendingWriters() {
   const [filters, setFilters] = useState({ search: '' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [processing, setProcessing] = useState(null);
 
   // Fetch tasks pending content approval from writers
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await managerAPI.getTasks();
-      // Filter for tasks with writer content pending approval
-      const pendingTasks = (response.tasks || []).filter(t =>
-        t.current_status === 'SUBMITTED_TO_MANAGER' ||
-        t.current_status === 'PENDING_MANAGER_APPROVAL_2'
-      );
+      const response = await managerAPI.getTasks({ current_status: 'PENDING_MANAGER_APPROVAL_2' });
+      const pendingTasks = response.tasks || [];
       console.log('Pending Writers Tasks:', pendingTasks);
       setTasks(pendingTasks);
     } catch (err) {
@@ -40,6 +37,23 @@ export function PendingWriters() {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // Handle rejection - return content to writer with feedback
+  const handleReject = async (taskId) => {
+    const reason = prompt('Enter rejection reason / feedback for writer:');
+    if (!reason || !reason.trim()) return;
+
+    try {
+      setProcessing(taskId);
+      await managerAPI.returnToWriter(taskId, reason.trim());
+      showSuccess('Content returned to writer for revision');
+      fetchTasks();
+    } catch (err) {
+      showError('Failed to reject: ' + (err.message || 'Unknown error'));
+    } finally {
+      setProcessing(null);
+    }
+  };
 
   // Filter tasks
   const rows = useMemo(() => {
@@ -222,8 +236,9 @@ export function PendingWriters() {
                               <Eye size={16} />
                             </button>
                             <button
+                              onClick={() => navigate(`/manager/pending/writers/${task.id}?reject=true`)}
                               className="premium-btn p-2 min-w-0 bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                              title="Delete"
+                              title="Reject with Website Toggle"
                             >
                               <Trash2 size={16} />
                             </button>

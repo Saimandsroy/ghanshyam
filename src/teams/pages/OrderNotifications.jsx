@@ -139,7 +139,7 @@ export function OrderNotifications() {
                 pageData.map((r) => (
                   <tr key={r.id}>
                     <td className="font-mono text-[var(--primary-cyan)]">
-                      #{r.id}
+                      {r.manual_order_id || `#${r.id}`}
                     </td>
                     <td className="text-[var(--text-secondary)]">
                       {r.order_type || 'Guest Post'}

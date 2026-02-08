@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Search, Filter, ChevronDown, ChevronUp, Download, Eye } from 'lucide-react';
+import { ArrowUpRight, Search, Filter, ChevronDown, ChevronUp, Download, Eye, X } from 'lucide-react';
 import api from '../../../lib/api';
+
+const PAYMENT_METHODS = ['Bank', 'PayPal', 'UPI', 'QR Code'];
 
 export function WithdrawalRequests() {
     const navigate = useNavigate();
@@ -12,14 +14,42 @@ export function WithdrawalRequests() {
     const [sortConfig, setSortConfig] = useState({ key: 'datetime', direction: 'desc' });
     const [expandedRows, setExpandedRows] = useState([]);
 
+    // Filter state
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const [filters, setFilters] = useState({
+        name: '',
+        email: '',
+        paymentMethod: '',
+        date: ''
+    });
+
+    // Debounced filter state
+    const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
+    // Debounce effect
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilters(filters);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [filters]);
+
     useEffect(() => {
         fetchWithdrawals();
-    }, []);
+    }, [debouncedFilters]);
 
     const fetchWithdrawals = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/admin/wallet/withdrawal-requests');
+            const response = await api.get('/admin/wallet/withdrawal-requests', {
+                params: {
+                    filter_name: debouncedFilters.name || undefined,
+                    filter_email: debouncedFilters.email || undefined,
+                    filter_payment_method: debouncedFilters.paymentMethod || undefined,
+                    filter_date: debouncedFilters.date || undefined
+                }
+            });
             setWithdrawals(response.data.withdrawals || []);
         } catch (err) {
             setError('Failed to load withdrawal requests');
@@ -104,6 +134,15 @@ export function WithdrawalRequests() {
         a.click();
     };
 
+    // Reset filters
+    const resetFilters = () => {
+        setFilters({ name: '', email: '', paymentMethod: '', date: '' });
+    };
+
+    // Check if any filter is active
+    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.date;
+    const activeFilterCount = [filters.name, filters.email, filters.paymentMethod, filters.date].filter(Boolean).length;
+
     const filteredWithdrawals = withdrawals
         .filter(w =>
             w.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -156,33 +195,116 @@ export function WithdrawalRequests() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <ArrowUpRight size={28} style={{ color: 'var(--warning)' }} />
-                <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Withdrawal Requests</h2>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <ArrowUpRight size={28} style={{ color: 'var(--warning)' }} />
+                    <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Withdrawal Requests</h2>
+                    <span className="ml-2 px-3 py-1 rounded-full text-sm" style={{ backgroundColor: 'var(--warning)', color: 'white' }}>
+                        {withdrawals.length} pending
+                    </span>
+                </div>
+                {/* Filter Icon Button */}
+                <button
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                    className="relative p-2 rounded-lg transition-colors hover:bg-white/10"
+                    style={{ border: '1px solid var(--border)' }}
+                    title="Toggle Filters"
+                >
+                    <Filter size={20} style={{ color: filtersExpanded ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
+                    {hasActiveFilters && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-xs flex items-center justify-center"
+                            style={{ backgroundColor: 'var(--primary-orange)', color: 'white' }}>{activeFilterCount}</span>
+                    )}
+                </button>
             </div>
+
+            {/* Collapsible Filters Section */}
+            {filtersExpanded && (
+                <div
+                    className="rounded-2xl p-5 animate-in slide-in-from-top-2 duration-300"
+                    style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Filters</h3>
+                        {hasActiveFilters && (
+                            <button
+                                onClick={resetFilters}
+                                className="text-xs px-2 py-1 rounded transition-colors hover:bg-white/10"
+                                style={{ color: 'var(--error)' }}
+                            >
+                                Reset All
+                            </button>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Name Filter */}
+                        <div>
+                            <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Name</label>
+                            <input
+                                type="text"
+                                value={filters.name}
+                                onChange={e => setFilters({ ...filters, name: e.target.value })}
+                                placeholder="Search name..."
+                                className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        {/* Email Filter */}
+                        <div>
+                            <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Email</label>
+                            <input
+                                type="text"
+                                value={filters.email}
+                                onChange={e => setFilters({ ...filters, email: e.target.value })}
+                                placeholder="Search email..."
+                                className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        {/* Payment Method Filter */}
+                        <div>
+                            <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Payment Method</label>
+                            <select
+                                value={filters.paymentMethod}
+                                onChange={e => setFilters({ ...filters, paymentMethod: e.target.value })}
+                                className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            >
+                                <option value="">Select an option</option>
+                                {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                        </div>
+                        {/* Date Filter */}
+                        <div>
+                            <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Date</label>
+                            <input
+                                type="date"
+                                value={filters.date}
+                                onChange={e => setFilters({ ...filters, date: e.target.value })}
+                                className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                    </div>
+                    {hasActiveFilters && (
+                        <div className="mt-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            Showing {withdrawals.length} filtered results
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Search and Table Container */}
             <div className="card overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
                 {/* Toolbar */}
-                <div className="p-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <div></div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={downloadBankDetails}
-                            className="premium-btn premium-btn-accent"
-                        >
-                            <Download className="h-4 w-4" />
-                            Download Bank Details
-                        </button>
-                        <button
-                            className="p-2 rounded-lg transition-colors relative"
-                            style={{ color: 'var(--text-muted)' }}
-                        >
-                            <Filter size={20} />
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-xs flex items-center justify-center"
-                                style={{ backgroundColor: 'var(--error)', color: 'white' }}>0</span>
-                        </button>
-                    </div>
+                <div className="p-4 flex justify-end items-center" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <button
+                        onClick={downloadBankDetails}
+                        className="premium-btn premium-btn-accent"
+                    >
+                        <Download className="h-4 w-4" />
+                        Download Bank Details
+                    </button>
                 </div>
 
                 {/* Table */}

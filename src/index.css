@@ -330,16 +330,17 @@
   animation: spin 5s linear infinite;
 }
 
-/* Grid Background Utility */
-.bg-grid-pattern {
-  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* Premium App Background (Subtle Spotlight) */
+.bg-app-background {
+  background-color: var(--background-dark);
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+  background-attachment: fixed;
 }
 
-/* Hide grid in light mode for cleaner look */
-.light .bg-grid-pattern {
-  background-image: none;
+/* Light mode background */
+.light .bg-app-background {
+  background-color: var(--background-dark);
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
 }
 
 /* =========================================
@@ -379,43 +380,114 @@
     backdrop-filter: blur(12px);
   }
 
-  .premium-table {
+  .premium-table,
+  table.w-full {
     width: 100%;
     text-align: left;
     font-size: 0.875rem;
-    border-collapse: collapse;
+    border-collapse: separate;
+    /* Enable spacing and radius */
+    border-spacing: 0 4px;
+    /* Vertical spacing between rows */
   }
 
-  .premium-table thead {
+  .premium-table thead,
+  table.w-full thead {
     background-color: var(--background-dark);
-    border-bottom: 1px solid var(--border);
+    /* border-bottom moved to th */
   }
 
-  .premium-table th {
+  .premium-table th,
+  table.w-full th {
     padding: 1.25rem 1.5rem;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-muted);
-  }
-
-  .premium-table tbody tr {
     border-bottom: 1px solid var(--border);
-    transition: background-color 0.2s ease;
   }
 
-  .premium-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.03);
+  .premium-table tbody tr,
+  table.w-full tbody tr {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background-clip: padding-box;
+    border-radius: 12px;
+    /* Fallback */
   }
 
-  .light .premium-table tbody tr:hover {
-    background-color: #FFF7ED;
-    /* Light Orange Background */
+  /* Borders on TDs since separate collapse ignores TR borders */
+  .premium-table tbody tr td,
+  table.w-full tbody tr td {
+    border-bottom: 1px solid var(--border);
+    background-color: transparent;
+    /* vital */
+    transition: background-color 0.3s, border-color 0.3s;
   }
 
-  .premium-table tbody tr:last-child {
+  /* Corner Radius Logic */
+  .premium-table tbody tr td:first-child,
+  table.w-full tbody tr td:first-child {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-left: 1px solid transparent;
+  }
+
+  .premium-table tbody tr td:last-child,
+  table.w-full tbody tr td:last-child {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-right: 1px solid transparent;
+  }
+
+  /* MILLION DOLLAR HOVER EFFECT */
+  .premium-table tbody tr:hover,
+  table.w-full tbody tr:hover {
+    background: linear-gradient(90deg,
+        rgba(255, 140, 66, 0.08) 0%,
+        rgba(255, 140, 66, 0.12) 50%,
+        rgba(255, 140, 66, 0.08) 100%) !important;
+
+    /* Stronger Shadow */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+
+    transform: translateY(-2px) scale(1.005);
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  /* Handle Borders on Hover */
+  .premium-table tbody tr:hover td,
+  table.w-full tbody tr:hover td {
+    border-bottom-color: transparent;
+    /* Hide separator */
+    color: var(--text-primary) !important;
+    text-shadow: 0 0 15px rgba(255, 140, 66, 0.4);
+  }
+
+  /* Light Mode Override */
+  .light .premium-table tbody tr:hover,
+  .light table.w-full tbody tr:hover {
+    background: linear-gradient(90deg, #FFF7ED 0%, #FFEDD5 50%, #FFF7ED 100%) !important;
+    box-shadow: 0 8px 24px rgba(234, 88, 12, 0.15) !important;
+    transform: translateY(-2px) scale(1.005);
+    text-shadow: none !important;
+  }
+
+  .light .premium-table tbody tr:hover td,
+  .light table.w-full tbody tr:hover td {
+    text-shadow: none !important;
+    border-bottom-color: transparent;
+  }
+
+  .light table.w-full tbody tr:hover td {
+    text-shadow: none !important;
+  }
+
+  .premium-table tbody tr:last-child,
+  table.w-full tbody tr:last-child {
     border-bottom: none;
+
   }
 
   .premium-table td {

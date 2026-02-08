@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Users, CheckCircle, XCircle, Eye, Search, Filter } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Eye, Search, Filter } from 'lucide-react';
 import { Pagination } from '../../../components/Pagination.jsx';
 import { managerAPI } from '../../../lib/api';
 import { useToast } from '../../../context/ToastContext';
@@ -35,19 +35,7 @@ export function PendingTeams() {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Handle approval (approve team's website selection)
-  const handleApprove = async (taskId) => {
-    try {
-      setProcessing(taskId);
-      await managerAPI.approveTeamSubmission(taskId);
-      showSuccess('Team submission approved! Ready for writer assignment.');
-      fetchTasks();
-    } catch (err) {
-      showError('Failed to approve: ' + err.message);
-    } finally {
-      setProcessing(null);
-    }
-  };
+
 
   // Handle rejection
   const handleReject = async (taskId) => {
@@ -179,7 +167,7 @@ export function PendingTeams() {
                   pageData.map((task) => (
                     <tr key={task.id}>
                       <td>
-                        <span className="font-semibold text-[var(--text-primary)]">#{task.id}</span>
+                        <span className="font-semibold text-[var(--text-primary)]">{task.manual_order_id || `#${task.id}`}</span>
                       </td>
                       <td>
                         <div>
@@ -226,20 +214,12 @@ export function PendingTeams() {
                             <Eye size={16} />
                           </Link>
                           <button
-                            onClick={() => handleApprove(task.id)}
-                            disabled={processing === task.id}
-                            className="premium-btn p-2 min-w-0 bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
-                            title="Approve"
-                          >
-                            {processing === task.id ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                          </button>
-                          <button
                             onClick={() => handleReject(task.id)}
                             disabled={processing === task.id}
                             className="premium-btn p-2 min-w-0 bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
                             title="Reject"
                           >
-                            <XCircle size={16} />
+                            {processing === task.id ? <RefreshCw className="animate-spin" size={16} /> : <Trash2 size={16} />}
                           </button>
                         </div>
                       </td>

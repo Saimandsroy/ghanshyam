@@ -200,11 +200,7 @@ export function CreateAccountFromSites() {
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{
-                                width: '100%',
-                                borderCollapse: 'collapse',
-                                fontSize: '14px'
-                            }}>
+                            <table className="w-full">
                                 <thead>
                                     <tr style={{
                                         backgroundColor: 'var(--background, #0f0f1a)',
@@ -281,12 +277,6 @@ export function CreateAccountFromSites() {
                                     {pendingEmails.map((item, index) => (
                                         <tr
                                             key={index}
-                                            style={{
-                                                borderBottom: '1px solid var(--border, #2a2a4a)',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,188,212,0.05)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             <td style={{
                                                 padding: '16px 20px',

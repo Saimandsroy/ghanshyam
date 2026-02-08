@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, X, Eye, RefreshCw, FileText } from 'lucide-react';
+import { Search, Filter, X, Eye, RefreshCw, FileText, SlidersHorizontal, Columns, Calendar } from 'lucide-react';
 import { adminAPI } from '../../../lib/api';
 
 export function AdminOrders() {
@@ -8,18 +8,71 @@ export function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [filters, setFilters] = useState({ search: '', status: '' });
 
     // Pagination state
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
     const [total, setTotal] = useState(0);
 
+    // Filter states
+    const [showFilters, setShowFilters] = useState(false);
+    const [showColumnToggle, setShowColumnToggle] = useState(false);
+    const [filters, setFilters] = useState({
+        search: '',
+        status: '',
+        order_id: '',
+        category: '',
+        client_name: '',
+        client_website: '',
+        ordered_at_from: '',
+        ordered_at_to: ''
+    });
+
+    // Column visibility state
+    const [visibleColumns, setVisibleColumns] = useState({
+        manager: true,
+        client_name: true,
+        status: true,
+        website: true,
+        tat: true,
+        no_of_links: true,
+        order_type: true,
+        order_package: true,
+        category: true,
+        ordered_at: true,
+        completed_at: true
+    });
+
+    const allColumns = [
+        { key: 'manager', label: 'Manager' },
+        { key: 'client_name', label: 'Client Name' },
+        { key: 'status', label: 'Status' },
+        { key: 'website', label: 'Website' },
+        { key: 'tat', label: 'TAT' },
+        { key: 'no_of_links', label: 'No of Links' },
+        { key: 'order_type', label: 'Order Type' },
+        { key: 'order_package', label: 'Order Package' },
+        { key: 'category', label: 'Category' },
+        { key: 'ordered_at', label: 'Ordered At' },
+        { key: 'completed_at', label: 'Completed At' }
+    ];
+
     const fetchOrders = useCallback(async () => {
         try {
             setLoading(true);
             setError('');
-            const response = await adminAPI.getOrders({ page, limit: pageSize });
+
+            // Build query params
+            const queryParams = { page, limit: pageSize };
+            if (filters.status) queryParams.status = filters.status;
+            if (filters.order_id) queryParams.order_id = filters.order_id;
+            if (filters.category) queryParams.category = filters.category;
+            if (filters.client_name) queryParams.client_name = filters.client_name;
+            if (filters.client_website) queryParams.client_website = filters.client_website;
+            if (filters.ordered_at_from) queryParams.ordered_at_from = filters.ordered_at_from;
+            if (filters.ordered_at_to) queryParams.ordered_at_to = filters.ordered_at_to;
+
+            const response = await adminAPI.getOrders(queryParams);
             setOrders(response.orders || []);
             setTotal(response.total || 0);
         } catch (err) {
@@ -28,36 +81,28 @@ export function AdminOrders() {
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize]);
+    }, [page, pageSize, filters.status, filters.order_id, filters.category, filters.client_name, filters.client_website, filters.ordered_at_from, filters.ordered_at_to]);
 
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
 
-    // Local filter - search within loaded data
+    // Local search filter (for instant search)
     const filteredOrders = useMemo(() => {
-        let list = orders;
         const q = filters.search.trim().toLowerCase();
-        if (q) {
-            list = list.filter(o =>
-                (o.order_id || '').toLowerCase().includes(q) ||
-                (o.client_name || '').toLowerCase().includes(q) ||
-                (o.manager_name || '').toLowerCase().includes(q) ||
-                (o.client_website || '').toLowerCase().includes(q)
-            );
-        }
-        if (filters.status) {
-            list = list.filter(o => o.status_label === filters.status);
-        }
-        return list;
-    }, [orders, filters]);
+        if (!q) return orders;
+        return orders.filter(o =>
+            (o.order_id || '').toLowerCase().includes(q) ||
+            (o.client_name || '').toLowerCase().includes(q) ||
+            (o.manager_name || '').toLowerCase().includes(q) ||
+            (o.client_website || '').toLowerCase().includes(q)
+        );
+    }, [orders, filters.search]);
 
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, workflowLocation) => {
         const statusStyles = {
             'Pending': { bg: 'rgba(251, 191, 36, 0.2)', color: '#FBBF24' },
-            'In Progress': { bg: 'rgba(59, 130, 246, 0.2)', color: '#3B82F6' },
-            'With Writer': { bg: 'rgba(168, 85, 247, 0.2)', color: '#A855F7' },
-            'With Blogger': { bg: 'rgba(107, 240, 255, 0.2)', color: '#6BF0FF' },
+            'In Process': { bg: 'rgba(59, 130, 246, 0.2)', color: '#3B82F6' },
             'Completed': { bg: 'rgba(34, 197, 94, 0.2)', color: '#22C55E' },
             'Rejected': { bg: 'rgba(239, 68, 68, 0.2)', color: '#EF4444' },
             'Unknown': { bg: 'rgba(107, 114, 128, 0.2)', color: '#6B7280' }
@@ -66,16 +111,42 @@ export function AdminOrders() {
     };
 
     const formatDate = (dateStr) => {
-        if (!dateStr) return 'N/A';
-        const date = new Date(dateStr);
-        return date.toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        if (!dateStr) return '-';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return '-';
+        }
     };
+
+
+    const clearFilters = () => {
+        setFilters({
+            search: '',
+            status: '',
+            order_id: '',
+            category: '',
+            client_name: '',
+            client_website: '',
+            ordered_at_from: '',
+            ordered_at_to: ''
+        });
+        setPage(1);
+    };
+
+    const hasActiveFilters = filters.status || filters.order_id || filters.category ||
+        filters.client_name || filters.client_website ||
+        filters.ordered_at_from || filters.ordered_at_to;
+
+    const totalPages = Math.ceil(total / pageSize);
 
     return (
         <div className="space-y-6">
@@ -84,17 +155,204 @@ export function AdminOrders() {
                 <div className="flex items-center gap-3">
                     <FileText className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders</h1>
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{total} total orders</p>
+                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders Views</h1>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} results
+                        </p>
                     </div>
                 </div>
-                <button
-                    onClick={fetchOrders}
-                    disabled={loading}
-                    className="p-2 rounded-lg transition-colors hover:bg-white/10 disabled:opacity-50"
+                <div className="flex items-center gap-2">
+                    {/* Filter Toggle */}
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`relative p-2.5 rounded-xl transition-all duration-300 ${showFilters ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20' : 'hover:bg-white/10'
+                            }`}
+                        title="Toggle Filters"
+                        style={{ border: showFilters ? '1px solid rgba(107, 240, 255, 0.3)' : '1px solid transparent' }}
+                    >
+                        <SlidersHorizontal className={`h-5 w-5 transition-all duration-300 ${showFilters ? 'text-cyan-400' : ''}`}
+                            style={{ color: showFilters ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
+                        {hasActiveFilters && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+                        )}
+                    </button>
+
+                    {/* Column Toggle */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowColumnToggle(!showColumnToggle)}
+                            className={`p-2.5 rounded-xl transition-all duration-300 ${showColumnToggle ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20' : 'hover:bg-white/10'
+                                }`}
+                            title="Toggle Columns"
+                            style={{ border: showColumnToggle ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent' }}
+                        >
+                            <Columns className="h-5 w-5" style={{ color: showColumnToggle ? '#A855F7' : 'var(--text-muted)' }} />
+                        </button>
+
+                        {/* Column Toggle Popup */}
+                        {showColumnToggle && (
+                            <div
+                                className="absolute right-0 top-12 z-50 w-56 rounded-xl shadow-xl animate-in slide-in-from-top-2 duration-200"
+                                style={{
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border)',
+                                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)'
+                                }}
+                            >
+                                <div className="p-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                                    <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Columns</h4>
+                                </div>
+                                <div className="p-2 max-h-80 overflow-y-auto">
+                                    {allColumns.map(col => (
+                                        <label
+                                            key={col.key}
+                                            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleColumns[col.key]}
+                                                onChange={() => setVisibleColumns(v => ({ ...v, [col.key]: !v[col.key] }))}
+                                                className="w-4 h-4 rounded accent-cyan-400"
+                                            />
+                                            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{col.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={fetchOrders}
+                        disabled={loading}
+                        className="p-2 rounded-lg transition-colors hover:bg-white/10 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Collapsible Filters Panel */}
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div
+                    className="card p-5 rounded-2xl"
+                    style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}
                 >
-                    <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
-                </button>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                            Filters
+                        </h3>
+                        {hasActiveFilters && (
+                            <button onClick={clearFilters} className="text-xs px-3 py-1.5 rounded-lg text-red-400 hover:bg-red-500/10">
+                                Reset
+                            </button>
+                        )}
+                    </div>
+
+                    {/* First Row: Ordered At Date */}
+                    <div className="mb-4">
+                        <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--text-muted)' }}>Ordered At</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="date"
+                                value={filters.ordered_at_from}
+                                onChange={e => { setFilters(f => ({ ...f, ordered_at_from: e.target.value })); setPage(1); }}
+                                className="flex-1 px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                            <span className="flex items-center text-sm" style={{ color: 'var(--text-muted)' }}>to</span>
+                            <input
+                                type="date"
+                                value={filters.ordered_at_to}
+                                onChange={e => { setFilters(f => ({ ...f, ordered_at_to: e.target.value })); setPage(1); }}
+                                className="flex-1 px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Second Row: Other Filters */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Order ID</label>
+                            <input
+                                type="text"
+                                value={filters.order_id}
+                                onChange={e => { setFilters(f => ({ ...f, order_id: e.target.value })); setPage(1); }}
+                                placeholder="Search..."
+                                className="w-full px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Category</label>
+                            <input
+                                type="text"
+                                value={filters.category}
+                                onChange={e => { setFilters(f => ({ ...f, category: e.target.value })); setPage(1); }}
+                                placeholder="Search..."
+                                className="w-full px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Client Name</label>
+                            <input
+                                type="text"
+                                value={filters.client_name}
+                                onChange={e => { setFilters(f => ({ ...f, client_name: e.target.value })); setPage(1); }}
+                                placeholder="Search..."
+                                className="w-full px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Client Website</label>
+                            <input
+                                type="text"
+                                value={filters.client_website}
+                                onChange={e => { setFilters(f => ({ ...f, client_website: e.target.value })); setPage(1); }}
+                                placeholder="Search..."
+                                className="w-full px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Status</label>
+                            <select
+                                value={filters.status}
+                                onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}
+                                className="w-full px-3 py-2 rounded-xl text-sm"
+                                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                            >
+                                <option value="">Select an option</option>
+                                <option value="Completed">Completed</option>
+                                <option value="In Process">In Process</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Manager">Manager</option>
+                                <option value="Team">Team</option>
+                                <option value="Writer">Writer</option>
+                                <option value="Blogger">Blogger</option>
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Search */}
+            <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+                <div className="relative">
+                    <input
+                        value={filters.search}
+                        onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
+                        type="text"
+                        placeholder="Quick search by order id, client, manager, website..."
+                        className="w-full rounded-xl px-10 py-2"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+                </div>
             </div>
 
             {/* Error State */}
@@ -105,165 +363,227 @@ export function AdminOrders() {
                 </div>
             )}
 
-            {/* Filters */}
-            <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-                <div className="flex flex-wrap items-center gap-4">
-                    <div className="relative flex-1 min-w-[200px]">
-                        <input
-                            value={filters.search}
-                            onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-                            type="text"
-                            placeholder="Search by order id, client, manager, website..."
-                            className="w-full rounded-xl px-10 py-2"
-                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                        />
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-                    </div>
-                    <div className="relative min-w-[180px]">
-                        <select
-                            value={filters.status}
-                            onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}
-                            className="w-full rounded-xl px-10 py-2 appearance-none"
-                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                        >
-                            <option value="">All Statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="With Writer">With Writer</option>
-                            <option value="With Blogger">With Blogger</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Rejected">Rejected</option>
-                        </select>
-                        <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            {/* Orders Table */}
+            <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead style={{ backgroundColor: 'var(--background-dark)' }}>
+                            <tr>
+                                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order ID</th>
+                                {visibleColumns.manager && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Manager</th>}
+                                {visibleColumns.client_name && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Client Name</th>}
+                                {visibleColumns.status && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Status</th>}
+                                {visibleColumns.website && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Website</th>}
+                                {visibleColumns.tat && <th className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-muted)' }}>TAT</th>}
+                                {visibleColumns.no_of_links && <th className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No of Links</th>}
+                                {visibleColumns.order_type && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order Type</th>}
+                                {visibleColumns.order_package && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order Package</th>}
+                                {visibleColumns.category && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Category</th>}
+                                {visibleColumns.ordered_at && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Ordered At</th>}
+                                {visibleColumns.completed_at && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Completed At</th>}
+                                <th className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={13} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                                        <RefreshCw className="h-5 w-5 animate-spin inline mr-2" />
+                                        Loading orders...
+                                    </td>
+                                </tr>
+                            ) : filteredOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={13} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                                        No orders found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredOrders.map((order) => {
+                                    const statusStyle = getStatusBadge(order.status_label);
+                                    return (
+                                        <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }} className="hover:bg-white/5">
+                                            {/* Order ID */}
+                                            <td className="px-4 py-3">
+                                                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{order.order_id || `#${order.id}`}</div>
+                                                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>New Order</div>
+                                            </td>
+                                            {/* Manager */}
+                                            {visibleColumns.manager && (
+                                                <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{order.manager_name || 'N/A'}</td>
+                                            )}
+                                            {/* Client Name */}
+                                            {visibleColumns.client_name && (
+                                                <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{order.client_name || 'N/A'}</td>
+                                            )}
+                                            {/* Status with Workflow Location */}
+                                            {visibleColumns.status && (
+                                                <td className="px-4 py-3">
+                                                    <span
+                                                        className="px-2 py-1 rounded text-xs font-medium"
+                                                        style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
+                                                    >
+                                                        {order.status_label || 'Unknown'}
+                                                    </span>
+                                                    <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                                                        {order.workflow_location || ''}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {/* Website */}
+                                            {visibleColumns.website && (
+                                                <td className="px-4 py-3">
+                                                    {order.client_website ? (
+                                                        <a
+                                                            href={order.client_website.startsWith('http') ? order.client_website : `https://${order.client_website}`}
+                                                            className="text-sm hover:underline"
+                                                            style={{ color: 'var(--primary-cyan)' }}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            {order.client_website.replace(/^https?:\/\//, '').replace(/\/$/, '').substring(0, 30)}
+                                                            {order.client_website.length > 30 ? '...' : ''}
+                                                        </a>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                                                    )}
+                                                </td>
+                                            )}
+                                            {/* TAT */}
+                                            {visibleColumns.tat && (
+                                                <td className="px-4 py-3 text-center" style={{ color: 'var(--text-primary)' }}>-</td>
+                                            )}
+                                            {/* No of Links */}
+                                            {visibleColumns.no_of_links && (
+                                                <td className="px-4 py-3 text-center" style={{ color: 'var(--text-primary)' }}>{order.no_of_links || 1}</td>
+                                            )}
+                                            {/* Order Type */}
+                                            {visibleColumns.order_type && (
+                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>
+                                                    {order.order_type === 'gp' ? 'Guest Post' : order.order_type === 'niche' ? 'niche' : order.order_type || '-'}
+                                                </td>
+                                            )}
+                                            {/* Order Package */}
+                                            {visibleColumns.order_package && (
+                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>
+                                                    {order.order_package || '-'}
+                                                </td>
+                                            )}
+                                            {/* Category */}
+                                            {visibleColumns.category && (
+                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>
+                                                    {order.category || '-'}
+                                                </td>
+                                            )}
+                                            {/* Ordered At */}
+                                            {visibleColumns.ordered_at && (
+                                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>
+                                                    {formatDate(order.created_at)}
+                                                </td>
+                                            )}
+                                            {/* Completed At */}
+                                            {visibleColumns.completed_at && (
+                                                <td className="px-4 py-3 text-sm" style={{ color: order.completed_at ? 'var(--success)' : 'var(--text-muted)' }}>
+                                                    {order.completed_at ? formatDate(order.completed_at) : '-'}
+                                                </td>
+                                            )}
+                                            {/* Actions */}
+                                            <td className="px-4 py-3 text-center">
+                                                <button
+                                                    onClick={() => navigate(`/admin/orders/${order.id}`)}
+                                                    className="p-2 rounded-lg transition-all hover:bg-white/10"
+                                                    title="View Order Details"
+                                                >
+                                                    <Eye size={16} style={{ color: 'var(--primary-cyan)' }} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Per page:</span>
+                    <select
+                        value={pageSize}
+                        onChange={e => { setPageSize(parseInt(e.target.value)); setPage(1); }}
+                        className="px-3 py-1.5 rounded-lg text-sm"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    >
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                    </select>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setPage(1)}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 rounded-lg disabled:opacity-50 text-sm"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    >
+                        First
+                    </button>
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 rounded-lg disabled:opacity-50 text-sm"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    >
+                        Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const startPage = Math.max(1, page - 2);
+                            const pageNum = startPage + i;
+                            if (pageNum > totalPages) return null;
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => setPage(pageNum)}
+                                    className={`w-8 h-8 rounded-lg text-sm ${page === pageNum ? 'font-bold' : ''}`}
+                                    style={{
+                                        backgroundColor: page === pageNum ? 'var(--primary-cyan)' : 'var(--background-dark)',
+                                        color: page === pageNum ? 'var(--background-dark)' : 'var(--text-primary)',
+                                        border: '1px solid var(--border)'
+                                    }}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
                     </div>
                     <button
-                        onClick={() => setFilters({ search: '', status: '' })}
-                        className="px-4 py-2 rounded-xl flex items-center gap-2"
-                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages}
+                        className="px-3 py-1.5 rounded-lg disabled:opacity-50 text-sm"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                     >
-                        <X size={16} /> Reset
+                        Next
+                    </button>
+                    <button
+                        onClick={() => setPage(totalPages)}
+                        disabled={page >= totalPages}
+                        className="px-3 py-1.5 rounded-lg disabled:opacity-50 text-sm"
+                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    >
+                        Last
                     </button>
                 </div>
             </div>
 
-            {/* Orders Table */}
-            <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
-                <table className="w-full">
-                    <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-                        <tr>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order ID</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Manager</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Client Name</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Status</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Website</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>No of Links</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order Type</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Ordered At</th>
-                            <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={9} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
-                                    <RefreshCw className="h-5 w-5 animate-spin inline mr-2" />
-                                    Loading orders...
-                                </td>
-                            </tr>
-                        ) : filteredOrders.length === 0 ? (
-                            <tr>
-                                <td colSpan={9} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
-                                    No orders found.
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredOrders.map((order) => {
-                                const statusStyle = getStatusBadge(order.status_label);
-                                return (
-                                    <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }} className="hover:bg-white/5">
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{order.order_id || `#${order.id}`}</div>
-                                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{order.order_package || 'Standard'}</div>
-                                        </td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{order.manager_name || 'N/A'}</td>
-                                        <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{order.client_name || 'N/A'}</td>
-                                        <td className="px-4 py-3">
-                                            <span
-                                                className="px-2 py-1 rounded text-xs font-medium"
-                                                style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
-                                            >
-                                                {order.status_label || 'Unknown'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {order.client_website ? (
-                                                <a
-                                                    href={order.client_website}
-                                                    className="text-sm hover:underline"
-                                                    style={{ color: 'var(--primary-cyan)' }}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    {order.client_website.replace(/^https?:\/\//, '').replace(/\/$/, '').substring(0, 30)}...
-                                                </a>
-                                            ) : (
-                                                <span style={{ color: 'var(--text-muted)' }}>No site</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{order.no_of_links || 1}</td>
-                                        <td className="px-4 py-3">
-                                            <span
-                                                className="px-2 py-1 rounded text-xs font-medium"
-                                                style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#A855F7' }}
-                                            >
-                                                {order.order_type === 'gp' ? 'Guest Post' : order.order_type === 'niche' ? 'Niche Edit' : order.order_type || 'N/A'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)' }}>
-                                            {formatDate(order.created_at)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button
-                                                onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                                className="p-2 rounded-lg transition-all hover:bg-white/10"
-                                                title="View Order Details"
-                                            >
-                                                <Eye size={16} style={{ color: 'var(--primary-cyan)' }} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Pagination */}
-            {total > pageSize && (
-                <div className="flex items-center justify-between">
-                    <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                            className="px-4 py-2 rounded-lg disabled:opacity-50"
-                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={() => setPage(p => p + 1)}
-                            disabled={page * pageSize >= total}
-                            className="px-4 py-2 rounded-lg disabled:opacity-50"
-                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+            {/* Click outside to close column toggle */}
+            {showColumnToggle && (
+                <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowColumnToggle(false)}
+                />
             )}
         </div>
     );

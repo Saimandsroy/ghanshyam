@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Upload, Download, CheckCircle, FileSpreadsheet } from 'lucide-react';
+import { Upload, Download, CheckCircle, FileSpreadsheet, AlertTriangle, ArrowRight, X, Copy, RefreshCw, Trash2, Check } from 'lucide-react';
+import { adminAPI } from '../../../lib/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export function AddExcel() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [importResult, setImportResult] = useState(null);
+    const [step, setStep] = useState('upload'); // 'upload' | 'preview' | 'result'
+
+    // Preview Data
+    const [validSites, setValidSites] = useState([]);
+    const [conflicts, setConflicts] = useState([]);
+    const [errors, setErrors] = useState([]);
+
+    // Result Data
+    const [resultStats, setResultStats] = useState(null);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -19,251 +28,371 @@ export function AddExcel() {
                 return;
             }
             setSelectedFile(file);
-            setImportResult(null);
+            setStep('upload');
+            setResultStats(null);
+            setConflicts([]);
         }
     };
 
-    const handleDownloadFormat = () => {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            toast.error('Please login first');
-            return;
+    const handleDownloadFormat = async () => {
+        try {
+            const blob = await adminAPI.downloadSiteFormat();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'new_site_format.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            toast.error('Failed to download format');
         }
-        window.location.href = `${API_BASE_URL}/admin/sites/download-format?token=${token}`;
     };
 
-    const handleImport = async () => {
+    // Step 1: Upload & Preview
+    const handlePreview = async () => {
         if (!selectedFile) {
             toast.error('Please select an Excel file first');
             return;
         }
 
         setUploading(true);
-        setImportResult(null);
-
+        setErrors([]); // Clear previous errors
         try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
+            const data = await adminAPI.previewSitesExcel(selectedFile);
 
-            const token = localStorage.getItem('authToken');
-            const response = await fetch(`${API_BASE_URL}/admin/sites/upload-excel`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
+            // Safe access with defaults
+            const validSitesFromApi = data?.validSites || [];
+            const conflictsFromApi = data?.conflicts || [];
+            const errorsFromApi = data?.errors || [];
 
-            const data = await response.json();
+            // Initialize conflicts with default resolution 'IGNORE' for safety
+            const conflictsWithResolution = conflictsFromApi.map(c => ({
+                ...c,
+                resolution: 'IGNORE' // 'IGNORE', 'ADD', 'REPLACE'
+            }));
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Upload failed');
+            setValidSites(validSitesFromApi);
+            setConflicts(conflictsWithResolution);
+            setErrors(errorsFromApi);
+
+            // Handle edge case: no valid sites AND no conflicts
+            if (conflictsFromApi.length === 0 && validSitesFromApi.length === 0) {
+                if (errorsFromApi.length > 0) {
+                    toast.error(`All ${errorsFromApi.length} rows had errors. No sites to import.`);
+                } else {
+                    toast.error('Excel file contains no valid site data.');
+                }
+                return; // Stay on upload step
             }
 
-            // Show success toast in top right
-            toast.success(`Successfully imported ${data.inserted} sites!`, {
-                duration: 5000,
-                position: 'top-right',
-                style: {
-                    background: '#22c55e',
-                    color: '#fff',
-                    fontWeight: '500'
-                },
-                icon: '✅'
-            });
-
-            // Set result for display
-            setImportResult({
-                success: true,
-                inserted: data.inserted,
-                total: data.total_rows,
-                errors: data.errors || []
-            });
-
-            if (data.errors && data.errors.length > 0) {
-                toast.error(`${data.errors.length} rows had errors`, {
-                    position: 'top-right'
-                });
+            setStep('preview');
+            if (conflictsFromApi.length > 0) {
+                toast('Duplicate sites found. Please resolve conflicts.', { icon: '⚠️' });
             }
 
-            // Reset form
-            setSelectedFile(null);
-            document.querySelector('input[type="file"]').value = '';
         } catch (error) {
-            toast.error(error.message || 'Failed to import Excel file', {
-                position: 'top-right'
-            });
-            setImportResult({
-                success: false,
-                error: error.message
-            });
+            console.error('Preview Error:', error);
+            toast.error(error?.response?.data?.message || error?.message || 'Failed to preview Excel file');
         } finally {
             setUploading(false);
         }
     };
 
+    // Conflict Resolution Handler
+    const updateResolution = (index, resolution) => {
+        const newConflicts = [...conflicts];
+        newConflicts[index].resolution = resolution;
+        setConflicts(newConflicts);
+    };
+
+    const applyResolutionToAll = (resolution) => {
+        const newConflicts = conflicts.map(c => ({ ...c, resolution }));
+        setConflicts(newConflicts);
+    };
+
+    // Step 2: Confirm & Import
+    const handleConfirmImport = async () => {
+        // Check if there's anything to actually import
+        const sitesToAdd = conflicts.filter(c => c.resolution !== 'IGNORE').length + validSites.length;
+        if (sitesToAdd === 0) {
+            toast.error('No sites to import. All conflicts are set to Skip.');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            // Prepare payload
+            const sitesToProcess = [
+                ...validSites, // Valid ones are just added
+                ...conflicts.map(c => ({
+                    ...c.newSite,
+                    resolution: c.resolution
+                }))
+            ];
+
+            const data = await adminAPI.confirmSitesExcel(sitesToProcess);
+
+            setResultStats({
+                success: true,
+                inserted: data?.stats?.inserted || 0,
+                replaced: data?.stats?.replaced || 0,
+                ignored: data?.stats?.ignored || 0,
+                errors: data?.stats?.errors || []
+            });
+            setStep('result');
+            toast.success('Import completed successfully!');
+
+            // Reset File
+            setSelectedFile(null);
+            const fileInput = document.querySelector('input[type="file"]');
+            if (fileInput) fileInput.value = '';
+
+        } catch (error) {
+            console.error('Confirm Import Error:', error);
+            toast.error(error?.response?.data?.message || error?.message || 'Import failed during confirmation');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setStep('upload');
+        setValidSites([]);
+        setConflicts([]);
+        setErrors([]);
+        setSelectedFile(null);
+        if (document.querySelector('input[type="file"]')) {
+            document.querySelector('input[type="file"]').value = '';
+        }
+    };
+
+
     return (
         <div>
-            <h2 style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                marginBottom: '24px',
-                color: 'var(--text-primary, #fff)'
-            }}>
-                Add Excel File
+            <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+                <FileSpreadsheet className="text-green-500" /> Bulk Import Sites
             </h2>
 
-            <div style={{
-                backgroundColor: 'var(--card-background, #1a1a2e)',
-                border: '1px solid var(--border, #2a2a4a)',
-                borderRadius: '8px',
-                padding: '24px'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '16px'
-                }}>
-                    <div>
-                        <label style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '12px',
-                            color: 'var(--text-secondary, #aaa)',
-                            fontSize: '14px'
-                        }}>
-                            <FileSpreadsheet size={18} />
-                            Upload Excel File
-                        </label>
-                        <input
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={handleFileChange}
-                            style={{
-                                marginBottom: '16px',
-                                color: 'var(--text-primary, #fff)'
-                            }}
-                        />
-                        {selectedFile && (
-                            <div style={{
-                                marginBottom: '12px',
-                                padding: '8px 12px',
-                                backgroundColor: 'var(--background, #0f0f1a)',
-                                borderRadius: '4px',
-                                color: 'var(--text-secondary, #aaa)',
-                                fontSize: '13px'
-                            }}>
-                                Selected: <strong style={{ color: 'var(--primary-cyan, #00bcd4)' }}>{selectedFile.name}</strong>
+            {/* Error Display */}
+            {errors.length > 0 && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <h4 className="text-red-400 font-bold mb-2 flex items-center gap-2">
+                        <AlertTriangle size={16} /> Import Errors ({errors.length})
+                    </h4>
+                    <div className="max-h-32 overflow-y-auto text-sm text-red-300 space-y-1">
+                        {errors.map((err, i) => <div key={i}>{err}</div>)}
+                    </div>
+                </div>
+            )}
+
+            {step === 'upload' && (
+                <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-xl p-8">
+                    <div className="flex flex-col md:flex-row gap-8">
+                        {/* Upload Section */}
+                        <div className="flex-1">
+                            <label className="block text-[var(--text-secondary)] mb-4 font-medium">Select Excel File</label>
+
+                            <div className="border-2 border-dashed border-[var(--border)] rounded-xl p-8 flex flex-col items-center justify-center hover:border-[var(--primary-cyan)] transition-colors cursor-pointer relative bg-black/20">
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Upload size={40} className="text-[var(--text-muted)] mb-4" />
+                                {selectedFile ? (
+                                    <div className="text-center">
+                                        <p className="text-[var(--primary-cyan)] font-bold mb-1">{selectedFile.name}</p>
+                                        <p className="text-xs text-[var(--text-muted)]">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-[var(--text-muted)]">
+                                        <p className="font-medium">Drop file here or click to browse</p>
+                                        <p className="text-xs mt-2">Supports .xlsx and .xls</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            <div className="mt-6 flex items-center gap-4">
+                                <button
+                                    onClick={handlePreview}
+                                    disabled={uploading || !selectedFile}
+                                    className="premium-btn premium-btn-primary px-6 py-3 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {uploading ? <RefreshCw className="animate-spin" size={18} /> : <ArrowRight size={18} />}
+                                    {uploading ? 'Analyzing...' : 'Analyze File'}
+                                </button>
+
+                                <button
+                                    onClick={handleDownloadFormat}
+                                    className="premium-btn px-4 py-3 flex items-center gap-2 text-[var(--primary-cyan)] border border-[var(--primary-cyan)]/30 hover:bg-[var(--primary-cyan)]/10"
+                                >
+                                    <Download size={18} /> Format Template
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="w-full md:w-80 bg-[var(--background-dark)] rounded-xl p-6 h-fit border border-[var(--border)]">
+                            <h4 className="font-bold text-white mb-4">Instructions</h4>
+                            <ul className="space-y-3 text-sm text-[var(--text-secondary)] list-disc pl-4">
+                                <li>Use the official formatted template.</li>
+                                <li><strong>Root Domain</strong> is required.</li>
+                                <li>Prices (GP/Niche) allow decimals (e.g. 50.00).</li>
+                                <li>Existing domains will be detected for duplicate resolution.</li>
+                                <li>You can bulk create accounts afterwards.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {step === 'preview' && (
+                <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-xl overflow-hidden">
+                    <div className="p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--background-dark)]">
                         <div>
+                            <h3 className="text-lg font-bold text-white">Import Preview</h3>
+                            <p className="text-[var(--text-muted)] text-sm mt-1">
+                                Found <span className="text-green-400 font-bold">{validSites.length}</span> new sites and <span className="text-orange-400 font-bold">{conflicts.length}</span> conflicts.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
                             <button
-                                onClick={handleImport}
-                                disabled={uploading || !selectedFile}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    backgroundColor: uploading ? '#444' : '#22c55e',
-                                    color: '#fff',
-                                    border: 'none',
-                                    padding: '12px 24px',
-                                    borderRadius: '6px',
-                                    cursor: uploading || !selectedFile ? 'not-allowed' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    opacity: !selectedFile ? 0.5 : 1
-                                }}
+                                onClick={handleCancel}
+                                className="px-4 py-2 hover:bg-white/10 rounded-lg text-sm text-[var(--text-secondary)] transition-colors"
                             >
-                                <Upload size={18} />
-                                {uploading ? 'Importing...' : 'Import Excel File'}
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmImport}
+                                disabled={uploading}
+                                className="premium-btn premium-btn-primary px-6 py-2 flex items-center gap-2"
+                            >
+                                <Check size={18} /> Confirm Import
                             </button>
                         </div>
                     </div>
 
-                    <div>
-                        <button
-                            onClick={handleDownloadFormat}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--primary-cyan, #00bcd4)',
-                                color: 'var(--primary-cyan, #00bcd4)',
-                                padding: '10px 16px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '14px'
-                            }}
-                        >
-                            <Download size={16} />
-                            Download Formatted Excel File
-                        </button>
+                    <div className="p-6 space-y-8">
+
+                        {/* Conflict Resolution Section */}
+                        {conflicts.length > 0 && (
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="font-bold text-orange-400 flex items-center gap-2">
+                                        <AlertTriangle size={18} /> Resolve Duplicates ({conflicts.length})
+                                    </h4>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => applyResolutionToAll('IGNORE')} className="text-xs px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded text-gray-300 transition-colors">Keep All Existing</button>
+                                        <button onClick={() => applyResolutionToAll('ADD')} className="text-xs px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded transition-colors">Add All as Duplicate</button>
+                                        <button onClick={() => applyResolutionToAll('REPLACE')} className="text-xs px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors">Replace All</button>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto border border-[var(--border)] rounded-lg">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-[var(--background-dark)] text-[var(--text-muted)] uppercase text-xs">
+                                            <tr>
+                                                <th className="p-3">Domain</th>
+                                                <th className="p-3">New Upload Details</th>
+                                                <th className="p-3">Existing Site Details</th>
+                                                <th className="p-3 w-64 text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--border)]">
+                                            {conflicts.map((conflict, idx) => (
+                                                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                    <td className="p-3 font-medium text-white">{conflict.newSite.root_domain}</td>
+                                                    <td className="p-3">
+                                                        <div className="text-xs space-y-1">
+                                                            <div><span className="text-[var(--text-muted)]">Email:</span> {conflict.newSite.email || '-'}</div>
+                                                            <div><span className="text-[var(--text-muted)]">GP:</span> ${conflict.newSite.gp_price} / <span className="text-[var(--text-muted)]">Niche:</span> ${conflict.newSite.niche_edit_price}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <div className="text-xs space-y-1 opacity-70">
+                                                            <div><span className="text-[var(--text-muted)]">Email:</span> {conflict.existingSite.email || '-'}</div>
+                                                            <div><span className="text-[var(--text-muted)]">GP:</span> ${conflict.existingSite.gp_price} / <span className="text-[var(--text-muted)]">Niche:</span> ${conflict.existingSite.niche_edit_price}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-3">
+                                                        <div className="flex bg-black/40 rounded-lg p-1 border border-[var(--border)]">
+                                                            <button
+                                                                onClick={() => updateResolution(idx, 'IGNORE')}
+                                                                className={`flex-1 py-1.5 px-2 rounded text-xs transition-colors ${conflict.resolution === 'IGNORE' ? 'bg-gray-600 text-white' : 'text-[var(--text-muted)] hover:text-white'}`}
+                                                                title="Keep Existing (Skip New)"
+                                                            >
+                                                                Skip
+                                                            </button>
+                                                            <button
+                                                                onClick={() => updateResolution(idx, 'ADD')}
+                                                                className={`flex-1 py-1.5 px-2 rounded text-xs transition-colors ${conflict.resolution === 'ADD' ? 'bg-blue-600 text-white' : 'text-[var(--text-muted)] hover:text-white'}`}
+                                                                title="Keep Both (Create Duplicate)"
+                                                            >
+                                                                Add
+                                                            </button>
+                                                            <button
+                                                                onClick={() => updateResolution(idx, 'REPLACE')}
+                                                                className={`flex-1 py-1.5 px-2 rounded text-xs transition-colors ${conflict.resolution === 'REPLACE' ? 'bg-red-600 text-white' : 'text-[var(--text-muted)] hover:text-white'}`}
+                                                                title="Delete Old, Add New"
+                                                            >
+                                                                Replace
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Valid Sites Preview (Collapsed or simple stat) */}
+                        {validSites.length > 0 && (
+                            <div className="bg-green-500/5 border border-green-500/10 rounded-lg p-4 flex items-center gap-3">
+                                <CheckCircle className="text-green-500" size={20} />
+                                <div>
+                                    <p className="text-green-400 font-medium">{validSites.length} valid new sites ready to import.</p>
+                                    <p className="text-xs text-[var(--text-muted)]">These will be added efficiently without conflict.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
+            )}
 
-                {/* Success Result Banner */}
-                {importResult && importResult.success && (
-                    <div style={{
-                        marginTop: '20px',
-                        padding: '16px',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        border: '1px solid #22c55e',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
-                    }}>
-                        <CheckCircle size={24} style={{ color: '#22c55e' }} />
+            {step === 'result' && resultStats && (
+                <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-xl p-8 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+                        <Check className="text-green-500 w-8 h-8" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Import Complete</h3>
+                    <div className="grid grid-cols-3 gap-8 my-6 text-center">
                         <div>
-                            <div style={{ color: '#22c55e', fontWeight: '600', marginBottom: '4px' }}>
-                                Import Successful!
-                            </div>
-                            <div style={{ color: 'var(--text-secondary, #aaa)', fontSize: '14px' }}>
-                                Imported <strong style={{ color: '#22c55e' }}>{importResult.inserted}</strong> of {importResult.total} rows.
-                                {importResult.errors.length > 0 && (
-                                    <span style={{ color: '#f59e0b' }}> ({importResult.errors.length} rows had errors)</span>
-                                )}
-                            </div>
+                            <div className="text-2xl font-bold text-green-400">{resultStats.inserted}</div>
+                            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Added</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-blue-400">{resultStats.replaced}</div>
+                            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Replaced</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-gray-400">{resultStats.ignored}</div>
+                            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">Skipped</div>
                         </div>
                     </div>
-                )}
-
-                {/* Error Result Banner */}
-                {importResult && !importResult.success && (
-                    <div style={{
-                        marginTop: '20px',
-                        padding: '16px',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid #ef4444',
-                        borderRadius: '8px',
-                        color: '#ef4444'
-                    }}>
-                        <strong>Import Failed:</strong> {importResult.error}
-                    </div>
-                )}
-            </div>
-
-            {/* Instructions */}
-            <div style={{
-                marginTop: '20px',
-                padding: '16px',
-                backgroundColor: 'var(--card-background, #1a1a2e)',
-                border: '1px solid var(--border, #2a2a4a)',
-                borderRadius: '8px'
-            }}>
-                <h4 style={{ color: 'var(--text-primary, #fff)', marginBottom: '12px' }}>Instructions:</h4>
-                <ul style={{ color: 'var(--text-secondary, #aaa)', fontSize: '14px', lineHeight: '1.8', paddingLeft: '20px' }}>
-                    <li>Download the formatted Excel template first</li>
-                    <li>Fill in site details (Root Domain, DA, DR, Traffic, Prices, Email, etc.)</li>
-                    <li>Upload multiple Excel files - each import adds to the database</li>
-                    <li>After importing, go to <strong style={{ color: 'var(--primary-cyan, #00bcd4)' }}>Create Account</strong> to create blogger accounts from emails</li>
-                </ul>
-            </div>
+                    <button
+                        onClick={handleCancel}
+                        className="premium-btn px-6 py-2"
+                    >
+                        Upload Another File
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
+
+export default AddExcel;

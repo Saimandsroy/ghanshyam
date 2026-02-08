@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Send, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAutoSave, AutoSaveIndicator } from '../../hooks/useAutoSave';
 
 /**
  * ContentSubmitModal - Modal for submitting written content
  */
 export function ContentSubmitModal({ task, isOpen, onClose, onSubmit, submitting }) {
-    const [content, setContent] = useState('');
+    // Auto-save content based on task ID
+    const { value: content, setValue: setContent, clearSaved, isSaved } =
+        useAutoSave(`content-submit-${task?.id}`, '');
     const [error, setError] = useState('');
 
     if (!isOpen || !task) return null;
@@ -20,11 +23,12 @@ export function ContentSubmitModal({ task, isOpen, onClose, onSubmit, submitting
             setError('Content must be at least 100 characters');
             return;
         }
+        clearSaved(); // Clear auto-saved data on submit
         onSubmit(task.id, content);
     };
 
     const handleClose = () => {
-        setContent('');
+        // Don't clear content on close - let auto-save preserve it
         setError('');
         onClose();
     };

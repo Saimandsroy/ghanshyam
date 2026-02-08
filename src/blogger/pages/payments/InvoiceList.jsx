@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw, FileText, Eye, Download } from 'lucide-react';
 import { bloggerAPI } from '../../../lib/api';
+import { useToast } from '../../../context/ToastContext';
 
 export function InvoiceList() {
+  const navigate = useNavigate();
+  const { showError } = useToast();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,6 +14,7 @@ export function InvoiceList() {
   const [pageSize, setPageSize] = useState(20);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [sortDir, setSortDir] = useState('desc');
+  const [downloadingId, setDownloadingId] = useState(null);
 
   // Fetch invoices from API
   const fetchInvoices = useCallback(async () => {
@@ -49,6 +54,27 @@ export function InvoiceList() {
       return { text: 'Pending', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' };
     }
     return { text: 'Processing', color: 'var(--text-muted)', bg: 'var(--background-dark)' };
+  };
+
+  // Handle PDF download
+  const handleDownload = async (invoiceId) => {
+    try {
+      setDownloadingId(invoiceId);
+      const blob = await bloggerAPI.downloadInvoicePdf(invoiceId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      showError('Failed to download PDF');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -95,69 +121,93 @@ export function InvoiceList() {
 
       {/* Table */}
       {!loading && (
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="premium-card overflow-hidden p-0" style={{ border: '1px solid var(--border)' }}>
           <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
+            <thead style={{ backgroundColor: 'var(--background-secondary)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Id</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Invoice Number</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Type</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Payment Method</th>
-                <th
-                  className="px-4 py-3 text-left text-sm cursor-pointer select-none"
-                  style={{ color: 'var(--text-muted)' }}
-                  onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
-                >
-                  Amount {sortDir === 'asc' ? '▲' : '▼'}
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Id</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Invoice number</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Payment Method</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-[var(--primary-cyan)] transition-colors" onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}>
+                    Amount {sortDir === 'asc' ? '▲' : '▼'}
+                  </div>
                 </th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Status</th>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Datetime</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Datetime</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Action</th>
               </tr>
             </thead>
-            <tbody>
-              {sortedInvoices.map((inv) => {
-                const status = getStatusBadge(inv.status);
-                return (
-                  <tr key={inv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{inv.id}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_number}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="px-2 py-1 rounded text-xs capitalize"
-                        style={{
-                          backgroundColor: inv.type === 'credit' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                          color: inv.type === 'credit' ? 'var(--success)' : 'var(--error)'
-                        }}
-                      >
-                        {inv.type || 'N/A'}
+            <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
+              {sortedInvoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-[var(--card-hover)] transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{inv.id}</td>
+                  <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {inv.invoice_number && inv.invoice_number !== '-' ? inv.invoice_number : `LM-${inv.id}`}
+                  </td>
+
+                  {/* Payment Method Column */}
+                  <td className="px-6 py-4 text-sm">
+                    {(inv.payment_method === 'paypal' || inv.payment_method === 'paypal_id') ? (
+                      <div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 mb-1 border border-blue-500/20">
+                          Paypal ID
+                        </span>
+                        <div className="text-xs break-all max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+                          {inv.paypal_email || 'N/A'}
+                        </div>
+                      </div>
+                    ) : (inv.payment_method === 'bank_transfer' || inv.payment_method === 'bank') ? (
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-500 mb-1 border border-green-500/20">
+                          Bank Details
+                        </span>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Bank Type:</span> {inv.bank_details?.bank_type || 'N/A'}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Acc No:</span> {inv.bank_details?.account_number || 'N/A'}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Beneficiary:</span> {inv.bank_details?.beneficiary_name || 'N/A'}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>IFSC:</span> {inv.bank_details?.ifsc_code || 'N/A'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{inv.payment_method || 'N/A'}</span>
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    ${inv.amount?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {inv.paid_date ? (
+                      <span className="text-green-600 font-medium">
+                        {new Date(inv.paid_date).toLocaleString('en-US', {
+                          year: 'numeric', month: 'short', day: 'numeric',
+                          hour: 'numeric', minute: 'numeric'
+                        })}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-1 rounded text-xs mr-2" style={{ backgroundColor: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', color: '#60A5FA' }}>
-                        {inv.payment_method || 'N/A'}
-                      </span>
-                      {inv.paypal_email && <span style={{ color: 'var(--text-secondary)' }}>{inv.paypal_email}</span>}
-                    </td>
-                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--text-primary)' }}>
-                      ${inv.amount || 0}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="px-2 py-1 rounded text-xs"
-                        style={{ backgroundColor: status.bg, color: status.color }}
-                      >
-                        {status.text}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>
-                      {inv.created_at ? new Date(inv.created_at).toLocaleString() : 'N/A'}
-                    </td>
-                  </tr>
-                );
-              })}
+                    ) : (
+                      <span className="text-amber-500 font-medium">Pending</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => navigate(`/blogger/payments/invoices/${inv.id}`)}
+                      className="p-2 rounded-lg hover:bg-[var(--primary-cyan)]/10 transition-colors inline-block group"
+                      title="View Invoice"
+                    >
+                      <FileText className="h-5 w-5 text-orange-400 group-hover:text-orange-600 transition-colors" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
               {sortedInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <td colSpan={6} className="px-6 py-12 text-center" style={{ color: 'var(--text-muted)' }}>
                     No invoices found
                   </td>
                 </tr>

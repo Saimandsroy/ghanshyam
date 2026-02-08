@@ -7,8 +7,16 @@ import { useAuth } from '../auth/AuthContext.jsx';
 export function AdminLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const getUserImage = () => {
+    if (!user?.profile_image) return null;
+    if (user.profile_image.startsWith('http')) return user.profile_image;
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+    const cleanPath = user.profile_image.startsWith('/') ? user.profile_image.slice(1) : user.profile_image;
+    return `${baseUrl}/${cleanPath}`;
+  };
 
   const handleLogout = () => {
     logout();
@@ -32,6 +40,7 @@ export function AdminLayout() {
         { label: 'Create Account from Sites', to: '/admin/sites/create-account' },
         { label: 'Deleted Sites', to: '/admin/sites/deleted' },
         { label: 'Pending Bulk Upload Requests', to: '/admin/sites/pending-bulk' },
+        { label: 'Link Completed', to: '/admin/sites/link-completed' },
         { label: 'Sites', to: '/admin/sites' }
       ]
     },
@@ -58,17 +67,26 @@ export function AdminLayout() {
         { label: 'Videos', to: '/admin/more/videos' }
       ]
     },
+    {
+      icon: <Users size={20} />,
+      label: 'Profile',
+      to: '/admin/profile',
+      active: pathname === '/admin/profile'
+    }
   ];
 
   return (
-    <div className="h-screen overflow-hidden flex bg-[var(--background-dark)] bg-grid-pattern">
+    <div className="h-screen overflow-hidden flex bg-app-background">
       <ModernSidebar
         navItems={navItems}
-        userName="Admin User"
-        userRole="Administrator"
+        userName={user?.name || "Admin User"}
+        userRole={user?.role || "Administrator"}
+        userImage={getUserImage()}
         onLogout={handleLogout}
         isMobileOpen={isMobileOpen}
         onMobileClose={() => setIsMobileOpen(false)}
+        profileLink="/admin/profile"
+        changePasswordLink="/admin/change-password"
       />
       <div className="flex-1 flex flex-col min-w-0 h-full">
         <header className="px-8 py-6 border-b border-[var(--border)] bg-[var(--background-dark)]/80 backdrop-blur-md sticky top-0 z-30">

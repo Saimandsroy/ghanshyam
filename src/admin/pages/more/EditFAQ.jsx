@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { RichTextEditor } from '../../../components/RichTextEditor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -154,32 +155,22 @@ export function EditFAQ() {
 
                 {/* Form Fields */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                        Question<span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                        name="question" value={form.question} onChange={handleChange} rows={3}
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '6px',
-                            backgroundColor: 'var(--background, #0f0f1a)',
-                            border: '1px solid var(--border, #2a2a4a)',
-                            color: 'var(--text-primary, #fff)', fontSize: '14px', resize: 'vertical'
-                        }}
+                    <RichTextEditor
+                        label="Question"
+                        value={form.question}
+                        onChange={(value) => setForm({ ...form, question: value })}
+                        placeholder="Enter the FAQ question..."
+                        required={true}
                     />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                        Answer<span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                        name="answer" value={form.answer} onChange={handleChange} rows={4}
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '6px',
-                            backgroundColor: 'var(--background, #0f0f1a)',
-                            border: '1px solid var(--border, #2a2a4a)',
-                            color: 'var(--text-primary, #fff)', fontSize: '14px', resize: 'vertical'
-                        }}
+                    <RichTextEditor
+                        label="Answer"
+                        value={form.answer}
+                        onChange={(value) => setForm({ ...form, answer: value })}
+                        placeholder="Enter the FAQ answer..."
+                        required={true}
                     />
                 </div>
 

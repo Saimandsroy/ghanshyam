@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { teamAPI } from '../../lib/api';
 import { ArrowLeft, Search, Trash2, Send, AlertCircle, ChevronLeft, ChevronRight, Filter, X, Globe, BarChart2, Tag, DollarSign, CheckCircle } from 'lucide-react';
+import { RichTextEditor } from '../../components/RichTextEditor';
+import { useAutoSave, AutoSaveIndicator } from '../../hooks/useAutoSave';
 
 /**
  * PushToManager - WORKFLOW STEP 2
@@ -20,7 +22,9 @@ export const PushToManager = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [globalNote, setGlobalNote] = useState('');
+
+    // Auto-save global note
+    const { value: globalNote, setValue: setGlobalNote, clearSaved: clearNoteSaved, isSaved: noteIsSaved } = useAutoSave(`push-to-manager-note-${id}`, '');
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -183,6 +187,7 @@ export const PushToManager = () => {
 
             await teamAPI.submitWebsitesToManager(id, websiteIds, notes, websiteData);
 
+            clearNoteSaved(); // Clear auto-saved global note
             setSuccess('Websites submitted to Manager successfully!');
             setTimeout(() => {
                 navigate('/teams/order-notifications');
@@ -233,7 +238,7 @@ export const PushToManager = () => {
                 </button>
                 <div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Push to Manager</h1>
-                    <p className="text-[var(--text-muted)]">Order #{task.id} • Select <span className="text-[var(--primary-cyan)] font-bold">{requiredLinks}</span> website(s)</p>
+                    <p className="text-[var(--text-muted)]">Order {task.manual_order_id || `#${task.id}`} • Select <span className="text-[var(--primary-cyan)] font-bold">{requiredLinks}</span> website(s)</p>
                 </div>
             </div>
 
@@ -260,7 +265,7 @@ export const PushToManager = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
                     <div className="space-y-1">
                         <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Order ID</span>
-                        <div className="font-mono text-[var(--primary-cyan)]">#{task.id}</div>
+                        <div className="font-mono text-[var(--primary-cyan)]">{task.manual_order_id || `#${task.id}`}</div>
                     </div>
                     <div className="space-y-1">
                         <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Client</span>
@@ -587,13 +592,11 @@ export const PushToManager = () => {
 
                 {/* Global Note */}
                 <div className="mt-8 pt-6 border-t border-[var(--border)]">
-                    <label className="text-sm font-semibold text-[var(--text-primary)] block mb-2">Global Note (Optional)</label>
-                    <textarea
-                        className="premium-input w-full min-h-[80px]"
-                        placeholder="Add a summary note for the manager..."
-                        rows={3}
+                    <RichTextEditor
+                        label="Global Note (Optional)"
                         value={globalNote}
-                        onChange={(e) => setGlobalNote(e.target.value)}
+                        onChange={setGlobalNote}
+                        placeholder="Add a summary note for the manager..."
                     />
                 </div>
 

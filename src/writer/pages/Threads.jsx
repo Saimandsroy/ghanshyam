@@ -3,6 +3,8 @@ import { Pagination } from '../../components/Pagination.jsx';
 import { threadsAPI } from '../../lib/api';
 import { MessageSquare, Plus, RefreshCw, Send, Search } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { RichTextEditor } from '../../components/RichTextEditor';
+import { useAutoSaveForm, AutoSaveIndicator } from '../../hooks/useAutoSave';
 
 export function Threads() {
   const { showError, showSuccess } = useToast();
@@ -13,12 +15,12 @@ export function Threads() {
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState('');
 
-  // Form State
-  const [form, setForm] = useState({
-    department: '', // Was 'role'
-    priority: 'Medium', // Default
+  // Auto-save form state - survives browser close
+  const { formData: form, setFormData: setForm, clearAllSaved, isSaved } = useAutoSaveForm('writer-create-ticket', {
+    department: '',
+    priority: 'Medium',
     subject: '',
-    message: '' // Initial message
+    message: ''
   });
 
   const fetchThreads = useCallback(async () => {
@@ -61,6 +63,7 @@ export function Threads() {
       });
 
       showSuccess('Ticket created successfully');
+      clearAllSaved(); // Clear auto-saved data
       fetchThreads();
 
       if (createAnother) {
@@ -174,14 +177,12 @@ export function Threads() {
             />
           </div>
           <div className="md:col-span-3">
-            <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Message*</label>
-            <textarea
-              name="message"
+            <RichTextEditor
+              label="Message"
               value={form.message}
-              onChange={onChange}
-              rows={3}
+              onChange={(value) => setForm({ ...form, message: value })}
               placeholder="Describe your issue in detail..."
-              className="premium-input w-full min-h-[100px]"
+              required={true}
             />
           </div>
         </div>

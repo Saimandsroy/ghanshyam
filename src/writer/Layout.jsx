@@ -1,14 +1,22 @@
 import React from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
-import { LayoutGrid, CheckCircle2, Bell, XCircle, MessageSquare } from 'lucide-react';
+import { LayoutGrid, CheckCircle2, Bell, XCircle, MessageSquare, User } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 export function WriterLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const base = '/writer';
+
+  const getUserImage = () => {
+    if (!user?.profile_image) return null;
+    if (user.profile_image.startsWith('http')) return user.profile_image;
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+    const cleanPath = user.profile_image.startsWith('/') ? user.profile_image.slice(1) : user.profile_image;
+    return `${baseUrl}/${cleanPath}`;
+  };
 
   const handleLogout = () => {
     logout();
@@ -20,15 +28,19 @@ export function WriterLayout() {
     { icon: <Bell size={18} />, label: 'Order Notifications', to: `${base}/notifications`, active: pathname.startsWith(`${base}/notifications`) },
     { icon: <XCircle size={18} />, label: 'Rejected Notifications', to: `${base}/rejected`, active: pathname.startsWith(`${base}/rejected`) },
     { icon: <MessageSquare size={18} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`) },
+    { icon: <User size={18} />, label: 'Profile', to: `${base}/profile`, active: pathname === `${base}/profile` },
   ];
 
   return (
-    <div className="h-screen overflow-hidden flex bg-[var(--background-dark)] bg-grid-pattern text-[var(--text-primary)]">
+    <div className="h-screen overflow-hidden flex bg-app-background text-[var(--text-primary)]">
       <ModernSidebar
         navItems={navItems}
-        userName="Writer"
-        userRole="Writer"
+        userName={user?.name || "Writer"}
+        userRole={user?.role || "Writer"}
+        userImage={getUserImage()}
         onLogout={handleLogout}
+        profileLink="/writer/profile"
+        changePasswordLink="/writer/change-password"
       />
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Mobile Header */}

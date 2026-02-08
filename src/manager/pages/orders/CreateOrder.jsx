@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../../components/layout/Layout';
 import { managerAPI, adminAPI } from '../../../lib/api';
 import { useNavigate } from 'react-router-dom';
+import { RichTextEditor } from '../../../components/RichTextEditor';
+import { useAutoSaveForm, AutoSaveIndicator } from '../../../hooks/useAutoSave';
 
 // Dropdown options based on production deep dive analysis
 const ORDER_TYPE_OPTIONS = ['New Order', 'Sub Order'];
@@ -102,7 +104,8 @@ export const CreateOrder = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
 
-  const [form, setForm] = useState({
+  // Auto-save form state - survives browser close/power outage
+  const { formData: form, setFormData: setForm, setField, clearAllSaved, isSaved } = useAutoSaveForm('manager-create-order', {
     // Row 1
     orderType: 'New Order',      // New Order vs Sub Order
     assigned_team_id: '',        // Select Team dropdown
@@ -187,7 +190,8 @@ export const CreateOrder = () => {
       setSuccess('Order created successfully!');
 
       if (stayOnPage) {
-        // Reset form for new entry
+        // Reset form for new entry and clear auto-saved data
+        clearAllSaved();
         setForm({
           ...form,
           manual_order_id: '',
@@ -201,7 +205,8 @@ export const CreateOrder = () => {
         });
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        // Navigate to orders list
+        // Clear auto-saved data and navigate
+        clearAllSaved();
         setTimeout(() => navigate('/manager/orders'), 1000);
       }
     } catch (err) {
@@ -212,6 +217,7 @@ export const CreateOrder = () => {
   };
 
   const reset = () => {
+    clearAllSaved(); // Clear auto-saved data from localStorage
     setForm({
       orderType: 'New Order',
       assigned_team_id: '',
@@ -243,7 +249,10 @@ export const CreateOrder = () => {
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight">Create New Order</h1>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-3">
+              Create New Order
+              <AutoSaveIndicator isSaved={isSaved} />
+            </h1>
             <p className="text-[var(--text-muted)] mt-1">Fill in the details below to create a new client order.</p>
           </div>
           <button className="premium-btn text-[var(--text-muted)] border border-[var(--border)] hover:bg-white/5" onClick={reset}>
@@ -432,37 +441,24 @@ export const CreateOrder = () => {
 
           {/* Row 6: Message (Rich Text) */}
           <div className="mb-8">
-            <label className="premium-label">Instructions & Notes <span className="text-red-400">*</span></label>
-            <div className="border border-[var(--border)] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[var(--primary-cyan)]/20 focus-within:border-[var(--primary-cyan)] transition-all">
-              {/* Toolbar */}
-              <div className="flex items-center gap-1 p-2 bg-[var(--background-dark)] border-b border-[var(--border)]">
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">B</button>
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded italic text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">I</button>
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded underline text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">U</button>
-                <div className="w-px h-4 bg-[var(--border)] mx-1"></div>
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">H1</button>
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">H2</button>
-                <div className="w-px h-4 bg-[var(--border)] mx-1"></div>
-                <button type="button" className="p-1.5 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Example</button>
-              </div>
-              <textarea
-                className="w-full px-4 py-4 bg-[var(--card-background)] text-[var(--text-primary)] min-h-[180px] focus:outline-none placeholder-[var(--text-muted)] resize-y"
-                value={form.notes}
-                onChange={onChange('notes')}
-                placeholder="Write detailed instructions for the team/writer..."
-              />
-            </div>
+            <RichTextEditor
+              label="Instructions & Notes"
+              value={form.notes}
+              onChange={(value) => setForm({ ...form, notes: value })}
+              placeholder="Write detailed instructions for the team/writer..."
+              required={true}
+            />
           </div>
 
-          {/* Buttons */}
+          {/* Buttons - Standard Workflow */}
           <div className="flex gap-4 pt-4">
             <button
               className="premium-btn premium-btn-accent flex-1 py-3 text-base shadow-lg shadow-[var(--primary-cyan)]/20"
               onClick={() => handleCreate(false)}
               disabled={loading}
             >
-              {loading ? <span className="animate-spin">↻</span> : '✨'}
-              {loading ? 'Creating Order...' : 'Create Order'}
+              {loading ? <span className="animate-spin">↻</span> : '📤'}
+              {loading ? 'Creating Order...' : 'Push to Team'}
             </button>
             <button
               className="premium-btn border border-[var(--border)] hover:bg-white/5 text-[var(--text-primary)] flex-1 py-3"
@@ -471,6 +467,30 @@ export const CreateOrder = () => {
             >
               Create & Add Another
             </button>
+          </div>
+
+          {/* Super Workflow - Direct Push Options */}
+          <div className="mt-6 pt-6 border-t border-[var(--border)]">
+            <h3 className="text-sm font-semibold text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              ⚡ Direct Push Options
+              <span className="text-xs font-normal">(Skip intermediate steps)</span>
+            </h3>
+            <div className="flex gap-4">
+              <button
+                className="premium-btn flex-1 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-400 hover:from-blue-500/30 hover:to-cyan-500/30 transition-all"
+                onClick={() => navigate('/manager/orders/create/direct-writer')}
+              >
+                ✍️ Push to Writer
+                <span className="text-xs opacity-70 ml-2">(Skip Team)</span>
+              </button>
+              <button
+                className="premium-btn flex-1 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:from-purple-500/30 hover:to-pink-500/30 transition-all"
+                onClick={() => navigate('/manager/orders/create/direct-blogger')}
+              >
+                📝 Push to Blogger
+                <span className="text-xs opacity-70 ml-2">(Skip Team & Writer)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

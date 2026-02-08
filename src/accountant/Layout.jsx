@@ -19,7 +19,7 @@ export function AccountantLayout() {
   ];
 
   return (
-    <div className="h-screen overflow-hidden flex bg-[var(--background-dark)] bg-grid-pattern">
+    <div className="h-screen overflow-hidden flex bg-app-background">
       <ModernSidebar navItems={navItems} userName="Accountant" userRole="Accounts" onLogout={handleLogout} />
       <div className="flex-1 flex flex-col min-w-0 h-full">
         <header className="px-8 py-6 border-b border-[var(--border)] bg-[var(--background-dark)]/80 backdrop-blur-md sticky top-0 z-30">

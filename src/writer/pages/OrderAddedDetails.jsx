@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Upload } from 'lucide-react';
+import { ArrowLeft, Send, Upload, XCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { writerAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAutoSave, AutoSaveIndicator } from '../../hooks/useAutoSave';
 
 export function OrderAddedDetails() {
     const { id } = useParams();
@@ -14,11 +15,18 @@ export function OrderAddedDetails() {
     const [submitting, setSubmitting] = useState(false);
     const [websiteSubmissions, setWebsiteSubmissions] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState({});
-    const [globalNote, setGlobalNote] = useState('');
+
+    // Auto-save global note for this task
+    const { value: globalNote, setValue: setGlobalNote, clearSaved: clearNoteSaved, isSaved: noteIsSaved } =
+        useAutoSave(`writer-order-note-${id}`, '');
+
     const fileInputRefs = useRef({});
 
     // Check if order is Niche Edit
     const isNicheEdit = task?.order_type?.toLowerCase().includes('niche');
+
+    // Key for localStorage for website submissions
+    const submissionsKey = `autosave_writer-submissions-${id}`;
 
     useEffect(() => {
         const loadData = async () => {
@@ -28,6 +36,21 @@ export function OrderAddedDetails() {
                 const taskData = response.task;
                 setTask(taskData);
 
+                // Try to restore from localStorage first
+                const savedSubmissions = localStorage.getItem(submissionsKey);
+                if (savedSubmissions) {
+                    try {
+                        const parsed = JSON.parse(savedSubmissions);
+                        if (parsed.timestamp && Date.now() - parsed.timestamp < 7 * 24 * 60 * 60 * 1000) {
+                            setWebsiteSubmissions(parsed.data);
+                            return; // Use saved data
+                        }
+                    } catch (e) {
+                        console.warn('Failed to restore submissions:', e);
+                    }
+                }
+
+                // Initialize from API
                 if (taskData.selected_websites) {
                     setWebsiteSubmissions(
                         taskData.selected_websites.map(sw => ({
@@ -41,11 +64,11 @@ export function OrderAddedDetails() {
                             writer_note: sw.writer_note || '',
                             notes: sw.notes,
                             // Niche Edit specific fields
-                            option_type: 'replace', // 'replace' or 'insert'
-                            replace_with: '',
-                            replace_statement: '',
-                            insert_after: '',
-                            insert_statement: ''
+                            option_type: sw.option_type || 'insert', // 'replace' or 'insert' from API
+                            replace_with: sw.replace_with || '',
+                            replace_statement: sw.replace_statement || '',
+                            insert_after: sw.insert_after || '',
+                            insert_statement: sw.insert_statement || ''
                         }))
                     );
                 }
@@ -59,6 +82,19 @@ export function OrderAddedDetails() {
 
         loadData();
     }, [id, showError]);
+
+    // Auto-save websiteSubmissions changes to localStorage
+    useEffect(() => {
+        if (websiteSubmissions.length > 0 && !loading) {
+            const timeoutId = setTimeout(() => {
+                localStorage.setItem(submissionsKey, JSON.stringify({
+                    data: websiteSubmissions,
+                    timestamp: Date.now()
+                }));
+            }, 400);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [websiteSubmissions, submissionsKey, loading]);
 
     const handleContentChange = (index, field, value) => {
         setWebsiteSubmissions(prev => {
@@ -150,7 +186,7 @@ export function OrderAddedDetails() {
             await writerAPI.submitContent(id, payload);
 
             showSuccess('Content submitted successfully!');
-            navigate('/writer/notifications');
+            navigate('/writer/completed-orders');
         } catch (err) {
             let errorMessage = 'Failed to submit content';
             if (err?.response?.data?.message) {

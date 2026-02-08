@@ -4,6 +4,7 @@ import { ArrowLeft, User, Globe, FileText, Send, CheckCircle, AlertCircle, Trash
 import { managerAPI } from '../../../lib/api';
 import { useToast } from '../../../context/ToastContext';
 import { Layout } from '../../components/layout/Layout';
+import { useAutoSave, AutoSaveIndicator } from '../../../hooks/useAutoSave';
 
 export function TeamSubmissionDetails() {
     const { id } = useParams();
@@ -15,9 +16,20 @@ export function TeamSubmissionDetails() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    const [selectedWriter, setSelectedWriter] = useState('');
-    const [instructions, setInstructions] = useState('');
+    // Auto-save selectedWriter
+    const { value: selectedWriter, setValue: setSelectedWriter, clearSaved: clearWriterSaved } =
+        useAutoSave(`team-submission-writer-${id}`, '');
+
+    // Auto-save instructions for this task
+    const { value: instructions, setValue: setInstructions, clearSaved: clearInstructionsSaved, isSaved } =
+        useAutoSave(`team-submission-instructions-${id}`, '');
+
     const [websiteDetails, setWebsiteDetails] = useState([]);
+    const [selectedWebsiteIds, setSelectedWebsiteIds] = useState(new Set());
+    const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
+
+    // Key for localStorage for website details
+    const websiteDetailsKey = `autosave_team-submission-websites-${id}`;
 
     useEffect(() => {
         const loadData = async () => {
@@ -33,7 +45,21 @@ export function TeamSubmissionDetails() {
                     setWriters(writersResponse.users);
                 }
 
-                // Initialize website details state from selected websites
+                // Try to restore from localStorage first
+                const savedDetails = localStorage.getItem(websiteDetailsKey);
+                if (savedDetails) {
+                    try {
+                        const parsed = JSON.parse(savedDetails);
+                        if (parsed.timestamp && Date.now() - parsed.timestamp < 7 * 24 * 60 * 60 * 1000) {
+                            setWebsiteDetails(parsed.data);
+                            return; // Use saved data
+                        }
+                    } catch (e) {
+                        console.warn('Failed to restore website details:', e);
+                    }
+                }
+
+                // Initialize website details state from API
                 if (taskResponse.task && taskResponse.task.selected_websites) {
                     setWebsiteDetails(
                         taskResponse.task.selected_websites.map(sw => ({
@@ -66,11 +92,52 @@ export function TeamSubmissionDetails() {
         loadData();
     }, [id, showError]);
 
+    // Auto-save websiteDetails changes to localStorage
+    useEffect(() => {
+        if (websiteDetails.length > 0 && !loading) {
+            const timeoutId = setTimeout(() => {
+                localStorage.setItem(websiteDetailsKey, JSON.stringify({
+                    data: websiteDetails,
+                    timestamp: Date.now()
+                }));
+            }, 400);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [websiteDetails, websiteDetailsKey, loading]);
+
+    // Auto-select first N websites when data loads
+    useEffect(() => {
+        if (task && websiteDetails.length > 0 && !hasInitializedSelection) {
+            const maxSelections = parseInt(task.no_of_links, 10) || 1;
+            const initialIds = websiteDetails.slice(0, maxSelections).map(w => w.id);
+            setSelectedWebsiteIds(new Set(initialIds));
+            setHasInitializedSelection(true);
+        }
+    }, [task, websiteDetails, hasInitializedSelection]);
+
     const handleWebsiteDetailChange = (index, field, value) => {
         setWebsiteDetails(prev => {
             const updated = [...prev];
             updated[index] = { ...updated[index], [field]: value };
             return updated;
+        });
+    };
+
+    // Toggle website selection
+    const toggleWebsiteSelection = (websiteId) => {
+        const maxSelections = parseInt(task?.no_of_links, 10) || 1;
+        setSelectedWebsiteIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(websiteId)) {
+                newSet.delete(websiteId);
+            } else {
+                if (newSet.size >= maxSelections) {
+                    showError(`You can only select ${maxSelections} website(s) for this order.`);
+                    return prev;
+                }
+                newSet.add(websiteId);
+            }
+            return newSet;
         });
     };
 
@@ -80,10 +147,21 @@ export function TeamSubmissionDetails() {
             return;
         }
 
-        // Validate all website details based on order type
+        const maxSelections = parseInt(task?.no_of_links, 10) || 1;
+
+        // Validate selection count
+        if (selectedWebsiteIds.size !== maxSelections) {
+            showError(`You must select exactly ${maxSelections} website(s) for this order.`);
+            return;
+        }
+
+        // Filter to only selected websites
+        const selectedDetails = websiteDetails.filter(detail => selectedWebsiteIds.has(detail.id));
+
+        // Validate selected website details based on order type
         const isGuestPost = task?.order_type?.toLowerCase().includes('guest') || task?.order_type?.toLowerCase() === 'gp';
 
-        const missingFields = websiteDetails.some(detail => {
+        const missingFields = selectedDetails.some(detail => {
             // URL and Anchor are always required
             if (!detail.target_url || !detail.anchor_text) return true;
             // Title is only required for Guest Post
@@ -95,16 +173,17 @@ export function TeamSubmissionDetails() {
 
         if (missingFields) {
             if (isGuestPost) {
-                showError('Please fill in URL, Anchor, and Title for all websites. PayPal ID is required for upfront payments.');
+                showError('Please fill in URL, Anchor, and Title for all selected websites.');
             } else {
-                showError('Please fill in URL and Anchor for all websites. PayPal ID is required for upfront payments.');
+                showError('Please fill in URL and Anchor for all selected websites.');
             }
             return;
         }
 
         try {
             setSubmitting(true);
-            await managerAPI.assignToWriter(id, selectedWriter, instructions, websiteDetails);
+            // Only send selected websites to the backend
+            await managerAPI.assignToWriter(id, selectedWriter, instructions, selectedDetails);
             showSuccess('Task successfully assigned to writer');
             navigate('/manager/pending/teams');
         } catch (err) {
@@ -191,23 +270,62 @@ export function TeamSubmissionDetails() {
 
                         {/* Selected Websites - Multiple */}
                         <div className="premium-card p-6">
-                            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2 border-b border-[var(--border)] pb-4">
-                                <Globe className="h-5 w-5 text-green-400" />
-                                Team Selected Websites ({websiteDetails.length})
-                            </h2>
+                            <div className="flex items-center justify-between mb-4 border-b border-[var(--border)] pb-4">
+                                <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                                    <Globe className="h-5 w-5 text-green-400" />
+                                    Team Selected Websites ({websiteDetails.length})
+                                </h2>
+                                <div className={`px-4 py-2 rounded-lg text-sm font-medium ${selectedWebsiteIds.size === (parseInt(task?.no_of_links, 10) || 1)
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                    }`}>
+                                    Selected: {selectedWebsiteIds.size} / {parseInt(task?.no_of_links, 10) || 1}
+                                </div>
+                            </div>
 
                             {websiteDetails.length > 0 ? (
                                 <div className="space-y-6">
                                     {websiteDetails.map((detail, index) => {
                                         const isGuestPost = task?.order_type?.toLowerCase().includes('guest') || task?.order_type?.toLowerCase() === 'gp';
                                         const isNicheEdit = task?.order_type?.toLowerCase().includes('niche');
+                                        const isSelected = selectedWebsiteIds.has(detail.id);
 
                                         return (
-                                            <div key={detail.id} className="bg-[var(--background-dark)] rounded-xl p-5 border border-[var(--border)]">
+                                            <div
+                                                key={detail.id}
+                                                className={`rounded-xl p-5 border-2 transition-all duration-300 relative overflow-hidden ${isSelected
+                                                    ? 'bg-[var(--card-background)] border-[var(--primary-cyan)] shadow-lg shadow-[var(--primary-cyan)]/10'
+                                                    : 'bg-[var(--background-dark)] border-[var(--border)] opacity-70 hover:opacity-100 hover:border-[var(--text-muted)]'
+                                                    }`}
+                                            >
+                                                {/* Selection Checkbox/Toggle */}
+                                                <div className="absolute top-0 right-0 p-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleWebsiteSelection(detail.id)}
+                                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${isSelected
+                                                            ? 'bg-[var(--primary-cyan)] text-black shadow-md'
+                                                            : 'bg-[var(--background-dark)] border border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-primary)] hover:text-[var(--text-primary)]'
+                                                            }`}
+                                                    >
+                                                        {isSelected ? (
+                                                            <>
+                                                                <CheckCircle size={14} />
+                                                                Selected
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="w-3.5 h-3.5 rounded-full border border-current"></div>
+                                                                Select
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+
                                                 {/* Website Header */}
-                                                <div className="flex justify-between items-start mb-4 pb-4 border-b border-[var(--border)]">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-lg font-bold text-blue-400 mb-2">
+                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-[var(--border)]">
+                                                    <div className="pr-24"> {/* Padding for absolute button */}
+                                                        <h3 className={`text-xl font-bold mb-2 transition-colors ${isSelected ? 'text-[var(--primary-cyan)]' : 'text-[var(--text-muted)]'}`}>
                                                             {detail.domain_url}
                                                         </h3>
                                                         <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
@@ -215,31 +333,31 @@ export function TeamSubmissionDetails() {
                                                             <span>DA: <span className="text-[var(--text-primary)]">{detail.da || '-'}</span></span>
                                                             <span>Traffic: <span className="text-[var(--text-primary)]">{detail.traffic || '-'}</span></span>
                                                         </div>
+                                                    </div>         {/* Post URL - Only for Niche Edit orders */}
+                                                    {isNicheEdit && detail.copy_url && (
+                                                        <div className="mt-2 text-xs">
+                                                            <span className="text-purple-400 font-medium">Post URL: </span>
+                                                            <span className="text-[var(--text-primary)] break-all">{detail.copy_url}</span>
+                                                        </div>
+                                                    )}
 
-                                                        {/* Post URL - Only for Niche Edit orders */}
-                                                        {isNicheEdit && detail.copy_url && (
-                                                            <div className="mt-2 text-xs">
-                                                                <span className="text-purple-400 font-medium">Post URL: </span>
-                                                                <span className="text-[var(--text-primary)] break-all">{detail.copy_url}</span>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Notes from Team */}
-                                                        {detail.notes && (
-                                                            <div className="mt-2 text-xs">
-                                                                <span className="text-[var(--primary-cyan)] font-medium">Notes: </span>
-                                                                <span className="text-[var(--text-primary)]">{detail.notes}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-sm text-[var(--text-muted)]">{isNicheEdit ? 'Niche Price' : 'GP Price'}</div>
-                                                        <div className="text-lg font-bold text-emerald-400">${isNicheEdit ? (detail.niche_price || '0.00') : (detail.gp_price || '0.00')}</div>
-                                                    </div>
+                                                    {/* Notes from Team */}
+                                                    {detail.notes && (
+                                                        <div className="mt-2 text-xs">
+                                                            <span className="text-[var(--primary-cyan)] font-medium">Notes: </span>
+                                                            <span className="text-[var(--text-primary)]">{detail.notes}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
 
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-[var(--text-muted)]">{isNicheEdit ? 'Niche Price' : 'GP Price'}</span>
+                                                    <span className="text-xl font-bold text-emerald-400">${isNicheEdit ? (detail.niche_price || '0.00') : (detail.gp_price || '0.00')}</span>
+                                                </div>
+
+
                                                 {/* Editable Fields */}
-                                                <div className="space-y-4">
+                                                <div className={`space-y-4 ${!isSelected ? 'opacity-50 pointer-events-none' : ''}`}>
                                                     {/* URL - For both order types */}
                                                     <div>
                                                         <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">
@@ -250,6 +368,7 @@ export function TeamSubmissionDetails() {
                                                             onChange={(e) => handleWebsiteDetailChange(index, 'target_url', e.target.value)}
                                                             placeholder="https://example.com/target-page"
                                                             className="premium-input w-full"
+                                                            disabled={!isSelected}
                                                         />
                                                     </div>
 
@@ -263,6 +382,7 @@ export function TeamSubmissionDetails() {
                                                             onChange={(e) => handleWebsiteDetailChange(index, 'anchor_text', e.target.value)}
                                                             placeholder="Anchor text for backlink"
                                                             className="premium-input w-full"
+                                                            disabled={!isSelected}
                                                         />
                                                     </div>
 
@@ -277,6 +397,7 @@ export function TeamSubmissionDetails() {
                                                                 onChange={(e) => handleWebsiteDetailChange(index, 'article_title', e.target.value)}
                                                                 placeholder="Article title"
                                                                 className="premium-input w-full"
+                                                                disabled={!isSelected}
                                                             />
                                                         </div>
                                                     )}
@@ -405,8 +526,8 @@ export function TeamSubmissionDetails() {
                     </div>
 
                 </div>
-            </div>
-        </Layout>
+            </div >
+        </Layout >
     );
 }
 

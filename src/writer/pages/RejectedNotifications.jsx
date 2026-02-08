@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RefreshCw, XCircle, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { RefreshCw, XCircle, AlertTriangle, Send, Edit } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
 import { writerAPI } from '../../lib/api';
 
@@ -8,6 +9,8 @@ import { writerAPI } from '../../lib/api';
  * Integrated with backend API
  */
 export function RejectedNotifications() {
+  const navigate = useNavigate();
+
   // State for data
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +27,10 @@ export function RejectedNotifications() {
       setError(null);
 
       const response = await writerAPI.getTasks();
-      // Filter for rejected tasks only
-      const rejectedTasks = (response.tasks || []).filter(t => t.current_status === 'REJECTED');
+      // Filter for rejected tasks only (REJECTED or WRITER_REJECTED)
+      const rejectedTasks = (response.tasks || []).filter(t =>
+        t.current_status === 'REJECTED' || t.current_status === 'WRITER_REJECTED'
+      );
       setTasks(rejectedTasks);
     } catch (err) {
       console.error('Error fetching tasks:', err);
@@ -128,7 +133,7 @@ export function RejectedNotifications() {
               </div>
 
               {task.rejection_reason && (
-                <div className="p-4 rounded-xl bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.1)]">
+                <div className="p-4 rounded-xl bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.1)] mb-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 mt-0.5 text-[var(--error)] flex-shrink-0" />
                     <div>
@@ -138,6 +143,17 @@ export function RejectedNotifications() {
                   </div>
                 </div>
               )}
+
+              {/* Action button - navigate to task to revise and resubmit */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => navigate(`/writer/rejected/${task.id}`)}
+                  className="premium-btn premium-btn-primary flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Revise & Submit
+                </button>
+              </div>
             </div>
           ))}
 

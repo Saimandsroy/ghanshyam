@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useAutoSaveForm, AutoSaveIndicator } from '../../../hooks/useAutoSave';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export function CreateVideo() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState({
+
+    // Auto-save form state
+    const { formData: form, setFormData: setForm, clearAllSaved, isSaved } = useAutoSaveForm('admin-create-video', {
         title: '',
         link: '',
         is_active: true

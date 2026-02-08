@@ -109,13 +109,14 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                             <th>Website</th>
                             <th>Date/Time</th>
                             <th>Status</th>
+                            <th>Payment Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredData.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-4 py-12 text-center text-[var(--text-muted)]">
+                                <td colSpan={6} className="px-4 py-12 text-center text-[var(--text-muted)]">
                                     {data && data.length > 0 ? 'No matching tasks found' : 'No tasks found'}
                                 </td>
                             </tr>
@@ -123,7 +124,16 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                             filteredData.map((task) => {
                                 const displayStatus = mapTaskStatus(task.current_status);
                                 const statusClass = getStatusClass(displayStatus);
-                                const canSubmitLink = displayStatus === 'pending';
+                                const canSubmitLink = (displayStatus === 'pending' || displayStatus === 'rejected') && task.detail_status !== 12;
+
+                                // Determine Payment Status
+                                const isCompleted = displayStatus === 'completed';
+                                const paymentStatus = (() => {
+                                    if (!isCompleted) return '-';
+                                    if (task.payment_status === 1) return 'Paid';
+                                    if (task.payment_status === 0) return 'Requested';
+                                    return 'Pending Request';
+                                })();
 
                                 return (
                                     <tr key={task.id} className="hover:bg-[var(--background-dark)]/50 transition-colors duration-200">
@@ -159,23 +169,32 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                                             </span>
                                         </td>
                                         <td>
+                                            {paymentStatus === 'Paid' ? (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold px-2 py-1 rounded bg-green-500/10 text-green-500 border border-green-500/20">
+                                                        Paid
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className={`text-xs ${paymentStatus === 'Requested' ? 'text-amber-500' :
+                                                    paymentStatus === 'Pending Request' ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'
+                                                    }`}>
+                                                    {paymentStatus}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>
                                             <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => onViewDetails(task)}
-                                                    className="p-2 rounded-lg hover:bg-[var(--background-dark)] text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] transition-colors"
-                                                    title="View Details"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                                {canSubmitLink && (
+                                                {task.detail_status !== 12 && (
                                                     <button
-                                                        onClick={() => onSubmitLink(task)}
-                                                        className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all hover:brightness-110 shadow-lg shadow-[var(--primary-cyan)]/20 text-black bg-gradient-to-r from-[var(--primary-cyan)] to-[var(--bright-cyan)]"
+                                                        onClick={() => onViewDetails(task)}
+                                                        className="p-2 rounded-lg hover:bg-[var(--background-dark)] text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] transition-colors"
+                                                        title="View Details"
                                                     >
-                                                        <Send className="h-3 w-3" />
-                                                        Submit Link
+                                                        <Eye className="h-4 w-4" />
                                                     </button>
                                                 )}
+
                                                 {canSubmitLink && onRejectTask && (
                                                     <button
                                                         onClick={() => onRejectTask(task)}

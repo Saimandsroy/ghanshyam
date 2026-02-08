@@ -8,7 +8,9 @@ import { AdminOrderDetails } from './pages/orders/AdminOrderDetails';
 import { PriceCharts } from './pages/PriceCharts';
 import { Users } from './pages/Users';
 import { Bloggers } from './pages/Bloggers';
+import { BloggerPerformance } from './pages/BloggerPerformance';
 import { TeamMembers } from './pages/TeamMembers';
+import { UserPermissions } from './pages/UserPermissions';
 import { Settings } from './pages/Settings';
 
 // Sites pages
@@ -37,6 +39,7 @@ import { EditFAQ } from './pages/more/EditFAQ';
 import { Videos } from './pages/more/Videos';
 import { CreateVideo } from './pages/more/CreateVideo';
 import { EditVideo } from './pages/more/EditVideo';
+import { Profile } from './pages/Profile';
 
 export function AdminRoutes() {
   return (
@@ -44,13 +47,16 @@ export function AdminRoutes() {
       <Route element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="users" element={<Users />} />
+        <Route path="users/:id/permissions" element={<UserPermissions />} />
         <Route path="reporting" element={<Reporting />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="orders/:id" element={<AdminOrderDetails />} />
         <Route path="price-charts" element={<PriceCharts />} />
         <Route path="bloggers" element={<Bloggers />} />
+        <Route path="bloggers/:id/performance" element={<BloggerPerformance />} />
         <Route path="team-members" element={<TeamMembers />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="profile" element={<Profile />} />
 
         {/* Sites routes */}
         <Route path="sites/add-excel" element={<AddExcel />} />

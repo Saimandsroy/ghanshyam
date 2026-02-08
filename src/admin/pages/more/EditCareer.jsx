@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { RichTextEditor } from '../../../components/RichTextEditor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -189,32 +190,22 @@ export function EditCareer() {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                        Qualification<span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                        name="qualification" value={form.qualification} onChange={handleChange} rows={3}
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '6px',
-                            backgroundColor: 'var(--background, #0f0f1a)',
-                            border: '1px solid var(--border, #2a2a4a)',
-                            color: 'var(--text-primary, #fff)', fontSize: '14px', resize: 'vertical'
-                        }}
+                    <RichTextEditor
+                        label="Qualification"
+                        value={form.qualification}
+                        onChange={(value) => setForm({ ...form, qualification: value })}
+                        placeholder="Enter the required qualifications..."
+                        required={true}
                     />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                        Skills<span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                        name="skills" value={form.skills} onChange={handleChange} rows={3}
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '6px',
-                            backgroundColor: 'var(--background, #0f0f1a)',
-                            border: '1px solid var(--border, #2a2a4a)',
-                            color: 'var(--text-primary, #fff)', fontSize: '14px', resize: 'vertical'
-                        }}
+                    <RichTextEditor
+                        label="Skills"
+                        value={form.skills}
+                        onChange={(value) => setForm({ ...form, skills: value })}
+                        placeholder="Enter the required skills..."
+                        required={true}
                     />
                 </div>
 

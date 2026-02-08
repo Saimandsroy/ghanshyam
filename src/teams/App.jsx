@@ -10,6 +10,8 @@ import { RejectedLinks } from './pages/RejectedLinks.jsx';
 import { NewSites } from './pages/NewSites.jsx';
 import { Threads } from './pages/Threads.jsx';
 import { PushToManager } from './pages/PushToManager.jsx';
+import { Profile } from './pages/Profile.jsx';
+import { ChangePassword } from './components/pages/ChangePassword.jsx';
 
 export function App() {
   return (
@@ -23,6 +25,8 @@ export function App() {
         <Route path="rejected-links" element={<RejectedLinks />} />
         <Route path="new-sites" element={<NewSites />} />
         <Route path="threads" element={<Threads />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="change-password" element={<ChangePassword />} />
       </Route>
     </Routes>
   );

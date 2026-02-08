@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { MessageSquare, Plus, X, Send, RefreshCw, Users, FileText, ChevronRight, User } from 'lucide-react';
 import { teamAPI } from '../../lib/api';
+import { RichTextEditor } from '../../components/RichTextEditor';
+import { useAutoSaveForm, useAutoSave, AutoSaveIndicator } from '../../hooks/useAutoSave';
 
 export function Threads() {
+  // Get permissions from Layout context
+  const context = useOutletContext() || {};
+  const permissions = context.permissions || {};
+  const canCreateThread = permissions.create_new_thread !== false;
+
   const [threads, setThreads] = useState([]);
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,13 +25,15 @@ export function Threads() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
-  const [formData, setFormData] = useState({
+  // Auto-save form state for thread creation
+  const { formData, setFormData, clearAllSaved: clearFormSaved, isSaved: formIsSaved } = useAutoSaveForm('team-create-thread', {
     role: 'manager',
     user_id: '',
     subject: ''
   });
-  const [newMessage, setNewMessage] = useState('');
+
+  // Auto-save for reply message
+  const { value: newMessage, setValue: setNewMessage, clearSaved: clearMessageSaved, isSaved: messageIsSaved } = useAutoSave('team-thread-reply', '');
 
   // Fetch threads
   const fetchThreads = useCallback(async () => {
@@ -73,6 +83,7 @@ export function Threads() {
       });
       setSuccess('Thread created successfully!');
       setShowCreateModal(false);
+      clearFormSaved(); // Clear auto-saved form data
       setFormData({ role: 'manager', user_id: '', subject: '' });
       fetchThreads();
       setTimeout(() => setSuccess(''), 3000);
@@ -110,6 +121,7 @@ export function Threads() {
     try {
       setSubmitting(true);
       await teamAPI.sendMessage(selectedThread.id, newMessage);
+      clearMessageSaved(); // Clear auto-saved reply message
       setNewMessage('');
       const response = await teamAPI.getThreadMessages(selectedThread.id);
       setMessages(response.messages || []);
@@ -149,7 +161,7 @@ export function Threads() {
         </div>
 
         <div className="flex gap-3">
-          {!showCreateModal && (
+          {!showCreateModal && canCreateThread && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="premium-btn bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/90 shadow-[0_0_15px_rgba(6,182,212,0.3)] group"
@@ -302,13 +314,19 @@ export function Threads() {
                 <MessageSquare className="h-8 w-8 text-[var(--text-muted)]" />
               </div>
               <p className="text-xl font-medium text-[var(--text-primary)] mb-2">No threads yet</p>
-              <p className="text-[var(--text-muted)] mb-6 max-w-md mx-auto">Start a conversation with a manager to get support or discuss tasks.</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="premium-btn bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/90"
-              >
-                <Plus className="h-4 w-4" /> Create First Thread
-              </button>
+              <p className="text-[var(--text-muted)] mb-6 max-w-md mx-auto">
+                {canCreateThread
+                  ? 'Start a conversation with a manager to get support or discuss tasks.'
+                  : 'You do not have permission to create threads.'}
+              </p>
+              {canCreateThread && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="premium-btn bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/90"
+                >
+                  <Plus className="h-4 w-4" /> Create First Thread
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -421,8 +439,8 @@ export function Threads() {
                     >
                       <div
                         className={`max-w-[85%] rounded-2xl p-4 shadow-sm relative ${isMe
-                            ? 'bg-[var(--primary-cyan)]/10 border border-[var(--primary-cyan)]/20 rounded-tr-sm text-[var(--text-primary)]'
-                            : 'bg-[#1E2024] border border-[var(--border)] rounded-tl-sm text-[var(--text-secondary)]'
+                          ? 'bg-[var(--primary-cyan)]/10 border border-[var(--primary-cyan)]/20 rounded-tr-sm text-[var(--text-primary)]'
+                          : 'bg-[#1E2024] border border-[var(--border)] rounded-tl-sm text-[var(--text-secondary)]'
                           }`}
                       >
                         <div className={`flex items-center gap-2 mb-2 text-xs font-semibold uppercase tracking-wider ${isMe ? 'text-[var(--primary-cyan)] justify-end' : 'text-[var(--text-muted)]'}`}>
@@ -443,32 +461,24 @@ export function Threads() {
 
             {/* Reply Input */}
             <div className="p-4 md:p-6 bg-[var(--card-background)] border-t border-[var(--border)]">
-              <div className="relative">
-                <textarea
-                  placeholder="Type your message here..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  className="premium-input w-full min-h-[50px] max-h-[150px] pr-12 py-3 resize-none scrollbar-hide"
-                  style={{ height: 'auto' }}
-                  rows={1}
-                />
+              <RichTextEditor
+                value={newMessage}
+                onChange={setNewMessage}
+                placeholder="Type your message here..."
+              />
+              <div className="flex justify-between items-center mt-3">
+                <p className="text-xs text-[var(--text-muted)]">
+                  Use the toolbar above for formatting
+                </p>
                 <button
                   onClick={handleSendMessage}
                   disabled={submitting || !newMessage.trim()}
-                  className="absolute right-2 bottom-2 p-2 rounded-lg bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg"
+                  className="premium-btn bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg"
                 >
-                  {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  Send
                 </button>
               </div>
-              <p className="text-xs text-[var(--text-muted)] mt-2 text-center">
-                Press <kbd className="px-1 py-0.5 rounded bg-[var(--background-dark)] border border-[var(--border)] text-[var(--text-secondary)] font-mono">Enter</kbd> to send, <kbd className="px-1 py-0.5 rounded bg-[var(--background-dark)] border border-[var(--border)] text-[var(--text-secondary)] font-mono">Shift + Enter</kbd> for new line
-              </p>
             </div>
           </div>
         </div>

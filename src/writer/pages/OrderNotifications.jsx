@@ -136,7 +136,7 @@ export function OrderNotifications() {
               {pageData.map((task) => (
                 <tr key={task.id} className="group">
                   <td className="font-medium">
-                    <span className="text-[var(--primary-cyan)]">#{task.id}</span>
+                    <span className="text-[var(--primary-cyan)]">{task.manual_order_id || `#${task.id}`}</span>
                   </td>
                   <td>
                     <span className="premium-badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>

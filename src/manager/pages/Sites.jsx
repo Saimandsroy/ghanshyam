@@ -400,13 +400,23 @@ export function Sites() {
                           {/* PRICE */}
                           {visibleColumns.price && (
                             <td className="p-4 text-center">
-                              <div className="mb-1">
-                                <div className="text-emerald-400 font-medium text-xs">${site.gp_price || 0}</div>
-                                <div className="text-[10px] text-[var(--text-muted)] uppercase">GP</div>
-                              </div>
-                              <div>
-                                <div className="text-blue-400 font-medium text-xs">${site.niche_edit_price || 0}</div>
-                                <div className="text-[10px] text-[var(--text-muted)] uppercase">Niche</div>
+                              <div className="grid grid-cols-2 gap-1">
+                                <div>
+                                  <div className="text-emerald-400 font-medium text-xs">${site.gp_price || 0}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] uppercase">GP</div>
+                                </div>
+                                <div>
+                                  <div className="text-blue-400 font-medium text-xs">${site.niche_edit_price || 0}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] uppercase">Niche</div>
+                                </div>
+                                <div>
+                                  <div className="text-orange-400 font-medium text-xs">${site.fc_gp || 0}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] uppercase">FC GP</div>
+                                </div>
+                                <div>
+                                  <div className="text-purple-400 font-medium text-xs">${site.fc_ne || 0}</div>
+                                  <div className="text-[10px] text-[var(--text-muted)] uppercase">FC Niche</div>
+                                </div>
                               </div>
                             </td>
                           )}
@@ -500,7 +510,9 @@ export function Sites() {
                       <MetricCard label="Traffic" value={selectedSite.traffic} color="text-yellow-400" />
                       <MetricCard label="Spam Score" value={selectedSite.spam_score} color={parseInt(selectedSite.spam_score) > 10 ? 'text-red-400' : 'text-green-400'} />
                       <MetricCard label="GP Price" value={`$${selectedSite.gp_price || 0}`} color="text-emerald-400" />
-                      <MetricCard label="Niche Price" value={`$${selectedSite.niche_edit_price || 0}`} color="text-emerald-400" />
+                      <MetricCard label="Niche Price" value={`$${selectedSite.niche_edit_price || 0}`} color="text-blue-400" />
+                      <MetricCard label="FC GP" value={`$${selectedSite.fc_gp || 0}`} color="text-orange-400" />
+                      <MetricCard label="FC Niche" value={`$${selectedSite.fc_ne || 0}`} color="text-purple-400" />
                     </div>
                   </div>
                 </div>

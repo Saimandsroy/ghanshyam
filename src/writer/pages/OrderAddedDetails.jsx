@@ -183,7 +183,19 @@ export function OrderAddedDetails() {
                 global_note: globalNote
             }));
 
-            await writerAPI.submitContent(id, payload);
+            // Build FormData to support file uploads
+            const formData = new FormData();
+            formData.append('website_submissions', JSON.stringify(payload));
+
+            // Append uploaded files with fieldname pattern file_<detail_id>
+            for (const sub of websiteSubmissions) {
+                const file = uploadedFiles[sub.website_id] || uploadedFiles[sub.id];
+                if (file) {
+                    formData.append(`file_${sub.id}`, file);
+                }
+            }
+
+            await writerAPI.submitContent(id, formData);
 
             showSuccess('Content submitted successfully!');
             navigate('/writer/completed-orders');

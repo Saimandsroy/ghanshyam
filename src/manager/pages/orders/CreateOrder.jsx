@@ -164,6 +164,19 @@ export const CreateOrder = () => {
       return;
     }
 
+    // Niche Edit: validate Target Post URLs match Client Website
+    if (form.contentType?.toLowerCase().includes('niche') && form.post_url && form.client_website) {
+      const clientDomain = form.client_website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '').toLowerCase();
+      const urls = form.post_url.split('\n').map(u => u.trim()).filter(Boolean);
+      for (const url of urls) {
+        const normalizedUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '').toLowerCase();
+        if (!normalizedUrl.startsWith(clientDomain)) {
+          setError(`Target Post URL "${url}" does not match Client Website "${form.client_website}". URL must start with the client domain and can include additional paths.`);
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
       setError('');

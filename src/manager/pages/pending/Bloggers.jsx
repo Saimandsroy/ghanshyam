@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, UserCheck, CheckCircle, XCircle, Eye, Search, Filter, Globe, Trash2 } from 'lucide-react';
+import { RefreshCw, UserCheck, CheckCircle, XCircle, Eye, Search, Filter, Globe, Trash2, ExternalLink } from 'lucide-react';
 import { Pagination } from '../../../components/Pagination.jsx';
 import { managerAPI } from '../../../lib/api';
 import { useToast } from '../../../context/ToastContext';
@@ -161,6 +161,7 @@ export function PendingBloggers() {
                   <th>Order Type</th>
                   <th>Vendor</th>
                   <th>Root Domain</th>
+                  <th>Submitted URL</th>
                   <th>Status</th>
                   <th className="text-right">Actions</th>
                 </tr>
@@ -168,7 +169,7 @@ export function PendingBloggers() {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-[var(--text-muted)]">
+                    <td colSpan={7} className="text-center py-12 text-[var(--text-muted)]">
                       No pending blogger submissions found
                     </td>
                   </tr>
@@ -199,6 +200,22 @@ export function PendingBloggers() {
                           <Globe className="h-4 w-4 text-[var(--text-muted)]" />
                           {approval.root_domain || approval.new_site || '-'}
                         </a>
+                      </td>
+                      <td className="max-w-[200px] truncate">
+                        {approval.submit_url ? (
+                          <a
+                            href={approval.submit_url.startsWith('http') ? approval.submit_url : `https://${approval.submit_url}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 text-[var(--primary-cyan)] hover:underline"
+                            title={approval.submit_url}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            <span className="truncate">{approval.submit_url.replace(/^https?:\/\//, '')}</span>
+                          </a>
+                        ) : (
+                          <span className="text-[var(--text-muted)]">-</span>
+                        )}
                       </td>
                       <td>
                         <span className="premium-badge bg-green-500/10 text-green-400 border-green-500/20">

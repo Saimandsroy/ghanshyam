@@ -20,7 +20,7 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       active: location.pathname.startsWith('/manager/orders'),
       hasDropdown: true,
       dropdownItems: [
-        { label: 'Create View Order', to: '/manager/orders/create' },
+        { label: 'Create New Order', to: '/manager/orders/create' },
         { label: 'View Orders', to: '/manager/orders/view' },
         { label: 'Pending from Bloggers', to: '/manager/orders/pending-bloggers' }
       ]

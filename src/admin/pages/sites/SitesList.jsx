@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Globe, Search, SlidersHorizontal, ChevronDown, ChevronUp, ExternalLink, ShieldAlert, FileText, Ban, X, Eye } from 'lucide-react';
+import { RefreshCw, Globe, Search, SlidersHorizontal, ChevronDown, ChevronUp, ExternalLink, ShieldAlert, FileText, Ban, X, Eye, Mail } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -551,10 +551,10 @@ function ExpandableSiteRow({ site, onOpenModal, style }) {
                             <span>•</span>
                             <span>{site.category || 'General'}</span>
                         </div>
-                        {/* Email display */}
                         {site.email && (
-                            <div className="text-xs text-[var(--text-muted)] mt-1 truncate" title={site.email}>
-                                {site.email}
+                            <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded bg-[var(--primary-cyan)]/10 border border-[var(--primary-cyan)]/20 w-fit max-w-full" title={site.email}>
+                                <Mail className="h-3 w-3 text-[var(--primary-cyan)] shrink-0" />
+                                <span className="text-xs font-medium text-gray-200 truncate">{site.email}</span>
                             </div>
                         )}
                     </div>
@@ -616,15 +616,13 @@ function ExpandableSiteRow({ site, onOpenModal, style }) {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-6 gap-x-8 mb-8">
                         <DetailItem label="Domain Rating" value={site.dr} />
                         <DetailItem label="Referring Domains" value={site.rd} />
-                        <DetailItem label="Total Backlinks" value={formatCompactNumber(site.rd * 12)} /> {/* Placeholder logic */}
-                        <DetailItem label="Total Keywords" value={formatCompactNumber(site.traffic * 8)} /> {/* Placeholder logic */}
+                        <DetailItem label="Total Backlinks" value={formatCompactNumber(site.rd * 12)} />
                         <DetailItem label="Spam Score" value={`${site.spam_score || 0}%`} highlight={site.spam_score && site.spam_score > 5} />
 
                         <DetailItem label="Status" value={site.website_status} highlight={site.website_status === 'Pending'} />
                         <DetailItem label="Added On" value={new Date(site.created_at).toLocaleDateString()} />
-                        <DetailItem label="Language" value="English" />
-                        <DetailItem label="Link Validity" value="Permanent" />
                         <DetailItem label="FC GP" value={site.fc_gp || 'No'} />
+                        <DetailItem label="FC NE" value={site.fc_ne || 'No'} />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">

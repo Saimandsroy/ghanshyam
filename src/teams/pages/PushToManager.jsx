@@ -71,6 +71,8 @@ export const PushToManager = () => {
                 traffic: activeFilters.traffic || undefined,
                 category: activeFilters.category || undefined
             });
+            const sampleSite = (websitesData.sites || websitesData.websites || [])[0];
+            if (sampleSite) console.log('Website sample:', { id: sampleSite.id, website_status: sampleSite.website_status, site_status: sampleSite.site_status, category: sampleSite.category, niche: sampleSite.niche, website_niche: sampleSite.website_niche });
             setWebsites(websitesData.sites || websitesData.websites || []);
             setTotalPages(websitesData.pagination?.totalPages || 1);
             setTotal(websitesData.pagination?.total || 0);
@@ -113,7 +115,7 @@ export const PushToManager = () => {
         const term = searchTerm.toLowerCase();
         return websites.filter(w =>
             (w.root_domain || w.domain_url || '').toLowerCase().includes(term) ||
-            (w.category || '').toLowerCase().includes(term)
+            (w.category || w.website_niche || '').toLowerCase().includes(term)
         );
     }, [websites, searchTerm]);
 
@@ -170,6 +172,18 @@ export const PushToManager = () => {
         if (missingCopyUrls) {
             setError('Please fill in Post URL for all selected websites (required for Niche Edit orders)');
             return;
+        }
+
+        // Niche Edit: validate each Post URL matches its selected blogger website domain
+        if (isNicheEdit) {
+            for (const sw of selectedWebsites) {
+                const siteDomain = (sw.website.root_domain || sw.website.domain_url || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '').toLowerCase();
+                const normalizedUrl = (sw.copyUrl || '').replace(/^https?:\/\//, '').replace(/^www\./, '').toLowerCase();
+                if (siteDomain && !normalizedUrl.startsWith(siteDomain)) {
+                    setError(`Post URL "${sw.copyUrl}" does not match the selected website "${sw.website.root_domain || sw.website.domain_url}". URL must start with the site domain and can include additional paths.`);
+                    return;
+                }
+            }
         }
 
         try {
@@ -272,6 +286,16 @@ export const PushToManager = () => {
                         <div className="text-[var(--text-primary)]">{task.client_name || 'N/A'}</div>
                     </div>
                     <div className="space-y-1">
+                        <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Client Website</span>
+                        <div className="text-[var(--text-primary)]">
+                            {task.client_website ? (
+                                <a href={task.client_website.startsWith('http') ? task.client_website : `https://${task.client_website}`} target="_blank" rel="noopener noreferrer" className="text-[var(--primary-cyan)] hover:underline break-all">
+                                    {task.client_website}
+                                </a>
+                            ) : 'N/A'}
+                        </div>
+                    </div>
+                    <div className="space-y-1">
                         <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Type</span>
                         <div className="premium-badge inline-flex">{task.order_type || 'Guest Post'}</div>
                     </div>
@@ -296,6 +320,20 @@ export const PushToManager = () => {
                         <div className={task.fc ? 'text-green-400' : 'text-[var(--text-muted)]'}>{task.fc ? 'Yes' : 'No'}</div>
                     </div>
                 </div>
+
+                {/* Manager Instructions */}
+                {task.notes && (
+                    <div className="mt-6 pt-6 border-t border-[var(--border)]">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                            <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
+                            Manager Instructions
+                        </h3>
+                        <div
+                            className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 text-sm text-[var(--text-primary)]"
+                            dangerouslySetInnerHTML={{ __html: task.notes }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Website Selection */}
@@ -416,15 +454,15 @@ export const PushToManager = () => {
                                 <th className="w-10 text-center">
                                     <span className="sr-only">Select</span>
                                 </th>
-                                <th>Domain</th>
-                                <th>Added on</th>
-                                <th>LO Created</th>
-                                <th>DR</th>
-                                <th>DA</th>
-                                <th>Traffic</th>
+                                <th>Root Domain</th>
+                                <th>Website Status</th>
                                 <th>Category</th>
-                                <th>GP Price</th>
-                                <th>Niche Price</th>
+                                <th>{task?.order_type?.toLowerCase().includes('niche') ? 'Niche Price' : 'GP Price(FC)'}</th>
+                                <th>DR</th>
+                                <th>RD</th>
+                                <th>DA</th>
+                                <th>Spam Score</th>
+                                <th>Traffic</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -442,23 +480,45 @@ export const PushToManager = () => {
                                     <td className={`font-medium ${isSelected(website.id) ? 'text-[var(--primary-cyan)]' : 'text-[var(--text-primary)]'}`}>
                                         {website.root_domain || website.domain_url}
                                     </td>
-                                    <td className="text-xs text-[var(--text-muted)]">
-                                        {website.created_at ? new Date(website.created_at).toLocaleDateString('en-GB') : '-'}
+                                    <td>
+                                        {(() => {
+                                            const status = website.website_status || '';
+                                            let badgeClass = 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
+                                            if (status === 'Approved' || status === 'Active') {
+                                                badgeClass = 'bg-green-500/10 text-green-400 border border-green-500/20';
+                                            } else if (status === 'Rejected') {
+                                                badgeClass = 'bg-red-500/10 text-red-400 border border-red-500/20';
+                                            } else if (status.toLowerCase().includes('acceptable') || status.toLowerCase().includes('accaptable') || status.toLowerCase().includes('acceptaable')) {
+                                                badgeClass = 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
+                                            } else if (status.toLowerCase().includes('traffic') || status.toLowerCase().includes('decline')) {
+                                                badgeClass = 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+                                            }
+                                            return (
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
+                                                    {status || '-'}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
-                                    <td className="text-xs text-[var(--text-muted)]">
-                                        {website.lo_created_at ? new Date(website.lo_created_at).toLocaleDateString('en-GB') : '-'}
+                                    <td className="max-w-[150px] truncate" title={website.category || website.website_niche || ''}>
+                                        {website.category || website.website_niche || '-'}
+                                    </td>
+                                    <td className="font-mono text-[var(--success)]">
+                                        ${task?.order_type?.toLowerCase().includes('niche')
+                                            ? (website.niche_price || website.niche_edit_price || 0)
+                                            : (website.gp_price || 0)
+                                        }
                                     </td>
                                     <td>{website.dr || '-'}</td>
+                                    <td>{website.rd || '-'}</td>
                                     <td>{website.da || '-'}</td>
-                                    <td>{website.traffic?.toLocaleString() || '-'}</td>
-                                    <td className="max-w-[150px] truncate" title={website.category}>{website.category || '-'}</td>
-                                    <td className="font-mono text-[var(--success)]">${website.gp_price || 0}</td>
-                                    <td className="font-mono text-[var(--success)]">${website.niche_price || 0}</td>
+                                    <td>{website.spam_score || '-'}</td>
+                                    <td>{website.traffic?.toLocaleString() || website.traffic_source?.toLocaleString() || '-'}</td>
                                 </tr>
                             ))}
                             {filteredWebsites.length === 0 && (
                                 <tr>
-                                    <td colSpan={10} className="px-6 py-12 text-center text-[var(--text-muted)]">
+                                    <td colSpan={11} className="px-6 py-12 text-center text-[var(--text-muted)]">
                                         No websites found matching your criteria
                                     </td>
                                 </tr>

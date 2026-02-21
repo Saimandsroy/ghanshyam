@@ -244,7 +244,10 @@ export function OrderDetails() {
 
                             {isGuestPost() && (
                                 <>
-                                    <DetailRow label="Document" value={order?.doc_url} isLink linkText="View Document" />
+                                    <DetailRow label="Document URL" value={order?.doc_urls} isLink linkText="View Google Doc" />
+                                    {order?.upload_doc_file && (
+                                        <DetailRow label="Content File" value={order?.upload_doc_file} isLink linkText="Download File" />
+                                    )}
                                     <DetailRow label="Title" value={order?.title} />
                                 </>
                             )}

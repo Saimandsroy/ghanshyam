@@ -1,9 +1,8 @@
 import React from 'react';
-import { ThreadsPage } from '../../components/ThreadsPage';
+import { ChatPage } from '../../components/ChatPage';
 
 export function Threads() {
-  return <ThreadsPage userRole="Manager" />;
+  return <ChatPage userRole="Manager" />;
 }
 
 export default Threads;
-

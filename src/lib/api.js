@@ -776,9 +776,9 @@ export const writerAPI = {
     return response.data;
   },
 
-  submitContent: async (taskId, websiteSubmissions) => {
-    const response = await api.post(`/writer/tasks/${taskId}/submit-content`, {
-      website_submissions: websiteSubmissions,
+  submitContent: async (taskId, formData) => {
+    const response = await api.post(`/writer/tasks/${taskId}/submit-content`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
@@ -939,6 +939,52 @@ export const configAPI = {
 
   updateConfig: async (key, value, description) => {
     const response = await api.put(`/config/${key}`, { value, description });
+    return response.data;
+  },
+};
+
+// ==================== Chat APIs (Live Chat) ====================
+
+export const chatAPI = {
+  // Get users available for chat
+  getUsers: async () => {
+    const response = await api.get('/chat/users');
+    return response.data;
+  },
+
+  // Get or create conversation with a user
+  getConversation: async (targetUserId) => {
+    const response = await api.get(`/chat/conversation/${targetUserId}`);
+    return response.data;
+  },
+
+  // Get messages for a thread
+  getMessages: async (threadId, page = 1, limit = 50) => {
+    const response = await api.get(`/chat/messages/${threadId}`, { params: { page, limit } });
+    return response.data;
+  },
+
+  // Send a message
+  sendMessage: async (threadId, message) => {
+    const response = await api.post(`/chat/messages/${threadId}`, { message });
+    return response.data;
+  },
+
+  // Mark messages as read
+  markAsRead: async (threadId) => {
+    const response = await api.post(`/chat/messages/${threadId}/read`);
+    return response.data;
+  },
+
+  // Get total unread count
+  getUnreadCount: async () => {
+    const response = await api.get('/chat/unread-count');
+    return response.data;
+  },
+
+  // Search users to start new chat
+  searchUsers: async (searchTerm) => {
+    const response = await api.get('/chat/search-users', { params: { q: searchTerm } });
     return response.data;
   },
 };

@@ -159,15 +159,15 @@ export const RejectedBloggers = () => {
                     ) : 'N/A'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-xs ${order.status === 11 || order.status === 12
+                    <span className={`px-2 py-1 rounded text-xs ${order.status === 12
                       ? 'bg-red-500/20 text-red-400'
-                      : 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-orange-500/20 text-orange-400'
                       }`}>
-                      {order.status === 11 || order.status === 12 ? 'Rejected' : 'Pending'}
+                      {order.status === 12 ? 'Rejected by Blogger' : 'Rejected by Manager'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={order.status === 11 || order.status === 12 ? 'text-red-400' : 'text-yellow-400'}>
+                    <span className={order.status === 12 ? 'text-red-400' : 'text-orange-400'}>
                       {order.rejection_reason || 'No reason provided'}
                     </span>
                   </td>

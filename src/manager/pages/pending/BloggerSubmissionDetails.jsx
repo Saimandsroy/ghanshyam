@@ -222,8 +222,15 @@ export function BloggerSubmissionDetails() {
                         {/* Link Verification */}
                         <div className="flex py-3 border-b border-[var(--border)] last:border-0 border-dashed">
                             <span className="w-1/3 text-sm font-medium text-[var(--text-secondary)] flex-shrink-0 uppercase tracking-wider">Link Verification</span>
-                            <span className={detail.link_verification === 'Verified' ? 'text-emerald-400 font-medium' : 'text-[var(--text-secondary)]'}>
-                                {detail.link_verification || 'Not Verified'}
+                            <span className={`font-medium ${detail.link_status === 'Live'
+                                    ? 'text-emerald-400'
+                                    : detail.link_status === 'Issue'
+                                        ? 'text-amber-400'
+                                        : detail.link_status === 'Not Found' || detail.link_status === 'Error'
+                                            ? 'text-red-400'
+                                            : 'text-[var(--text-secondary)]'
+                                }`}>
+                                {detail.link_check_result || detail.link_verification || 'Not Verified'}
                             </span>
                         </div>
 

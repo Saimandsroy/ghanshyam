@@ -457,7 +457,7 @@ export const PushToManager = () => {
                                 <th>Root Domain</th>
                                 <th>Website Status</th>
                                 <th>Category</th>
-                                <th>{task?.order_type?.toLowerCase().includes('niche') ? 'Niche Price' : 'GP Price(FC)'}</th>
+                                <th>{task?.order_type?.toLowerCase().includes('niche') ? (task?.fc ? 'Niche Price (FC)' : 'Niche Price') : (task?.fc ? 'GP Price (FC)' : 'GP Price')}</th>
                                 <th>DR</th>
                                 <th>RD</th>
                                 <th>DA</th>
@@ -505,8 +505,12 @@ export const PushToManager = () => {
                                     </td>
                                     <td className="font-mono text-[var(--success)]">
                                         ${task?.order_type?.toLowerCase().includes('niche')
-                                            ? (website.niche_price || website.niche_edit_price || 0)
-                                            : (website.gp_price || 0)
+                                            ? (task?.fc
+                                                ? (website.fc_ne || website.niche_price || website.niche_edit_price || 0)
+                                                : (website.niche_price || website.niche_edit_price || 0))
+                                            : (task?.fc
+                                                ? (website.fc_gp || website.gp_price || 0)
+                                                : (website.gp_price || 0))
                                         }
                                     </td>
                                     <td>{website.dr || '-'}</td>
@@ -611,8 +615,18 @@ export const PushToManager = () => {
                                                 <div className="text-[var(--text-primary)] font-bold text-lg">{item.website.root_domain || item.website.domain_url}</div>
                                                 <div className="text-xs text-[var(--text-muted)] flex items-center gap-2">
                                                     <DollarSign className="h-3 w-3" />
-                                                    {task?.order_type?.toLowerCase().includes('niche') ? 'Niche Price: ' : 'GP Price: '}
-                                                    <span className="text-[var(--success)] font-mono">${task?.order_type?.toLowerCase().includes('niche') ? (item.website.niche_edit_price || item.website.niche_price || 0) : (item.website.gp_price || 0)}</span>
+                                                    {task?.order_type?.toLowerCase().includes('niche')
+                                                        ? (task?.fc ? 'Niche Price (FC): ' : 'Niche Price: ')
+                                                        : (task?.fc ? 'GP Price (FC): ' : 'GP Price: ')}
+                                                    <span className="text-[var(--success)] font-mono">
+                                                        ${task?.order_type?.toLowerCase().includes('niche')
+                                                            ? (task?.fc
+                                                                ? (item.website.fc_ne || item.website.niche_edit_price || item.website.niche_price || 0)
+                                                                : (item.website.niche_edit_price || item.website.niche_price || 0))
+                                                            : (task?.fc
+                                                                ? (item.website.fc_gp || item.website.gp_price || 0)
+                                                                : (item.website.gp_price || 0))}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>

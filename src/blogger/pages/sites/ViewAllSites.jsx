@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Globe, Eye, X, ExternalLink } from 'lucide-react';
+import { RefreshCw, Globe, Eye, X, ExternalLink, Download } from 'lucide-react';
 import { bloggerAPI } from '../../../lib/api';
+import ExportModal from '../../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../../utils/exportUtils';
 
 export function ViewAllSites() {
   const [websites, setWebsites] = useState([]);
@@ -13,6 +15,8 @@ export function ViewAllSites() {
   const [pageSize, setPageSize] = useState(50);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Fetch websites from blogger API
   const fetchWebsites = useCallback(async () => {
@@ -52,6 +56,44 @@ export function ViewAllSites() {
   // Calculate showing range
   const showingFrom = (page - 1) * pageSize + 1;
   const showingTo = Math.min(page * pageSize, pagination.total);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedRows(new Set(rows.map(r => r.id)));
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    const newSet = new Set(selectedRows);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedRows(newSet);
+  };
+
+  const handleExport = ({ filename, format }) => {
+    const dataToExport = rows
+        .filter(r => selectedRows.has(r.id))
+        .map(site => ({
+            'Root Domain': site.root_domain || site.domain_url || '',
+            'Category': site.category || 'General',
+            'DA': site.da || 0,
+            'DR': site.dr || 0,
+            'Traffic': site.traffic || 0,
+            'GP Price': site.gp_price || 0,
+            'Niche Price': site.niche_edit_price || site.niche_price || 0,
+            'Status': site.website_status || (site.site_status === '1' || site.site_status === 1 ? 'Active' : 'Inactive'),
+            'Email': site.email || '',
+            'Date Added': site.created_at ? new Date(site.created_at).toLocaleDateString() : ''
+        }));
+
+    if (format === 'csv') {
+        exportToCSV(dataToExport, filename || 'blogger_sites');
+    } else {
+        exportToExcel(dataToExport, filename || 'blogger_sites', format === 'xlsx');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -121,6 +163,20 @@ export function ViewAllSites() {
             >
               Reset
             </button>
+            {selectedRows.size > 0 && (
+              <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ml-auto"
+                style={{ 
+                  backgroundColor: 'rgba(107, 240, 255, 0.1)', 
+                  border: '1px solid rgba(107, 240, 255, 0.3)', 
+                  color: 'var(--primary-cyan)' 
+                }}
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Export ({selectedRows.size})</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -145,6 +201,14 @@ export function ViewAllSites() {
             <table className="w-full min-w-[1500px]">
               <thead style={{ backgroundColor: 'var(--background-dark)' }}>
                 <tr>
+                  <th className="px-3 py-3 text-center w-12">
+                    <input 
+                        type="checkbox" 
+                        className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                        checked={rows.length > 0 && selectedRows.size === rows.length}
+                        onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-3 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Root Domain</th>
                   <th className="px-3 py-3 text-center text-xs font-medium" style={{ color: 'var(--text-muted)' }}>DR</th>
                   <th className="px-3 py-3 text-center text-xs font-medium" style={{ color: 'var(--text-muted)' }}>DA</th>
@@ -163,6 +227,14 @@ export function ViewAllSites() {
               <tbody>
                 {rows.map((site, index) => (
                   <tr key={site.id} className="hover:bg-white/5" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-3 py-3 text-center">
+                        <input 
+                            type="checkbox" 
+                            className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                            checked={selectedRows.has(site.id)}
+                            onChange={() => handleSelectRow(site.id)}
+                        />
+                    </td>
                     <td className="px-3 py-3">
                       <div>
                         <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -209,7 +281,7 @@ export function ViewAllSites() {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={13} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No websites found</td>
+                    <td colSpan={14} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No websites found</td>
                   </tr>
                 )}
               </tbody>
@@ -323,6 +395,14 @@ export function ViewAllSites() {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          onExport={handleExport}
+          selectedCount={selectedRows.size}
+      />
     </div>
   );
 }

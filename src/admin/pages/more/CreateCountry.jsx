@@ -68,108 +68,87 @@ export function CreateCountry() {
     };
 
     return (
-        <div style={{ padding: '24px' }}>
+        <div className="p-6">
             {/* Breadcrumb */}
-            <div style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--text-muted, #888)' }}>
-                <Link to="/admin/more/countries" style={{ color: 'var(--text-muted, #888)', textDecoration: 'none' }}>Countries Lists</Link>
+            <div className="mb-2 text-sm text-[var(--text-muted)]">
+                <Link to="/admin/more/countries" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Countries Lists</Link>
                 {' > '} Create
             </div>
 
             {/* Header */}
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary, #fff)', margin: '0 0 24px 0' }}>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-6">
                 Create Countries List
             </h1>
 
             {/* Form Card */}
-            <div style={{
-                backgroundColor: 'var(--card-background, #1a1a2e)',
-                border: '1px solid var(--border, #2a2a4a)',
-                borderRadius: '12px', padding: '24px'
-            }}>
-                <h3 style={{ margin: '0 0 24px 0', color: 'var(--text-primary, #fff)', fontSize: '16px', fontWeight: '500' }}>
+            <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-xl p-6">
+                <h3 className="mb-6 text-[var(--text-primary)] text-base font-medium">
                     Add New Country
                 </h3>
 
                 {/* Name Field */}
-                <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
+                <div className="mb-6">
+                    <label className="block mb-2 text-[var(--text-primary)] text-sm">
                         Name
                     </label>
                     <input
                         type="text" name="name" value={form.name} onChange={handleChange}
-                        style={{
-                            width: '100%', padding: '12px', borderRadius: '6px',
-                            backgroundColor: 'var(--background, #0f0f1a)',
-                            border: '1px solid var(--border, #2a2a4a)',
-                            color: 'var(--text-primary, #fff)', fontSize: '14px'
-                        }}
+                        className="w-full p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-shadow"
                     />
                 </div>
 
                 {/* Payment Methods */}
-                <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'block', marginBottom: '16px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
+                <div className="mb-8">
+                    <label className="block mb-4 text-[var(--text-primary)] text-sm font-medium">
                         Payment methods
                     </label>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                    <div className="flex flex-col gap-3">
+                        <label className="flex items-center gap-3 cursor-pointer w-max">
                             <input type="checkbox" name="bank" checked={form.bank} onChange={handleChange}
-                                style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }} />
-                            <span style={{ color: 'var(--text-primary, #fff)', fontSize: '14px' }}>Bank</span>
+                                className="w-4 h-4 rounded border-[var(--border)] text-amber-500 focus:ring-amber-500" />
+                            <span className="text-[var(--text-primary)] text-sm">Bank</span>
                         </label>
 
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                        <label className="flex items-center gap-3 cursor-pointer w-max">
                             <input type="checkbox" name="paypal" checked={form.paypal} onChange={handleChange}
-                                style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }} />
-                            <span style={{ color: 'var(--text-primary, #fff)', fontSize: '14px' }}>Paypal ID</span>
+                                className="w-4 h-4 rounded border-[var(--border)] text-amber-500 focus:ring-amber-500" />
+                            <span className="text-[var(--text-primary)] text-sm">Paypal ID</span>
                         </label>
 
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                        <label className="flex items-center gap-3 cursor-pointer w-max">
                             <input type="checkbox" name="qr_code" checked={form.qr_code} onChange={handleChange}
-                                style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }} />
-                            <span style={{ color: 'var(--text-primary, #fff)', fontSize: '14px' }}>QR Code</span>
+                                className="w-4 h-4 rounded border-[var(--border)] text-amber-500 focus:ring-amber-500" />
+                            <span className="text-[var(--text-primary)] text-sm">QR Code</span>
                         </label>
 
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                        <label className="flex items-center gap-3 cursor-pointer w-max">
                             <input type="checkbox" name="upi_id" checked={form.upi_id} onChange={handleChange}
-                                style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }} />
-                            <span style={{ color: 'var(--text-primary, #fff)', fontSize: '14px' }}>UPI ID</span>
+                                className="w-4 h-4 rounded border-[var(--border)] text-amber-500 focus:ring-amber-500" />
+                            <span className="text-[var(--text-primary)] text-sm">UPI ID</span>
                         </label>
                     </div>
                 </div>
 
                 {/* Buttons */}
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="flex gap-3">
                     <button
                         onClick={() => handleSubmit(false)}
                         disabled={loading}
-                        style={{
-                            padding: '10px 20px', backgroundColor: '#3b82f6',
-                            color: '#fff', border: 'none', borderRadius: '6px',
-                            fontWeight: '500', cursor: 'pointer', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:opacity-50 transition-colors"
                     >
                         Create
                     </button>
                     <button
                         onClick={() => handleSubmit(true)}
                         disabled={loading}
-                        style={{
-                            padding: '10px 20px', backgroundColor: 'var(--background, #0f0f1a)',
-                            color: 'var(--text-primary, #fff)', border: '1px solid var(--border, #2a2a4a)',
-                            borderRadius: '6px', fontWeight: '500', cursor: 'pointer', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg font-medium text-sm hover:bg-white/5 disabled:opacity-50 transition-colors"
                     >
                         Create & create another
                     </button>
                     <Link
                         to="/admin/more/countries"
-                        style={{
-                            padding: '10px 20px', backgroundColor: 'var(--background, #0f0f1a)',
-                            color: 'var(--text-primary, #fff)', border: '1px solid var(--border, #2a2a4a)',
-                            borderRadius: '6px', fontWeight: '500', textDecoration: 'none', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg font-medium text-sm hover:bg-white/5 transition-colors block text-center"
                     >
                         Cancel
                     </Link>

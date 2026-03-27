@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Save, Upload, X, User } from 'lucide-react';
 import { teamAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 
 /**
  * Profile Page for Team Panel
@@ -15,6 +16,7 @@ import { useToast } from '../../context/ToastContext';
  */
 export function Profile() {
     const { showSuccess, showError } = useToast();
+    const { refreshUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
@@ -134,6 +136,9 @@ export function Profile() {
             });
 
             showSuccess('Profile updated successfully');
+
+            // Refresh AuthContext to update sidebar without reload
+            await refreshUser();
         } catch (error) {
             console.error('Error updating profile:', error);
             showError(error.response?.data?.message || 'Failed to update profile');

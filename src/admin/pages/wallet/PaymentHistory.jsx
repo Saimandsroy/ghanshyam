@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ExternalLink, CreditCard, Smartphone, QrCode, Filter, X, Calendar, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Clock, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ExternalLink, CreditCard, Smartphone, QrCode, Filter, X, Calendar, Eye, Download } from 'lucide-react';
+import ExportModal from '../../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../../utils/exportUtils';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../lib/api';
 
 const PAYMENT_METHODS = ['Bank', 'PayPal', 'UPI', 'QR Code'];
-const PAYMENT_STATUSES = ['Pending', 'Paid', 'Rejected'];
 
 export function PaymentHistory() {
     const [payments, setPayments] = useState([]);
     const navigate = useNavigate();
+    const location = useLocation();
+    const basePath = location.pathname.startsWith('/accountant') ? '/accountant' : '/admin';
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+    const [selectedRows, setSelectedRows] = useState(new Set());
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -26,13 +31,54 @@ export function PaymentHistory() {
         name: '',
         email: '',
         paymentMethod: '',
-        paymentStatus: '',
         clearanceDate: ''
     });
 
     useEffect(() => {
         fetchPayments();
     }, [page, limit, sortConfig, filters]);
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedRows(new Set(payments.map(p => p.id)));
+        } else {
+            setSelectedRows(new Set());
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        const newSet = new Set(selectedRows);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedRows(newSet);
+    };
+
+    const handleExport = ({ filename, format }) => {
+        const dataToExport = payments
+            .filter(p => selectedRows.has(p.id))
+            .map(payment => ({
+                'ID': payment.id,
+                'User Details': payment.user_name + " (" + payment.user_email + ")",
+                'Requested Amount': payment.amount || 0,
+                'Payment Method': payment.payment_method || '',
+                'Beneficiary Name': payment.beneficiary_name || payment.ac_holder_name || '',
+                'Account Number': payment.beneficiary_account_number || payment.account_number || '',
+                'IFSC/SWIFT': payment.ifsc_code || payment.swift_code || '',
+                'Bank Name': payment.bank_name || payment.bene_bank_name || '',
+                'PayPal Email': payment.paypal_email || '',
+                'UPI ID': payment.upi_id || '',
+                'Status': payment.status === 1 ? 'Paid' : payment.status === 2 ? 'Rejected' : 'Pending',
+                'Remarks': payment.remarks ? payment.remarks.replace(/\\r\\n|\\r|\\n/g, ' - ') : '',
+                'Date Added': payment.request_date ? new Date(payment.request_date).toLocaleDateString() : '',
+                'Clearance Date': payment.clearance_date ? new Date(payment.clearance_date).toLocaleDateString() : ''
+            }));
+
+        if (format === 'csv') {
+            exportToCSV(dataToExport, filename || 'payment_history');
+        } else {
+            exportToExcel(dataToExport, filename || 'payment_history', format === 'xlsx');
+        }
+    };
 
     const fetchPayments = async () => {
         try {
@@ -47,8 +93,6 @@ export function PaymentHistory() {
                     filter_name: filters.name || undefined,
                     filter_email: filters.email || undefined,
                     filter_payment_method: filters.paymentMethod || undefined,
-                    filter_status: filters.paymentStatus ?
-                        (filters.paymentStatus === 'Pending' ? 0 : filters.paymentStatus === 'Paid' ? 1 : 2) : undefined,
                     filter_clearance_date: filters.clearanceDate || undefined
                 }
             });
@@ -269,12 +313,12 @@ export function PaymentHistory() {
 
     // Reset filters - also reset to page 1
     const resetFilters = () => {
-        setFilters({ name: '', email: '', paymentMethod: '', paymentStatus: '', clearanceDate: '' });
+        setFilters({ name: '', email: '', paymentMethod: '', clearanceDate: '' });
         setPage(1);
     };
 
     // Check if any filter is active
-    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.paymentStatus || filters.clearanceDate;
+    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.clearanceDate;
 
     return (
         <div className="space-y-6">
@@ -361,19 +405,6 @@ export function PaymentHistory() {
                                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
-                            {/* Payment Status Filter */}
-                            <div>
-                                <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Payment Status</label>
-                                <select
-                                    value={filters.paymentStatus}
-                                    onChange={e => setFilters({ ...filters, paymentStatus: e.target.value })}
-                                    className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
-                                    style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                                >
-                                    <option value="">All Statuses</option>
-                                    {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
                             {/* Clearance Date Filter */}
                             <div>
                                 <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Clearance Date</label>
@@ -401,6 +432,19 @@ export function PaymentHistory() {
             <div className="card overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
                 {/* Toolbar */}
                 <div className="p-4 flex justify-between items-center flex-wrap gap-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                    {/* Left: Export Action */}
+                    <div className="flex items-center gap-4">
+                        {selectedRows.size > 0 && (
+                            <button
+                                onClick={() => setIsExportModalOpen(true)}
+                                className="premium-btn py-1.5 px-3 bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)] border border-[var(--primary-cyan)]/20 hover:bg-[var(--primary-cyan)]/20 text-xs"
+                            >
+                                <Download className="h-4 w-4 mr-1.5" />
+                                Export ({selectedRows.size})
+                            </button>
+                        )}
+                    </div>
+                
                     {/* Rows per page */}
                     <div className="flex items-center gap-2">
                         <span style={{ color: 'var(--text-muted)' }}>Show:</span>
@@ -445,6 +489,14 @@ export function PaymentHistory() {
                     <table className="w-full">
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                <th className="text-left px-4 py-3" style={{ width: '5%' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                                        checked={payments.length > 0 && selectedRows.size === payments.length}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 {/* 1. User Column */}
                                 <th
                                     className="text-left px-4 py-3 font-medium cursor-pointer"
@@ -520,6 +572,16 @@ export function PaymentHistory() {
                                         className="hover:bg-opacity-50 transition-colors"
                                         style={{ borderBottom: '1px solid var(--border)' }}
                                     >
+                                        {/* Checkbox */}
+                                        <td className="px-4 py-4 align-top">
+                                            <input 
+                                                type="checkbox" 
+                                                className="mt-1 rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                                                checked={selectedRows.has(payment.id)}
+                                                onChange={() => handleSelectRow(payment.id)}
+                                            />
+                                        </td>
+                                        
                                         {/* User */}
                                         <td className="px-4 py-4 align-top">
                                             <div>
@@ -578,7 +640,7 @@ export function PaymentHistory() {
                                         {/* Action Column */}
                                         <td className="px-4 py-4 align-middle text-right">
                                             <button
-                                                onClick={() => navigate(`/admin/wallet/invoices/${payment.id}`)}
+                                                onClick={() => navigate(`${basePath}/wallet/invoices/${payment.id}`)}
                                                 className="p-2 rounded-lg hover:bg-white/10 transition-colors inline-flex items-center justify-center group"
                                                 title="View Invoice Details"
                                                 style={{ color: 'var(--primary-cyan)' }}
@@ -676,6 +738,13 @@ export function PaymentHistory() {
                     </div>
                 </div>
             </div>
+            
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExport}
+                selectedCount={selectedRows.size}
+            />
         </div >
     );
 }

@@ -50,11 +50,11 @@ export const PremiumStatsCard = ({
 
             <div className="flex justify-between items-start relative z-10">
                 <div>
-                    <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-subtle)] mb-2 line-clamp-2">
                         {label}
                     </h3>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+                        <span className="text-3xl font-bold tracking-tight text-[var(--text-main)] drop-shadow-sm">
                             {value}
                         </span>
                         {subValue && (

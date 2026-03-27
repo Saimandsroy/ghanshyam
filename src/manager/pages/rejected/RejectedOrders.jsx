@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, RefreshCw } from 'lucide-react';
+import { Eye, RefreshCw, Download } from 'lucide-react';
+import ExportModal from '../../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../../utils/exportUtils';
 import { Pagination } from '../../../components/Pagination.jsx';
 import { managerAPI } from '../../../lib/api';
 
@@ -9,6 +11,8 @@ export const RejectedOrders = () => {
     const [error, setError] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedRows, setSelectedRows] = useState(new Set());
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -42,11 +46,56 @@ export const RejectedOrders = () => {
         });
     };
 
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedRows(new Set(orders.map(o => o.id)));
+        } else {
+            setSelectedRows(new Set());
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        const newSet = new Set(selectedRows);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedRows(newSet);
+    };
+
+    const handleExport = ({ filename, format }) => {
+        const dataToExport = orders
+            .filter(o => selectedRows.has(o.id))
+            .map(order => ({
+                'Order ID': order.order_id || `#${order.id}`,
+                'Client': order.client_name || 'N/A',
+                'Order Type': order.order_type || 'Guest Post',
+                'Website': order.website_url || 'N/A',
+                'Blogger Name': order.blogger_name || 'N/A',
+                'Blogger Email': order.blogger_email || '',
+                'Rejection Reason': order.rejection_reason || 'No reason provided',
+                'Rejected At': formatDate(order.updated_at || order.created_at)
+            }));
+
+        if (format === 'csv') {
+            exportToCSV(dataToExport, filename || 'rejected_orders');
+        } else {
+            exportToExcel(dataToExport, filename || 'rejected_orders', format === 'xlsx');
+        }
+    };
+
     return (
         <div className="p-6">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold">Rejected Orders - Bloggers</h1>
                 <div className="flex items-center gap-4">
+                    {selectedRows.size > 0 && (
+                        <button
+                            onClick={() => setIsExportModalOpen(true)}
+                            className="bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 px-3 py-1.5 rounded flex items-center gap-2 text-sm"
+                        >
+                            <Download size={16} />
+                            Export ({selectedRows.size})
+                        </button>
+                    )}
                     <span className="text-sm text-muted">{total} total rejected orders</span>
                     <button onClick={fetchOrders} className="btn" disabled={loading}>
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -65,6 +114,14 @@ export const RejectedOrders = () => {
                 <table className="w-full">
                     <thead className="bg-background-dark">
                         <tr>
+                            <th className="px-4 py-3 text-left w-12">
+                                <input 
+                                    type="checkbox" 
+                                    className="rounded border-border text-accent focus:ring-accent cursor-pointer bg-background-dark"
+                                    checked={orders.length > 0 && selectedRows.size === orders.length}
+                                    onChange={handleSelectAll}
+                                />
+                            </th>
                             <th className="px-4 py-3 text-left text-sm text-muted">Order ID</th>
                             <th className="px-4 py-3 text-left text-sm text-muted">Client</th>
                             <th className="px-4 py-3 text-left text-sm text-muted">Order Type</th>
@@ -82,13 +139,21 @@ export const RejectedOrders = () => {
                             </tr>
                         ) : orders.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="px-4 py-8 text-center text-muted">
+                                <td colSpan={9} className="px-4 py-8 text-center text-muted">
                                     No rejected orders
                                 </td>
                             </tr>
                         ) : (
                             orders.map((order) => (
                                 <tr key={order.id} className="border-t border-border hover:bg-white/5">
+                                    <td className="px-4 py-3">
+                                        <input 
+                                            type="checkbox" 
+                                            className="rounded border-border text-accent focus:ring-accent cursor-pointer bg-background-dark"
+                                            checked={selectedRows.has(order.id)}
+                                            onChange={() => handleSelectRow(order.id)}
+                                        />
+                                    </td>
                                     <td className="px-4 py-3">
                                         <div className="font-medium">{order.order_id || `#${order.id}`}</div>
                                     </td>
@@ -193,6 +258,13 @@ export const RejectedOrders = () => {
                     </div>
                 </div>
             )}
+
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExport}
+                selectedCount={selectedRows.size}
+            />
         </div>
     );
 };

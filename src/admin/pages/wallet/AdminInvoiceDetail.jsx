@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, ExternalLink } from 'lucide-react';
 import { adminAPI } from '../../../lib/api';
 import { useToast } from '../../../context/ToastContext';
 
 /**
  * AdminInvoiceDetail Page - Displays detailed invoice matching the sample format
- * Route: /admin/wallet/invoices/:id
+ * Route: /admin/wallet/invoices/:id or /accountant/wallet/invoices/:id
  */
 export function AdminInvoiceDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const basePath = location.pathname.startsWith('/accountant') ? '/accountant' : '/admin';
     const { showError } = useToast();
 
     const [data, setData] = useState(null);
@@ -81,7 +83,7 @@ export function AdminInvoiceDetail() {
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate('/admin/wallet/payment-history')}
+                        onClick={() => navigate(`${basePath}/wallet/payment-history`)}
                         className="p-2 rounded-xl hover:bg-[var(--card-background)] border border-transparent hover:border-[var(--border)] transition-all"
                         title="Back to Payment History"
                     >
@@ -109,10 +111,11 @@ export function AdminInvoiceDetail() {
                     {/* Bill From */}
                     <div>
                         <h2 className="text-lg font-bold mb-2 text-black">Bill From:</h2>
-                        <p className="text-sm text-black">{blogger.name}</p>
-                        <p className="text-sm text-gray-600">Phone: {blogger.phone}</p>
-                        <p className="text-sm text-gray-600">Email: {blogger.email}</p>
-                        <p className="text-sm text-gray-600">Address: {blogger.country}</p>
+                        <p className="text-sm text-black">Rank Me up Services</p>
+                        <p className="text-sm text-gray-600"># Seo 105 Ranjeet Avenew B Block Amritsar</p>
+                        <p className="text-sm text-gray-600">Punjab, India 143001</p>
+                        <p className="text-sm text-gray-600">Email:- Contact@rankmeup.in</p>
+                        <p className="text-sm text-gray-600">Phone no = 7087825869</p>
                     </div>
 
                     {/* Invoice Info */}
@@ -136,9 +139,10 @@ export function AdminInvoiceDetail() {
                 {/* Bill To */}
                 <div className="mb-8">
                     <h2 className="text-lg font-bold mb-2 text-black">Bill To:</h2>
-                    <p className="text-sm text-black">Company Name: {company.name}</p>
-                    <p className="text-sm text-gray-600">Address: {company.address}</p>
-                    <p className="text-sm text-gray-600">Email: {company.email}</p>
+                    <p className="text-sm text-black">{blogger.name}</p>
+                    {blogger.phone && <p className="text-sm text-gray-600">Phone: {blogger.phone}</p>}
+                    <p className="text-sm text-gray-600">Email: {blogger.email}</p>
+                    <p className="text-sm text-gray-600">Address: {blogger.country || 'India'}</p>
                 </div>
 
                 {/* Items Table */}

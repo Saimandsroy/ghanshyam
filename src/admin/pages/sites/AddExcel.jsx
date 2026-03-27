@@ -291,7 +291,7 @@ export function AddExcel() {
                                 </div>
 
                                 <div className="overflow-x-auto border border-[var(--border)] rounded-lg">
-                                    <table className="w-full text-left text-sm">
+                                    <table className="w-full text-left text-sm" style={{ minWidth: '700px' }}>
                                         <thead className="bg-[var(--background-dark)] text-[var(--text-muted)] uppercase text-xs">
                                             <tr>
                                                 <th className="p-3">Domain</th>
@@ -303,7 +303,12 @@ export function AddExcel() {
                                         <tbody className="divide-y divide-[var(--border)]">
                                             {conflicts.map((conflict, idx) => (
                                                 <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                    <td className="p-3 font-medium text-white">{conflict.newSite.root_domain}</td>
+                                                    <td className="p-3 font-medium text-white">
+                                                        <a href={`https://${conflict.newSite.root_domain}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline flex items-center gap-1">
+                                                            {conflict.newSite.root_domain}
+                                                            <span className="text-xs opacity-60">↗</span>
+                                                        </a>
+                                                    </td>
                                                     <td className="p-3">
                                                         <div className="text-xs space-y-1">
                                                             <div><span className="text-[var(--text-muted)]">Email:</span> {conflict.newSite.email || '-'}</div>

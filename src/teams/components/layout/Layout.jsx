@@ -117,7 +117,7 @@ export const Layout = ({ children }) => {
     }, [allNavItems, permissions]);
 
     return (
-        <div className="h-screen overflow-hidden flex bg-app-background text-[var(--text-primary)]">
+        <div className="h-screen overflow-hidden flex bg-transparent text-[var(--text-main)]">
             <ModernSidebar
                 navItems={navItems}
                 userName={user?.name || "Team Member"}

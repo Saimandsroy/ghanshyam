@@ -46,39 +46,48 @@ export function TeamSubmissionDetails() {
                 }
 
                 // Try to restore from localStorage first
+                let localDetails = {};
                 const savedDetails = localStorage.getItem(websiteDetailsKey);
                 if (savedDetails) {
                     try {
                         const parsed = JSON.parse(savedDetails);
                         if (parsed.timestamp && Date.now() - parsed.timestamp < 7 * 24 * 60 * 60 * 1000) {
-                            setWebsiteDetails(parsed.data);
-                            return; // Use saved data
+                            parsed.data.forEach(item => {
+                                localDetails[item.id] = item;
+                            });
+                        } else {
+                            localStorage.removeItem(websiteDetailsKey);
                         }
                     } catch (e) {
                         console.warn('Failed to restore website details:', e);
+                        localStorage.removeItem(websiteDetailsKey);
                     }
                 }
 
-                // Initialize website details state from API
+                // Initialize website details state from API + local storage merge
                 if (taskResponse.task && taskResponse.task.selected_websites) {
                     setWebsiteDetails(
-                        taskResponse.task.selected_websites.map(sw => ({
-                            id: sw.id,
-                            website_id: sw.website_id,
-                            domain_url: sw.domain_url,
-                            gp_price: sw.gp_price,
-                            niche_price: sw.niche_price,
-                            dr: sw.dr,
-                            da: sw.da,
-                            traffic: sw.traffic,
-                            notes: sw.notes,
-                            copy_url: sw.copy_url || '',
-                            target_url: sw.target_url || '',
-                            anchor_text: sw.anchor_text || '',
-                            article_title: sw.article_title || '',
-                            upfront_payment: sw.upfront_payment || false,
-                            paypal_id: sw.paypal_id || ''
-                        }))
+                        taskResponse.task.selected_websites.map(sw => {
+                            const local = localDetails[sw.id] || {};
+                            return {
+                                id: sw.id,
+                                website_id: sw.website_id,
+                                domain_url: sw.domain_url,
+                                gp_price: sw.gp_price,
+                                niche_price: sw.niche_price,
+                                dr: sw.dr,
+                                da: sw.da,
+                                traffic: sw.traffic,
+                                notes: sw.notes,
+                                copy_url: sw.copy_url || '',
+                                // Manager inputs - favor local draft if exists, else DB
+                                target_url: local.target_url !== undefined ? local.target_url : (sw.target_url || ''),
+                                anchor_text: local.anchor_text !== undefined ? local.anchor_text : (sw.anchor_text || ''),
+                                article_title: local.article_title !== undefined ? local.article_title : (sw.article_title || ''),
+                                upfront_payment: local.upfront_payment !== undefined ? local.upfront_payment : (sw.upfront_payment || false),
+                                paypal_id: local.paypal_id !== undefined ? local.paypal_id : (sw.paypal_id || '')
+                            };
+                        })
                     );
                 }
             } catch (err) {

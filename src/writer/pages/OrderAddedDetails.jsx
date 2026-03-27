@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Upload, XCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Send, Upload, XCircle, CheckCircle, RefreshCw, AlertTriangle } from 'lucide-react';
 import { writerAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import { useAutoSave, AutoSaveIndicator } from '../../hooks/useAutoSave';
@@ -22,6 +22,10 @@ export function OrderAddedDetails() {
 
     const fileInputRefs = useRef({});
 
+    // Rejected website IDs and Reason
+    const [rejectedWebsiteIds, setRejectedWebsiteIds] = useState([]);
+    const [rejectionReason, setRejectionReason] = useState('');
+
     // Check if order is Niche Edit
     const isNicheEdit = task?.order_type?.toLowerCase().includes('niche');
 
@@ -36,40 +40,73 @@ export function OrderAddedDetails() {
                 const taskData = response.task;
                 setTask(taskData);
 
-                // Try to restore from localStorage first
+                // New dynamic parsing: Task DB now automatically surfaces rejection reasons
+                const rejectionContent = taskData.rejection_reason || taskData.message || taskData.notes || taskData.content_body || '';
+
+                // Keep reason set for banner
+                if (taskData.current_status === 'REJECTED' || taskData.current_status === 'WRITER_REJECTED' || (rejectionContent && rejectionContent.includes('[WRITER_REJECTED]'))) {
+                    const messageContent = rejectionContent.replace('[WRITER_REJECTED]', '').trim();
+                    if (messageContent.includes('|||')) {
+                        const [reason] = messageContent.split('|||');
+                        setRejectionReason(reason.trim());
+                    } else {
+                        setRejectionReason(messageContent);
+                    }
+                }
+
+                // Try to load from local storage first
+                let localSubmissions = {};
                 const savedSubmissions = localStorage.getItem(submissionsKey);
+
                 if (savedSubmissions) {
                     try {
                         const parsed = JSON.parse(savedSubmissions);
                         if (parsed.timestamp && Date.now() - parsed.timestamp < 7 * 24 * 60 * 60 * 1000) {
-                            setWebsiteSubmissions(parsed.data);
-                            return; // Use saved data
+                            parsed.data.forEach(item => {
+                                localSubmissions[item.id] = item;
+                                if (item.website_id) localSubmissions[item.website_id] = item;
+                            });
+                        } else {
+                            localStorage.removeItem(submissionsKey);
                         }
                     } catch (e) {
                         console.warn('Failed to restore submissions:', e);
+                        localStorage.removeItem(submissionsKey);
                     }
                 }
 
-                // Initialize from API
                 if (taskData.selected_websites) {
+                    console.log('Task Data Payload arrived:', taskData.selected_websites);
                     setWebsiteSubmissions(
-                        taskData.selected_websites.map(sw => ({
-                            id: sw.id,
-                            domain_url: sw.domain_url,
-                            target_url: sw.target_url,
-                            anchor_text: sw.anchor_text,
-                            article_title: sw.article_title,
-                            post_url: sw.copy_url || sw.post_url || '',
-                            content_link: sw.content_link || '',
-                            writer_note: sw.writer_note || '',
-                            notes: sw.notes,
-                            // Niche Edit specific fields
-                            option_type: sw.option_type || 'insert', // 'replace' or 'insert' from API
-                            replace_with: sw.replace_with || '',
-                            replace_statement: sw.replace_statement || '',
-                            insert_after: sw.insert_after || '',
-                            insert_statement: sw.insert_statement || ''
-                        }))
+                        taskData.selected_websites.map(sw => {
+                            // Backend Task.js inherently marks row.status === 11 as is_rejected: true
+                            console.log('Website Rejection Status Check:', sw.id, 'is_rejected:', sw.is_rejected);
+                            const isRejected = sw.is_rejected === true || sw.is_rejected === 'true' || sw.is_rejected === 1 || sw.is_rejected;
+                            const local = localSubmissions[sw.id] || localSubmissions[sw.website_id] || {};
+
+                            return {
+                                id: sw.id,
+                                website_id: sw.website_id,
+                                domain_url: sw.domain_url,
+                                // ALWAYS force read-only fields from backend DB 
+                                target_url: sw.target_url || '',
+                                anchor_text: sw.anchor_text || '',
+                                article_title: sw.article_title || '',
+                                // Editable fields: fallback to local cache if present
+                                post_url: local.post_url !== undefined ? local.post_url : (sw.copy_url || sw.post_url || ''),
+                                content_link: local.content_link !== undefined ? local.content_link : (sw.content_link || ''),
+                                writer_note: local.writer_note !== undefined ? local.writer_note : '', // Force empty for new GP orders
+                                notes: sw.notes,
+                                // Niche Edit specific fields
+                                option_type: local.option_type !== undefined ? local.option_type : (sw.option_type || 'insert'),
+                                replace_with: local.replace_with !== undefined ? local.replace_with : (sw.replace_with || ''),
+                                replace_statement: local.replace_statement !== undefined ? local.replace_statement : (sw.replace_statement || ''),
+                                insert_after: local.insert_after !== undefined ? local.insert_after : (sw.insert_after || ''),
+                                insert_statement: local.insert_statement !== undefined ? local.insert_statement : (sw.insert_statement || ''),
+                                // Used for border coloring
+                                is_rejected: isRejected
+                            };
+                        })
                     );
                 }
             } catch (err) {
@@ -246,7 +283,7 @@ export function OrderAddedDetails() {
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="premium-badge bg-[var(--primary-glow)] text-[var(--primary-cyan)]">
-                            Order #{task.id}
+                            Order #{task.manual_order_id || task.id}
                         </span>
                         <span className="text-[var(--text-muted)] text-sm">•</span>
                         <span className="text-[var(--text-secondary)] text-sm">{task.client_name || 'Client'}</span>
@@ -258,273 +295,295 @@ export function OrderAddedDetails() {
 
                 {/* Left Column - Website Details */}
                 <div className="lg:col-span-3 space-y-6">
+                    {/* Rejection Reason Banner */}
+                    {rejectionReason && (
+                        <div className="premium-card p-5 border-2 border-red-500/30 bg-red-500/10 mb-6">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="h-6 w-6 text-red-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <h3 className="font-semibold text-red-400 mb-1">Manager's Rejection Reason</h3>
+                                    <p className="text-[var(--text-primary)]">{rejectionReason}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {websiteSubmissions.length === 0 ? (
                         <div className="premium-card p-12 text-center">
                             <p className="text-[var(--text-muted)]">No website details available for this order.</p>
                         </div>
                     ) : (
-                        websiteSubmissions.map((site, index) => (
-                            <div key={site.id} className="premium-card p-6">
-                                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border)]">
-                                    <h2 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-[var(--primary-cyan)] text-white flex items-center justify-center text-xs">
-                                            {index + 1}
-                                        </div>
-                                        Website Details
-                                    </h2>
-                                    <div className="text-sm text-[var(--text-muted)] font-mono">
-                                        ID: {site.id}
-                                    </div>
-                                </div>
+                        websiteSubmissions.map((site, index) => {
+                            const isRejected = site.is_rejected === true || site.is_rejected === 'true' || site.is_rejected === 1;
 
-                                <div className="space-y-6">
-                                    {/* Read-only field: Root domain */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                        <label className="text-sm font-medium text-[var(--text-secondary)]">Root Domain</label>
-                                        <div className="md:col-span-3">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={site.domain_url || ''}
-                                                className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
-                                            />
+                            return (
+                                <div key={site.id} className={`premium-card p-6 transition-all ${isRejected ? 'border-2 border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10' : ''}`}>
+                                    <div className={`flex items-center justify-between mb-6 pb-4 border-b ${isRejected ? 'border-red-500/30' : 'border-[var(--border)]'}`}>
+                                        <h2 className={`text-lg font-bold flex items-center gap-2 ${isRejected ? 'text-red-400' : 'text-[var(--text-primary)]'}`}>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isRejected ? 'bg-red-500 text-white' : 'bg-[var(--primary-cyan)] text-white'}`}>
+                                                {index + 1}
+                                            </div>
+                                            Website Details
+                                            {isRejected && (
+                                                <span className="ml-2 px-3 py-1 text-xs font-bold rounded-full bg-red-500 text-white uppercase tracking-wide animate-pulse">
+                                                    ⚠ REJECTED - FIX REQUIRED
+                                                </span>
+                                            )}
+                                        </h2>
+                                        <div className="text-sm text-[var(--text-muted)] font-mono">
+                                            ID: {site.id}
                                         </div>
                                     </div>
 
-                                    {/* Read-only field: Anchor */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                        <label className="text-sm font-medium text-[var(--text-secondary)]">Anchor Text</label>
-                                        <div className="md:col-span-3">
-                                            <input
-                                                type="text"
-                                                readOnly
-                                                value={site.anchor_text || ''}
-                                                className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Read-only field: Post URL - Niche Edit only */}
-                                    {isNicheEdit && (
+                                    <div className="space-y-6">
+                                        {/* Read-only field: Root domain */}
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                            <label className="text-sm font-medium text-[var(--text-secondary)]">Target Post URL</label>
+                                            <label className="text-sm font-medium text-[var(--text-secondary)]">Root Domain</label>
                                             <div className="md:col-span-3">
                                                 <input
                                                     type="text"
                                                     readOnly
-                                                    value={site.post_url || ''}
+                                                    value={site.domain_url || ''}
                                                     className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
                                                 />
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Read-only field: Title - GP only */}
-                                    {!isNicheEdit && (
+                                        {/* Read-only field: Anchor */}
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                            <label className="text-sm font-medium text-[var(--text-secondary)]">Article Title</label>
+                                            <label className="text-sm font-medium text-[var(--text-secondary)]">Anchor Text</label>
                                             <div className="md:col-span-3">
                                                 <input
                                                     type="text"
                                                     readOnly
-                                                    value={site.article_title || ''}
+                                                    value={site.anchor_text || ''}
                                                     className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
                                                 />
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Read-only field: URL */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                        <label className="text-sm font-medium text-[var(--text-secondary)]">Target URL</label>
-                                        <div className="md:col-span-3">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    readOnly
-                                                    value={site.target_url || ''}
-                                                    className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed pl-10"
-                                                />
-                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                                                    <Upload className="w-4 h-4" />
+                                        {/* Read-only field: Post URL - Niche Edit only */}
+                                        {isNicheEdit && (
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                                <label className="text-sm font-medium text-[var(--text-secondary)]">Target Post URL</label>
+                                                <div className="md:col-span-3">
+                                                    <input
+                                                        type="text"
+                                                        readOnly
+                                                        value={site.post_url || ''}
+                                                        className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Read-only field: Title - GP only */}
+                                        {!isNicheEdit && (
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                                <label className="text-sm font-medium text-[var(--text-secondary)]">Article Title</label>
+                                                <div className="md:col-span-3">
+                                                    <input
+                                                        type="text"
+                                                        readOnly
+                                                        value={site.article_title || ''}
+                                                        className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Read-only field: URL */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                            <label className="text-sm font-medium text-[var(--text-secondary)]">Target URL</label>
+                                            <div className="md:col-span-3">
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        readOnly
+                                                        value={site.target_url || ''}
+                                                        className="premium-input bg-[var(--background-dark)] opacity-70 cursor-not-allowed pl-10"
+                                                    />
+                                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                                                        <Upload className="w-4 h-4" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div className="h-px bg-[var(--border)] my-6" />
+
+                                        {/* ===== NICHE EDIT SPECIFIC FIELDS ===== */}
+                                        {isNicheEdit && (
+                                            <>
+                                                {/* Options Dropdown */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                                    <label className="text-sm font-medium text-[var(--text-secondary)]">
+                                                        Action Type<span className="text-[var(--error)]">*</span>
+                                                    </label>
+                                                    <div className="md:col-span-3">
+                                                        <select
+                                                            value={site.option_type}
+                                                            onChange={(e) => handleContentChange(index, 'option_type', e.target.value)}
+                                                            className="premium-input appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-right-4 bg-[length:12px_12px]"
+                                                        >
+                                                            <option value="replace">Replace Existing Text</option>
+                                                            <option value="insert">Insert New Text</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* Replace Fields */}
+                                                {site.option_type === 'replace' && (
+                                                    <div className="space-y-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                                                        <h4 className="text-sm font-bold text-amber-700 uppercase tracking-wide">🔄 Replace Mode</h4>
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <label className="text-sm font-semibold text-[var(--text-main)] mb-2 block">
+                                                                    Text to Replace <span className="text-[var(--error)]">*</span>
+                                                                </label>
+                                                                <textarea
+                                                                    value={site.replace_with}
+                                                                    onChange={(e) => handleContentChange(index, 'replace_with', e.target.value)}
+                                                                    placeholder="Paste the exact text to find and replace..."
+                                                                    rows={6}
+                                                                    className="premium-input w-full font-mono text-sm"
+                                                                    style={{ minHeight: '140px' }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-sm font-semibold text-[var(--text-main)] mb-2 block">
+                                                                    New Content <span className="text-[var(--error)]">*</span>
+                                                                </label>
+                                                                <textarea
+                                                                    value={site.replace_statement}
+                                                                    onChange={(e) => handleContentChange(index, 'replace_statement', e.target.value)}
+                                                                    placeholder="New text with anchor link to replace the above..."
+                                                                    rows={6}
+                                                                    className="premium-input w-full font-mono text-sm"
+                                                                    style={{ minHeight: '140px' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Insert Fields */}
+                                                {site.option_type === 'insert' && (
+                                                    <div className="space-y-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                                                        <h4 className="text-sm font-bold text-emerald-700 uppercase tracking-wide">➕ Insert Mode</h4>
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <label className="text-sm font-semibold text-[var(--text-main)] mb-2 block">
+                                                                    Insert After <span className="text-[var(--error)]">*</span>
+                                                                </label>
+                                                                <textarea
+                                                                    value={site.insert_after}
+                                                                    onChange={(e) => handleContentChange(index, 'insert_after', e.target.value)}
+                                                                    placeholder="Paste the existing text after which you want to insert new content..."
+                                                                    rows={6}
+                                                                    className="premium-input w-full font-mono text-sm"
+                                                                    style={{ minHeight: '140px' }}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-sm font-semibold text-[var(--text-main)] mb-2 block">
+                                                                    New Statement <span className="text-[var(--error)]">*</span>
+                                                                </label>
+                                                                <textarea
+                                                                    value={site.insert_statement}
+                                                                    onChange={(e) => handleContentChange(index, 'insert_statement', e.target.value)}
+                                                                    placeholder="The new sentence or paragraph to insert with anchor link..."
+                                                                    rows={6}
+                                                                    className="premium-input w-full font-mono text-sm"
+                                                                    style={{ minHeight: '140px' }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {/* ===== GUEST POST SPECIFIC FIELDS ===== */}
+                                        {!isNicheEdit && (
+                                            <>
+                                                {/* Upload Document */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                                                    <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">Content File</label>
+                                                    <div className="md:col-span-3">
+                                                        <input
+                                                            type="file"
+                                                            ref={(el) => fileInputRefs.current[site.id] = el}
+                                                            onChange={(e) => handleFileChange(site.id, e)}
+                                                            className="hidden"
+                                                            accept=".doc,.docx,.pdf,.txt,.rtf,image/*,.png,.jpg,.jpeg,.gif,.webp"
+                                                        />
+                                                        <div
+                                                            onClick={() => handleFileClick(site.id)}
+                                                            onDragOver={handleDragOver}
+                                                            onDrop={(e) => handleDrop(site.id, e)}
+                                                            className="rounded-xl p-8 text-center cursor-pointer transition-all border-2 border-dashed border-[var(--border)] hover:border-[var(--primary-cyan)] hover:bg-[var(--primary-glow)] group"
+                                                        >
+                                                            {uploadedFiles[site.id] ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <div className="w-12 h-12 rounded-full bg-[var(--primary-glow)] flex items-center justify-center mb-3">
+                                                                        <CheckCircle className="h-6 w-6 text-[var(--primary-cyan)]" />
+                                                                    </div>
+                                                                    <p className="font-medium text-[var(--text-primary)]">{uploadedFiles[site.id].name}</p>
+                                                                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                                                                        ({(uploadedFiles[site.id].size / 1024).toFixed(1)} KB)
+                                                                    </p>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col items-center">
+                                                                    <div className="w-12 h-12 rounded-full bg-[var(--input-background)] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                                        <Upload className="h-6 w-6 text-[var(--text-muted)] group-hover:text-[var(--primary-cyan)]" />
+                                                                    </div>
+                                                                    <p className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
+                                                                        Click to upload or drag and drop
+                                                                    </p>
+                                                                    <p className="text-xs text-[var(--text-muted)] mt-2">DOC, DOCX, PDF, Images</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Doc URLs */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                                    <label className="text-sm font-medium text-[var(--text-secondary)]">Google Doc URL</label>
+                                                    <div className="md:col-span-3">
+                                                        <input
+                                                            type="url"
+                                                            value={site.content_link}
+                                                            onChange={(e) => handleContentChange(index, 'content_link', e.target.value)}
+                                                            placeholder="https://docs.google.com/..."
+                                                            className="premium-input"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Note - Mandatory for GP */}
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                                                    <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
+                                                        Writer Note<span className="text-[var(--error)]">*</span>
+                                                    </label>
+                                                    <div className="md:col-span-3">
+                                                        <textarea
+                                                            value={site.writer_note}
+                                                            onChange={(e) => handleContentChange(index, 'writer_note', e.target.value)}
+                                                            placeholder="Important notes for the manager..."
+                                                            rows={3}
+                                                            className="premium-input"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-
-                                    <div className="h-px bg-[var(--border)] my-6" />
-
-                                    {/* ===== NICHE EDIT SPECIFIC FIELDS ===== */}
-                                    {isNicheEdit && (
-                                        <>
-                                            {/* Options Dropdown */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                                <label className="text-sm font-medium text-[var(--text-secondary)]">
-                                                    Action Type<span className="text-[var(--error)]">*</span>
-                                                </label>
-                                                <div className="md:col-span-3">
-                                                    <select
-                                                        value={site.option_type}
-                                                        onChange={(e) => handleContentChange(index, 'option_type', e.target.value)}
-                                                        className="premium-input appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-right-4 bg-[length:12px_12px]"
-                                                    >
-                                                        <option value="replace">Replace Existing Text</option>
-                                                        <option value="insert">Insert New Text</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            {/* Replace Fields */}
-                                            {site.option_type === 'replace' && (
-                                                <>
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                        <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
-                                                            Replace Text<span className="text-[var(--error)]">*</span>
-                                                        </label>
-                                                        <div className="md:col-span-3">
-                                                            <textarea
-                                                                value={site.replace_with}
-                                                                onChange={(e) => handleContentChange(index, 'replace_with', e.target.value)}
-                                                                placeholder="Exact text to find and replace..."
-                                                                rows={3}
-                                                                className="premium-input font-mono text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                        <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
-                                                            New Content<span className="text-[var(--error)]">*</span>
-                                                        </label>
-                                                        <div className="md:col-span-3">
-                                                            <textarea
-                                                                value={site.replace_statement}
-                                                                onChange={(e) => handleContentChange(index, 'replace_statement', e.target.value)}
-                                                                placeholder="New text with anchor..."
-                                                                rows={4}
-                                                                className="premium-input font-mono text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {/* Insert Fields */}
-                                            {site.option_type === 'insert' && (
-                                                <>
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                        <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
-                                                            Insert After<span className="text-[var(--error)]">*</span>
-                                                        </label>
-                                                        <div className="md:col-span-3">
-                                                            <textarea
-                                                                value={site.insert_after}
-                                                                onChange={(e) => handleContentChange(index, 'insert_after', e.target.value)}
-                                                                placeholder="Text segment to insert after..."
-                                                                rows={3}
-                                                                className="premium-input font-mono text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                        <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
-                                                            New Statement<span className="text-[var(--error)]">*</span>
-                                                        </label>
-                                                        <div className="md:col-span-3">
-                                                            <textarea
-                                                                value={site.insert_statement}
-                                                                onChange={(e) => handleContentChange(index, 'insert_statement', e.target.value)}
-                                                                placeholder="The new sentence/paragraph to insert..."
-                                                                rows={4}
-                                                                className="premium-input font-mono text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {/* ===== GUEST POST SPECIFIC FIELDS ===== */}
-                                    {!isNicheEdit && (
-                                        <>
-                                            {/* Upload Document */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">Content File</label>
-                                                <div className="md:col-span-3">
-                                                    <input
-                                                        type="file"
-                                                        ref={(el) => fileInputRefs.current[site.id] = el}
-                                                        onChange={(e) => handleFileChange(site.id, e)}
-                                                        className="hidden"
-                                                        accept=".doc,.docx,.pdf,.txt,.rtf,image/*,.png,.jpg,.jpeg,.gif,.webp"
-                                                    />
-                                                    <div
-                                                        onClick={() => handleFileClick(site.id)}
-                                                        onDragOver={handleDragOver}
-                                                        onDrop={(e) => handleDrop(site.id, e)}
-                                                        className="rounded-xl p-8 text-center cursor-pointer transition-all border-2 border-dashed border-[var(--border)] hover:border-[var(--primary-cyan)] hover:bg-[var(--primary-glow)] group"
-                                                    >
-                                                        {uploadedFiles[site.id] ? (
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="w-12 h-12 rounded-full bg-[var(--primary-glow)] flex items-center justify-center mb-3">
-                                                                    <CheckCircle className="h-6 w-6 text-[var(--primary-cyan)]" />
-                                                                </div>
-                                                                <p className="font-medium text-[var(--text-primary)]">{uploadedFiles[site.id].name}</p>
-                                                                <p className="text-xs text-[var(--text-muted)] mt-1">
-                                                                    ({(uploadedFiles[site.id].size / 1024).toFixed(1)} KB)
-                                                                </p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="w-12 h-12 rounded-full bg-[var(--input-background)] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                                                    <Upload className="h-6 w-6 text-[var(--text-muted)] group-hover:text-[var(--primary-cyan)]" />
-                                                                </div>
-                                                                <p className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
-                                                                    Click to upload or drag and drop
-                                                                </p>
-                                                                <p className="text-xs text-[var(--text-muted)] mt-2">DOC, DOCX, PDF, Images</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Doc URLs */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                                <label className="text-sm font-medium text-[var(--text-secondary)]">Google Doc URL</label>
-                                                <div className="md:col-span-3">
-                                                    <input
-                                                        type="url"
-                                                        value={site.content_link}
-                                                        onChange={(e) => handleContentChange(index, 'content_link', e.target.value)}
-                                                        placeholder="https://docs.google.com/..."
-                                                        className="premium-input"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Note - Mandatory for GP */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                                                <label className="text-sm font-medium text-[var(--text-secondary)] pt-3">
-                                                    Writer Note<span className="text-[var(--error)]">*</span>
-                                                </label>
-                                                <div className="md:col-span-3">
-                                                    <textarea
-                                                        value={site.writer_note}
-                                                        onChange={(e) => handleContentChange(index, 'writer_note', e.target.value)}
-                                                        placeholder="Important notes for the manager..."
-                                                        rows={3}
-                                                        className="premium-input"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
 
                     {/* Global Notes - Only for Niche Edit */}

@@ -46,7 +46,7 @@ export function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="p-6" style={{ backgroundColor: 'var(--card-background)', borderBottom: '1px solid var(--border)' }}>
+        <header className="p-6 bg-white/70 backdrop-blur-md border-b border-[var(--color-border)]">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>

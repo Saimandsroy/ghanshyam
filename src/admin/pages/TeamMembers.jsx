@@ -1,14 +1,16 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Users2, Filter, RotateCcw, Shield, Key, X, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
+import { RefreshCw, Users2, Filter, RotateCcw, Shield, Key, X, ChevronDown, ChevronUp, UserPlus, LogIn } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
 import { adminAPI } from '../../lib/api';
+import { useAuth } from '../../auth/AuthContext';
 
-const TEAM_ROLES = ['Team', 'Manager', 'Writer'];
-const CREATE_ROLES = ['Manager', 'Writer', 'Blogger'];
+const TEAM_ROLES = ['Team', 'Manager', 'Writer', 'Accountant'];
+const CREATE_ROLES = ['Manager', 'Writer', 'Blogger', 'Accountant'];
 
 export function TeamMembers() {
   const navigate = useNavigate();
+  const { impersonateLogin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,16 +38,18 @@ export function TeamMembers() {
 
       // Fetch all three roles separately and combine
       // Backend pagination returns only 50 records, so we need to filter by role on the server side
-      const [teamRes, managerRes, writerRes] = await Promise.all([
+      const [teamRes, managerRes, writerRes, accountantRes] = await Promise.all([
         adminAPI.getUsers({ role: 'Team', limit: 100 }),
         adminAPI.getUsers({ role: 'Manager', limit: 100 }),
-        adminAPI.getUsers({ role: 'Writer', limit: 100 })
+        adminAPI.getUsers({ role: 'Writer', limit: 100 }),
+        adminAPI.getUsers({ role: 'Accountant', limit: 100 })
       ]);
 
       const allTeamMembers = [
         ...(teamRes.users || []),
         ...(managerRes.users || []),
-        ...(writerRes.users || [])
+        ...(writerRes.users || []),
+        ...(accountantRes.users || [])
       ];
 
       setUsers(allTeamMembers);
@@ -140,13 +144,43 @@ export function TeamMembers() {
     navigate(`/admin/users/${userId}/permissions`);
   };
 
+  // Action: Impersonate user
+  const handleImpersonate = async (userId, userName) => {
+    if (actionLoading) return;
+    if (!window.confirm(`Are you sure you want to log in as ${userName || 'this user'}?`)) return;
+    
+    setActionLoading(`impersonate-${userId}`);
+    try {
+      const data = await adminAPI.impersonateUser(userId);
+      impersonateLogin(data);
+      
+      const routeMap = {
+        Admin: '/admin',
+        Blogger: '/blogger',
+        Manager: '/manager',
+        Team: '/teams',
+        Writer: '/writer',
+        Accountant: '/accountant'
+      };
+      
+      // Wait a moment for context to persist, then forcibly navigate
+      setTimeout(() => {
+        window.location.href = routeMap[data.user.role] || '/';
+      }, 100);
+    } catch (err) {
+      setError(err.message || 'Failed to impersonate user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Action: Toggle account status (Active/Blocked)
   const handleToggleStatus = async (userId, userName, currentStatus) => {
     if (actionLoading) return;
     setActionLoading(`status-${userId}`);
     const newStatus = currentStatus ? 0 : 1; // Toggle: 1 = Active, 0 = Blocked
     try {
-      await adminAPI.updateUser(userId, { status: newStatus });
+      await adminAPI.updateUser(userId, { is_active: newStatus === 1 });
       setSuccessMessage(`${userName} is now ${newStatus === 1 ? 'Active' : 'Blocked'}`);
       // Update local state
       setUsers(prev => prev.map(u =>
@@ -418,6 +452,22 @@ export function TeamMembers() {
                         title="Change password"
                       >
                         <Key className="h-4 w-4" style={{ color: 'var(--success)' }} />
+                      </button>
+
+                      {/* Impersonate Icon */}
+                      <button
+                        onClick={() => handleImpersonate(m.id, m.name)}
+                        disabled={actionLoading === `impersonate-${m.id}`}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
+                        title={`Log in as ${m.name || 'this user'}`}
+                      >
+                        <LogIn 
+                          className={`h-4 w-4 ${actionLoading === `impersonate-${m.id}` ? 'animate-spin' : ''}`} 
+                          style={{ color: '#c084fc' }} // Purple-400
+                        />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                          Log in as {m.name || 'user'}
+                        </span>
                       </button>
                     </div>
                   </td>

@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
 import { LayoutGrid, CheckCircle2, Bell, XCircle, MessageSquare, User } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { authAPI } from '../lib/api';
 
 export function WriterLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const base = '/writer';
+  const [permissions, setPermissions] = useState(null);
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+        try {
+            const response = await authAPI.getMyPermissions();
+            setPermissions(response.permissions);
+        } catch (error) {
+            console.error('Error fetching permissions:', error);
+            // Default to all enabled on error
+            setPermissions({
+                completed_orders: true,
+                order_notifications: true,
+                rejected_notifications: true,
+                threads: true,
+                profile: true
+            });
+        }
+    };
+    fetchPermissions();
+  }, []);
 
   const getUserImage = () => {
     if (!user?.profile_image) return null;
@@ -22,17 +44,26 @@ export function WriterLayout() {
     logout();
     navigate('/login');
   };
-  const navItems = [
-    { icon: <LayoutGrid size={18} />, label: 'Dashboard', to: base, active: pathname === base || pathname === `${base}/` },
-    { icon: <CheckCircle2 size={18} />, label: 'Completed Orders', to: `${base}/completed-orders`, active: pathname.startsWith(`${base}/completed-orders`) },
-    { icon: <Bell size={18} />, label: 'Order Notifications', to: `${base}/notifications`, active: pathname.startsWith(`${base}/notifications`) },
-    { icon: <XCircle size={18} />, label: 'Rejected Notifications', to: `${base}/rejected`, active: pathname.startsWith(`${base}/rejected`) },
-    { icon: <MessageSquare size={18} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`) },
-    { icon: <User size={18} />, label: 'Profile', to: `${base}/profile`, active: pathname === `${base}/profile` },
-  ];
+
+  const allNavItems = useMemo(() => [
+    { icon: <LayoutGrid size={18} />, label: 'Dashboard', to: base, active: pathname === base || pathname === `${base}/`, permissionKey: null },
+    { icon: <CheckCircle2 size={18} />, label: 'Completed Orders', to: `${base}/completed-orders`, active: pathname.startsWith(`${base}/completed-orders`), permissionKey: 'completed_orders' },
+    { icon: <Bell size={18} />, label: 'Order Notifications', to: `${base}/notifications`, active: pathname.startsWith(`${base}/notifications`), permissionKey: 'order_notifications' },
+    { icon: <XCircle size={18} />, label: 'Rejected Notifications', to: `${base}/rejected`, active: pathname.startsWith(`${base}/rejected`), permissionKey: 'rejected_notifications' },
+    { icon: <MessageSquare size={18} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`), permissionKey: 'threads' },
+    { icon: <User size={18} />, label: 'Profile', to: `${base}/profile`, active: pathname === `${base}/profile`, permissionKey: 'profile' },
+  ], [pathname, base]);
+
+  const navItems = useMemo(() => {
+    if (!permissions) return allNavItems;
+    return allNavItems.filter(item => {
+        if (!item.permissionKey) return true;
+        return permissions[item.permissionKey] !== false;
+    });
+  }, [allNavItems, permissions]);
 
   return (
-    <div className="h-screen overflow-hidden flex bg-app-background text-[var(--text-primary)]">
+    <div className="h-screen overflow-hidden flex bg-transparent text-[var(--text-main)]">
       <ModernSidebar
         navItems={navItems}
         userName={user?.name || "Writer"}

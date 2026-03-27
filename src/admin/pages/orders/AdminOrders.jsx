@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, X, Eye, RefreshCw, FileText, SlidersHorizontal, Columns, Calendar } from 'lucide-react';
+import { Search, Filter, X, Eye, RefreshCw, FileText, SlidersHorizontal, Columns, Calendar, Download } from 'lucide-react';
 import { adminAPI } from '../../../lib/api';
+import ExportModal from '../../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../../utils/exportUtils';
 
 export function AdminOrders() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedRows, setSelectedRows] = useState(new Set());
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -148,6 +152,47 @@ export function AdminOrders() {
 
     const totalPages = Math.ceil(total / pageSize);
 
+    // Export Handlers
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedRows(new Set(filteredOrders.map(o => o.id)));
+        } else {
+            setSelectedRows(new Set());
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        const newSet = new Set(selectedRows);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedRows(newSet);
+    };
+
+    const handleExport = ({ filename, format }) => {
+        const dataToExport = filteredOrders
+            .filter(o => selectedRows.has(o.id))
+            .map(order => ({
+                'Order ID': order.order_id || `#${order.id}`,
+                'Manager': order.manager_name || '',
+                'Client Name': order.client_name || '',
+                'Status': order.status_label || '',
+                'Website': order.client_website || '',
+                'TAT': order.tat || '',
+                'No of Links': order.no_of_links || 0,
+                'Order Type': order.order_type || '',
+                'Order Package': order.order_package || '',
+                'Category': order.category || '',
+                'Ordered At': formatDate(order.created_at),
+                'Completed At': formatDate(order.completed_at)
+            }));
+
+        if (format === 'csv') {
+            exportToCSV(dataToExport, filename || 'orders_export');
+        } else {
+            exportToExcel(dataToExport, filename || 'orders_export', format === 'xlsx');
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -162,6 +207,18 @@ export function AdminOrders() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* Export Toggle */}
+                    {selectedRows.size > 0 && (
+                        <button
+                            onClick={() => setIsExportModalOpen(true)}
+                            className="p-2.5 rounded-xl transition-all duration-300 hover:bg-[var(--primary-cyan)]/10 flex items-center gap-2 bg-[var(--primary-cyan)]/5"
+                            title="Export Selected"
+                            style={{ border: '1px solid rgba(107, 240, 255, 0.3)' }}
+                        >
+                            <Download className="h-5 w-5" style={{ color: 'var(--primary-cyan)' }} />
+                            <span className="text-sm font-medium hidden sm:inline" style={{ color: 'var(--primary-cyan)' }}>Export ({selectedRows.size})</span>
+                        </button>
+                    )}
                     {/* Filter Toggle */}
                     <button
                         onClick={() => setShowFilters(!showFilters)}
@@ -369,6 +426,14 @@ export function AdminOrders() {
                     <table className="w-full">
                         <thead style={{ backgroundColor: 'var(--background-dark)' }}>
                             <tr>
+                                <th className="px-4 py-3 text-left w-12">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                                        checked={filteredOrders.length > 0 && selectedRows.size === filteredOrders.length}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Order ID</th>
                                 {visibleColumns.manager && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Manager</th>}
                                 {visibleColumns.client_name && <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--text-muted)' }}>Client Name</th>}
@@ -403,6 +468,14 @@ export function AdminOrders() {
                                     const statusStyle = getStatusBadge(order.status_label);
                                     return (
                                         <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }} className="hover:bg-white/5">
+                                            <td className="px-4 py-3">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                                                    checked={selectedRows.has(order.id)}
+                                                    onChange={() => handleSelectRow(order.id)}
+                                                />
+                                            </td>
                                             {/* Order ID */}
                                             <td className="px-4 py-3">
                                                 <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{order.order_id || `#${order.id}`}</div>
@@ -585,6 +658,13 @@ export function AdminOrders() {
                     onClick={() => setShowColumnToggle(false)}
                 />
             )}
+            
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExport}
+                selectedCount={selectedRows.size}
+            />
         </div>
     );
 }

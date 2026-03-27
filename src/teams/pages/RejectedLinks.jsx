@@ -39,6 +39,7 @@ export function RejectedLinks() {
     const term = searchTerm.toLowerCase();
     return orders.filter(o =>
       `${o.id}`.includes(term) ||
+      `${o.manual_order_id}`.toLowerCase().includes(term) ||
       o.client_name?.toLowerCase().includes(term) ||
       o.rejection_reason?.toLowerCase().includes(term)
     );
@@ -103,7 +104,6 @@ export function RejectedLinks() {
               <tr>
                 <th className="w-[100px]">Order ID</th>
                 <th>Client</th>
-                <th>Website</th>
                 <th>Manager</th>
                 <th>Rejection Reason</th>
                 <th className="text-center">Actions</th>
@@ -131,16 +131,8 @@ export function RejectedLinks() {
               ) : (
                 pageData.map((r) => (
                   <tr key={r.id}>
-                    <td className="font-mono text-[var(--primary-cyan)]">#{r.id}</td>
+                    <td className="font-mono text-[var(--primary-cyan)]">#{r.manual_order_id || r.id}</td>
                     <td className="text-[var(--text-secondary)]">{r.client_name || 'N/A'}</td>
-                    <td>
-                      {r.website_url ? (
-                        <a href={r.website_url} className="text-[var(--primary-cyan)] hover:underline flex items-center gap-1 group truncate max-w-[200px]" target="_blank" rel="noreferrer">
-                          <span className="truncate">{r.website_url}</span>
-                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </a>
-                      ) : <span className="text-[var(--text-muted)]">N/A</span>}
-                    </td>
                     <td className="text-[var(--text-secondary)]">{r.manager_name || 'N/A'}</td>
                     <td>
                       <span className="text-red-400 truncate block max-w-[300px]">
@@ -194,7 +186,7 @@ export function RejectedLinks() {
             <div className="flex justify-between items-center p-6 border-b border-[var(--border)]">
               <h3 className="text-xl font-bold flex items-center gap-2 text-red-400">
                 <AlertCircle className="h-5 w-5" />
-                Rejected Order #{viewOrder.id}
+                Rejected Order #{viewOrder.manual_order_id || viewOrder.id}
               </h3>
               <button
                 onClick={() => setViewOrder(null)}
@@ -223,23 +215,6 @@ export function RejectedLinks() {
                   <div className="premium-badge bg-red-500/10 text-red-400 border-red-500/20 inline-flex">
                     {viewOrder.current_status}
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-semibold">Website</label>
-                <div className="flex items-center gap-2">
-                  {viewOrder.website_url ? (
-                    <a
-                      href={viewOrder.website_url}
-                      className="text-[var(--primary-cyan)] hover:underline flex items-center gap-1 font-medium break-all"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {viewOrder.website_url}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ) : <span className="text-[var(--text-muted)]">N/A</span>}
                 </div>
               </div>
 

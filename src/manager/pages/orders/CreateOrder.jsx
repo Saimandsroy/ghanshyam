@@ -164,18 +164,7 @@ export const CreateOrder = () => {
       return;
     }
 
-    // Niche Edit: validate Target Post URLs match Client Website
-    if (form.contentType?.toLowerCase().includes('niche') && form.post_url && form.client_website) {
-      const clientDomain = form.client_website.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '').toLowerCase();
-      const urls = form.post_url.split('\n').map(u => u.trim()).filter(Boolean);
-      for (const url of urls) {
-        const normalizedUrl = url.replace(/^https?:\/\//, '').replace(/^www\./, '').toLowerCase();
-        if (!normalizedUrl.startsWith(clientDomain)) {
-          setError(`Target Post URL "${url}" does not match Client Website "${form.client_website}". URL must start with the client domain and can include additional paths.`);
-          return;
-        }
-      }
-    }
+
 
     try {
       setLoading(true);
@@ -439,18 +428,7 @@ export const CreateOrder = () => {
             </div>
           </div>
 
-          {/* Row 5: Post URL - Only for Niche Edit orders */}
-          {form.contentType?.toLowerCase().includes('niche') && (
-            <div className="mb-6 animate-in fade-in zoom-in-95 duration-200">
-              <label className="premium-label">Target Post URLs <span className="text-red-400">*</span></label>
-              <textarea
-                className="premium-input min-h-[100px] font-mono text-sm"
-                value={form.post_url}
-                onChange={onChange('post_url')}
-                placeholder="Enter post URLs (one per line)..."
-              />
-            </div>
-          )}
+
 
           {/* Row 6: Message (Rich Text) */}
           <div className="mb-8">

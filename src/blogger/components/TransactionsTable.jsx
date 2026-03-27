@@ -81,18 +81,18 @@ export function TransactionsTable({ transactions, loading }) {
     // Get withdrawal status display
     const getWithdrawalStatus = (tx) => {
         if (!tx.request_date && tx.type === 'credit') {
-            return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-500/10 text-gray-500 border-gray-500/20' };
+            return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-100 text-gray-800 border-gray-200' };
         }
         if (Number(tx.status) === 1) {
-            return { label: 'Pending', color: 'var(--warning)', icon: Clock, badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
+            return { label: 'Pending', color: 'var(--color-warning)', icon: Clock, badgeClass: 'bg-amber-100 text-amber-800 border-amber-200' };
         }
         if (Number(tx.status) === 2) {
-            return { label: 'Approved', color: 'var(--success)', icon: CheckCircle, badgeClass: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+            return { label: 'Approved', color: 'var(--color-success)', icon: CheckCircle, badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
         }
         if (Number(tx.status) === 3) {
-            return { label: 'Rejected', color: 'var(--error)', icon: XCircle, badgeClass: 'bg-red-500/10 text-red-500 border-red-500/20' };
+            return { label: 'Rejected', color: 'var(--color-error)', icon: XCircle, badgeClass: 'bg-rose-100 text-rose-800 border-rose-200' };
         }
-        return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-500/10 text-gray-500 border-gray-500/20' };
+        return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-100 text-gray-800 border-gray-200' };
     };
 
     // Get approved status display with formatted date
@@ -101,12 +101,12 @@ export function TransactionsTable({ transactions, loading }) {
             return {
                 label: 'Approved',
                 date: formatApprovedDate(tx.approved_date),
-                color: 'var(--success)',
+                color: 'var(--color-success)',
                 icon: CheckCircle
             };
         }
         if (tx.request_date && !tx.approved_date) {
-            return { label: 'Pending', date: null, color: 'var(--warning)', icon: Clock };
+            return { label: 'Pending', date: null, color: 'var(--color-warning)', icon: Clock };
         }
         return { label: '-', date: null, color: 'var(--text-muted)', icon: Minus };
     };
@@ -126,15 +126,15 @@ export function TransactionsTable({ transactions, loading }) {
 
             {filteredData.length === 0 && transactions.length > 0 ? (
                 <div className="premium-card p-12 text-center">
-                    <p className="text-[var(--text-secondary)]">No matching transactions found.</p>
+                    <p className="text-[var(--text-muted)]">No matching transactions found.</p>
                 </div>
             ) : filteredData.length === 0 ? (
                 <div className="premium-card p-12 text-center">
-                    <div className="h-16 w-16 bg-[var(--background-dark)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
+                    <div className="h-16 w-16 bg-[var(--surface-muted)] rounded-full flex items-center justify-center mx-auto mb-4 border border-[var(--color-border)]">
                         <Clock className="h-8 w-8 text-[var(--text-muted)]" />
                     </div>
-                    <h3 className="text-lg font-bold text-[var(--text-primary)]">No Transactions Found</h3>
-                    <p className="text-[var(--text-secondary)] mt-1">Your transaction history will appear here.</p>
+                    <h3 className="text-lg font-bold text-[var(--text-main)]">No Transactions Found</h3>
+                    <p className="text-[var(--text-muted)] mt-1">Your transaction history will appear here.</p>
                 </div>
             ) : (
                 <div className="premium-table-container">
@@ -154,10 +154,10 @@ export function TransactionsTable({ transactions, loading }) {
                                 const approvedStatus = getApprovedStatus(tx);
 
                                 return (
-                                    <tr key={tx.id} className="group hover:bg-[var(--background-dark)]/50 transition-colors duration-200">
+                                <tr key={tx.id} className="group transition-colors duration-200">
                                         {/* Date Column */}
                                         <td>
-                                            <span className="font-mono text-xs text-[var(--text-secondary)]">
+                                            <span className="font-mono text-xs text-[var(--text-muted)]">
                                                 {formatDate(tx.date)}
                                             </span>
                                         </td>
@@ -165,7 +165,7 @@ export function TransactionsTable({ transactions, loading }) {
                                         {/* Order Id Column - use order_id from new_orders table, fallback to order_detail_id */}
                                         <td>
                                             <div>
-                                                <div className="text-sm font-bold text-[var(--text-primary)]">
+                                                <div className="text-sm font-semibold text-[var(--color-primary)]">
                                                     {tx.order_id || tx.order_detail_id || tx.id}
                                                 </div>
                                                 {tx.submit_url && (
@@ -173,7 +173,7 @@ export function TransactionsTable({ transactions, loading }) {
                                                         href={tx.submit_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-xs flex items-center gap-1 mt-1 text-[var(--primary-cyan)] hover:underline opacity-80 hover:opacity-100 transition-opacity"
+                                                        className="text-xs flex items-center gap-1 mt-1 text-[var(--text-body)] hover:text-[var(--color-primary)] hover:underline opacity-80 hover:opacity-100 transition-opacity"
                                                     >
                                                         {tx.submit_url.length > 30
                                                             ? tx.submit_url.substring(0, 30) + '...'

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, ArrowRight } from 'lucide-react';
+import { RefreshCw, ArrowRight, Trash2, X } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
 import { writerAPI } from '../../lib/api';
 
@@ -16,6 +16,11 @@ export function OrderNotifications() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Rejection modal state
+  const [rejectModal, setRejectModal] = useState({ open: false, taskId: null, taskName: '' });
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -58,6 +63,31 @@ export function OrderNotifications() {
     navigate(`/writer/order-added-notifications/detail/${taskId}`);
   };
 
+  const openRejectModal = (task) => {
+    setRejectModal({ open: true, taskId: task.id, taskName: task.manual_order_id || `#${task.id}` });
+    setRejectReason('');
+  };
+
+  const closeRejectModal = () => {
+    setRejectModal({ open: false, taskId: null, taskName: '' });
+    setRejectReason('');
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) return;
+    try {
+      setRejecting(true);
+      await writerAPI.rejectTask(rejectModal.taskId, rejectReason.trim());
+      closeRejectModal();
+      fetchTasks(); // Refresh list
+    } catch (err) {
+      console.error('Rejection failed:', err);
+      setError(err?.response?.data?.message || 'Failed to reject order');
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -81,7 +111,7 @@ export function OrderNotifications() {
         <div className="premium-card p-4 flex items-center justify-between border-l-4 border-[var(--error)]">
           <p className="text-[var(--error)] font-medium">{error}</p>
           <button
-            onClick={fetchTasks}
+            onClick={() => { setError(null); fetchTasks(); }}
             className="text-sm font-semibold underline text-[var(--text-primary)] hover:text-[var(--primary-cyan)]"
           >
             Retry
@@ -128,6 +158,7 @@ export function OrderNotifications() {
                 <th>Manager</th>
                 <th>Client</th>
                 <th>Links</th>
+                <th style={{ minWidth: '400px' }}>Insert Statement</th>
                 <th>Pushed Date</th>
                 <th className="text-right">Action</th>
               </tr>
@@ -157,6 +188,11 @@ export function OrderNotifications() {
                       {task.no_of_links || 1}
                     </span>
                   </td>
+                  <td style={{ maxWidth: '500px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    <div className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                      {task.statement || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
+                    </div>
+                  </td>
                   <td className="text-[var(--text-muted)] text-sm">
                     {new Date(task.updated_at || task.created_at).toLocaleDateString('en-US', {
                       month: 'short',
@@ -165,12 +201,21 @@ export function OrderNotifications() {
                     })}
                   </td>
                   <td className="text-right">
-                    <button
-                      onClick={() => handleViewDetails(task.id)}
-                      className="premium-btn premium-btn-primary text-xs py-1.5 px-3 inline-flex items-center gap-1"
-                    >
-                      Process <ArrowRight className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openRejectModal(task)}
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-colors"
+                        title="Reject Order"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleViewDetails(task.id)}
+                        className="premium-btn premium-btn-primary text-xs py-1.5 px-3 inline-flex items-center gap-1"
+                      >
+                        Process <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -195,6 +240,48 @@ export function OrderNotifications() {
           onPageChange={(p) => setPage(p)}
           onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
         />
+      )}
+
+      {/* Rejection Modal */}
+      {rejectModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="premium-card p-6 w-full max-w-md mx-4 animate-fadeIn">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">
+                Reject Order {rejectModal.taskName}
+              </h3>
+              <button onClick={closeRejectModal} className="p-1 rounded hover:bg-white/10">
+                <X className="h-5 w-5 text-[var(--text-muted)]" />
+              </button>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
+              Please provide a reason for rejecting this order. The manager will see this reason.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              rows={3}
+              className="premium-input w-full mb-4 resize-none"
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={closeRejectModal}
+                className="premium-btn premium-btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectReason.trim() || rejecting}
+                className="premium-btn text-sm px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rejecting ? 'Rejecting...' : 'Reject Order'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -102,6 +102,7 @@ function App() {
 
           {/* Sites routes */}
           <Route path="sites/add-excel" element={<AddExcel />} />
+          <Route path="sites/upload" element={<AddExcel />} />
           <Route path="sites/create-account" element={<CreateAccountFromSites />} />
           <Route path="sites/deleted" element={<DeletedSites />} />
           <Route path="sites/pending-bulk" element={<PendingBulk />} />
@@ -171,6 +172,11 @@ function App() {
         {/* Accountant Routes */}
         <Route path="/accountant" element={<AccountantLayout />}>
           <Route index element={<AccountantPayments />} />
+          <Route path="wallet/bloggers" element={<BloggersWallet />} />
+          <Route path="wallet/payment-history" element={<PaymentHistory />} />
+          <Route path="wallet/invoices/:id" element={<AdminInvoiceDetail />} />
+          <Route path="wallet/withdrawal-requests" element={<WithdrawalRequests />} />
+          <Route path="wallet/withdrawal-requests/:id" element={<WithdrawalRequestDetail />} />
         </Route>
 
         {/* Dynamic Routes */}

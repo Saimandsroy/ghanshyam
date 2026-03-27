@@ -3,7 +3,7 @@ import { Menu } from 'lucide-react';
 
 export function TopNav({ onMenuClick }) {
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-card border-b border-border shadow-md">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white/70 backdrop-blur-md border-b border-[var(--color-border)]">
       <div className="flex items-center">
         <button
           onClick={onMenuClick}

@@ -125,8 +125,8 @@ export function InvoiceList() {
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--background-secondary)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Id</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Invoice number</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Order Id</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Invoice No</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Payment Method</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                   <div className="flex items-center gap-1 cursor-pointer hover:text-[var(--primary-cyan)] transition-colors" onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}>
@@ -134,80 +134,101 @@ export function InvoiceList() {
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Datetime</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Action</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
-              {sortedInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-[var(--card-hover)] transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{inv.id}</td>
-                  <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {inv.invoice_number && inv.invoice_number !== '-' ? inv.invoice_number : `LM-${inv.id}`}
-                  </td>
+              {sortedInvoices.map((inv) => {
+                const statusBadge = getStatusBadge(inv.status);
+                return (
+                  <tr key={inv.id} className="hover:bg-[var(--card-hover)] transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--primary-cyan)' }}>
+                      {inv.order_id || `#${inv.id}`}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {inv.invoice_number && inv.invoice_number !== '-' ? inv.invoice_number : `LM-${inv.id}`}
+                    </td>
 
-                  {/* Payment Method Column */}
-                  <td className="px-6 py-4 text-sm">
-                    {(inv.payment_method === 'paypal' || inv.payment_method === 'paypal_id') ? (
-                      <div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 mb-1 border border-blue-500/20">
-                          Paypal ID
-                        </span>
-                        <div className="text-xs break-all max-w-xs" style={{ color: 'var(--text-secondary)' }}>
-                          {inv.paypal_email || 'N/A'}
+                    {/* Payment Method Column */}
+                    <td className="px-6 py-4 text-sm">
+                      {(inv.payment_method === 'paypal' || inv.payment_method === 'paypal_id') ? (
+                        <div>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 mb-1 border border-blue-500/20">
+                            Paypal ID
+                          </span>
+                          <div className="text-xs break-all max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+                            {inv.paypal_email || 'N/A'}
+                          </div>
                         </div>
-                      </div>
-                    ) : (inv.payment_method === 'bank_transfer' || inv.payment_method === 'bank') ? (
-                      <div className="space-y-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-500 mb-1 border border-green-500/20">
-                          Bank Details
-                        </span>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Bank Type:</span> {inv.bank_details?.bank_type || 'N/A'}
+                      ) : (inv.payment_method === 'bank_transfer' || inv.payment_method === 'bank') ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-500 mb-1 border border-green-500/20">
+                            Bank Details
+                          </span>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Bank Type:</span> {inv.bank_details?.bank_type || 'N/A'}
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Acc No:</span> {inv.bank_details?.account_number || 'N/A'}
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Beneficiary:</span> {inv.bank_details?.beneficiary_name || 'N/A'}
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            <span className="font-medium" style={{ color: 'var(--text-primary)' }}>IFSC:</span> {inv.bank_details?.ifsc_code || 'N/A'}
+                          </div>
                         </div>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Acc No:</span> {inv.bank_details?.account_number || 'N/A'}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Beneficiary:</span> {inv.bank_details?.beneficiary_name || 'N/A'}
-                        </div>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>IFSC:</span> {inv.bank_details?.ifsc_code || 'N/A'}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{inv.payment_method || 'N/A'}</span>
-                    )}
-                  </td>
+                      ) : (
+                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{inv.payment_method || 'N/A'}</span>
+                      )}
+                    </td>
 
-                  <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    ${inv.amount?.toLocaleString() || 0}
-                  </td>
-                  <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    {inv.paid_date ? (
-                      <span className="text-green-600 font-medium">
-                        {new Date(inv.paid_date).toLocaleString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric',
-                          hour: 'numeric', minute: 'numeric'
-                        })}
+                    <td className="px-6 py-4 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      ${inv.amount?.toLocaleString() || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {inv.paid_date ? (
+                        <span className="text-green-500 font-medium">
+                          {new Date(inv.paid_date).toLocaleString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: 'numeric', minute: 'numeric'
+                          })}
+                        </span>
+                      ) : inv.created_at ? (
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {new Date(inv.created_at).toLocaleString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: 'numeric', minute: 'numeric'
+                          })}
+                        </span>
+                      ) : (
+                        <span className="text-amber-500 font-medium">Pending</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+                        style={{ backgroundColor: statusBadge.bg, color: statusBadge.color, border: `1px solid ${statusBadge.color}30` }}
+                      >
+                        {statusBadge.text}
                       </span>
-                    ) : (
-                      <span className="text-amber-500 font-medium">Pending</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => navigate(`/blogger/payments/invoices/${inv.id}`)}
-                      className="p-2 rounded-lg hover:bg-[var(--primary-cyan)]/10 transition-colors inline-block group"
-                      title="View Invoice"
-                    >
-                      <FileText className="h-5 w-5 text-orange-400 group-hover:text-orange-600 transition-colors" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => navigate(`/blogger/payments/invoices/${inv.id}`)}
+                        className="p-2 rounded-lg hover:bg-[var(--primary-cyan)]/10 transition-colors inline-block group"
+                        title="View Invoice"
+                      >
+                        <FileText className="h-5 w-5 text-orange-400 group-hover:text-orange-600 transition-colors" />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
               {sortedInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <td colSpan={7} className="px-6 py-12 text-center" style={{ color: 'var(--text-muted)' }}>
                     No invoices found
                   </td>
                 </tr>

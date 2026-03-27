@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Package, Clock, AlertTriangle, MessageSquare, Globe, User } from 'lucide-react';
 import { ModernSidebar } from '../../../components/ModernSidebar';
 export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Read manager's real name from localStorage (set at login)
+  const managerName = useMemo(() => {
+    try {
+      const userData = localStorage.getItem('authUser');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.name || parsed.username || 'Manager';
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return 'Manager';
+  }, []);
 
   const navItems = [
     {
@@ -17,13 +29,12 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       icon: <Package size={18} />,
       label: 'Orders',
       to: '/manager/orders/view',
-      active: location.pathname.startsWith('/manager/orders'),
-      hasDropdown: true,
-      dropdownItems: [
-        { label: 'Create New Order', to: '/manager/orders/create' },
+      items: [
         { label: 'View Orders', to: '/manager/orders/view' },
-        { label: 'Pending from Bloggers', to: '/manager/orders/pending-bloggers' }
-      ]
+        { label: 'Create Order', to: '/manager/orders/create' },
+        { label: 'Direct Writer Push', to: '/manager/orders/create/direct-writer' },
+        { label: 'Direct Blogger Push', to: '/manager/orders/create/direct-blogger' },
+      ],
     },
     {
       icon: <Clock size={18} />,
@@ -43,7 +54,8 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
       active: location.pathname.startsWith('/manager/rejected'),
       hasDropdown: true,
       dropdownItems: [
-        { label: 'Bloggers', to: '/manager/rejected/bloggers' }
+        { label: 'Bloggers', to: '/manager/rejected/bloggers' },
+        { label: 'Writers', to: '/manager/rejected/writers' }
       ]
     },
     {
@@ -75,7 +87,7 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
   return (
     <ModernSidebar
       navItems={navItems}
-      userName="John Doe"
+      userName={managerName}
       userRole="Manager"
       onLogout={handleLogout}
       isMobileOpen={isMobileOpen}

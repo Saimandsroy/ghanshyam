@@ -34,10 +34,7 @@ export function BloggerDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="px-10 py-5" style={{
-          backgroundColor: 'var(--card-background)',
-          borderBottom: '1px solid var(--border)'
-        }}>
+        <header className="px-10 py-5 bg-white/70 backdrop-blur-md border-b border-[var(--color-border)]">
           <div className="flex justify-between items-center">
             <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Dashboard</div>
             <div className="flex items-center gap-5">
@@ -83,7 +80,7 @@ export function BloggerDashboard() {
         <main className="flex-1 p-10 overflow-y-auto">
           {/* Section Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Dashboard Overview</h1>
+            <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-main)' }}>Dashboard Overview</h1>
           </div>
 
           {/* Stats Grid */}
@@ -98,16 +95,16 @@ export function BloggerDashboard() {
                 }}>
                   
                   <div className="flex justify-between items-start mb-5">
-                    <div className="text-sm uppercase tracking-wide font-medium" style={{ color: 'var(--text-muted)' }}>{stat.label}</div>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
-                      backgroundColor: 'rgba(107, 240, 255, 0.1)',
-                      color: 'var(--primary-cyan)'
+                    <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-subtle)' }}>{stat.label}</div>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center p-3 shadow-inner transition-transform group-hover:scale-110" style={{
+                      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                      color: 'var(--color-primary)'
                     }}>
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-6 w-6" />
                     </div>
                   </div>
                   
-                  <div className="text-4xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{stat.value}</div>
+                  <div className="text-3xl font-bold tracking-tight mb-3 drop-shadow-sm" style={{ color: 'var(--text-main)' }}>{stat.value}</div>
                   
                   <div className="flex items-center gap-2 text-sm font-medium" style={{
                     color: stat.change.includes('+') ? 'var(--success)' : 'var(--error)'
@@ -132,7 +129,7 @@ export function BloggerDashboard() {
             border: '1px solid var(--border)'
           }}>
             <div className="mb-8">
-              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders Performance</h2>
+              <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>Orders Performance</h2>
             </div>
             
             <div className="relative h-96">

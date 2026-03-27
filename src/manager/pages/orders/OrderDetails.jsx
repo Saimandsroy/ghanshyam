@@ -35,30 +35,14 @@ export const OrderDetails = () => {
     useEffect(() => {
         if (socket && isConnected && id) {
             joinOrderRoom(id);
-
-            // Listen for order detail updates
-            socket.on('order-detail-updated', (data) => {
-                console.log('📡 Real-time: Order detail updated', data);
-                fetchOrderDetails();
+            socket.on('order-detail-updated', () => fetchOrderDetails());
+            socket.on('workflow-changed', (d) => {
+                if (String(d.orderId) === String(id)) fetchOrderDetails();
             });
-
-            // Listen for workflow changes
-            socket.on('workflow-changed', (data) => {
-                console.log('📡 Real-time: Workflow changed', data);
-                if (String(data.orderId) === String(id)) {
-                    fetchOrderDetails();
-                }
-            });
-
-            // Listen for URL submissions
-            socket.on('url-submitted', (data) => {
-                console.log('📡 Real-time: URL submitted', data);
-                if (String(data.orderId) === String(id)) {
-                    fetchOrderDetails();
-                }
+            socket.on('url-submitted', (d) => {
+                if (String(d.orderId) === String(id)) fetchOrderDetails();
             });
         }
-
         return () => {
             if (socket && id) {
                 leaveOrderRoom(id);
@@ -73,6 +57,7 @@ export const OrderDetails = () => {
         if (!dateStr) return 'N/A';
         const date = new Date(dateStr);
         return date.toLocaleString('en-US', {
+            weekday: 'short',
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -91,56 +76,80 @@ export const OrderDetails = () => {
             'Blogger Submitted': 'border-teal-500/30 bg-teal-500/10 text-teal-300',
             'In Review': 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
             'Rejected': 'border-red-500/30 bg-red-500/10 text-red-300',
-            'Archived': 'border-gray-600/30 bg-gray-600/10 text-gray-400',
             'Pending': 'border-orange-500/30 bg-orange-500/10 text-orange-300',
-            'Manager Review': 'border-amber-500/30 bg-amber-500/10 text-amber-300',
             'Blogger Pushed': 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
         };
         return style[status] || 'border-gray-500/30 bg-gray-500/10 text-gray-400';
     };
 
+    // Renders a simple key-value info row
+    const InfoRow = ({ label, value, isLink, isBold }) => (
+        <tr className="border-b border-[var(--border)] last:border-b-0">
+            <td className="py-3 px-4 text-[var(--text-muted)] font-semibold text-sm whitespace-nowrap w-[200px]">{label}</td>
+            <td className={`py-3 px-4 text-sm ${isBold ? 'font-bold' : ''} text-[var(--text-primary)]`}>
+                {isLink && value ? (
+                    <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline break-all">
+                        {value}
+                    </a>
+                ) : (value || '-')}
+            </td>
+        </tr>
+    );
+
+    // Renders the dark timestamp header bar
+    const StepTimestamp = ({ date }) => (
+        <div className="bg-[var(--background-dark)] text-[var(--text-muted)] text-xs font-semibold px-5 py-2.5 border-b border-[var(--border)]">
+            {formatDate(date)}
+        </div>
+    );
+
     if (loading) {
         return (
-            <div className="p-6 flex items-center justify-center min-h-[400px]">
-                <RefreshCw className="h-8 w-8 animate-spin text-[var(--primary-cyan)]" />
-            </div>
+            <Layout>
+                <div className="p-6 flex items-center justify-center min-h-[400px]">
+                    <RefreshCw className="h-8 w-8 animate-spin text-[var(--primary-cyan)]" />
+                </div>
+            </Layout>
         );
     }
 
     if (error) {
         return (
-            <div className="p-6">
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-                    <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                    <p className="text-red-400 mb-4">{error}</p>
-                    <button onClick={fetchOrderDetails} className="premium-btn premium-btn-accent">Retry</button>
+            <Layout>
+                <div className="p-6">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+                        <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                        <p className="text-red-400 mb-4">{error}</p>
+                        <button onClick={fetchOrderDetails} className="premium-btn premium-btn-accent">Retry</button>
+                    </div>
                 </div>
-            </div>
+            </Layout>
         );
     }
 
     if (!data?.order) {
         return (
-            <div className="p-6">
-                <div className="text-center text-[var(--text-muted)] py-12">Order not found</div>
-            </div>
+            <Layout>
+                <div className="p-6">
+                    <div className="text-center text-[var(--text-muted)] py-12">Order not found</div>
+                </div>
+            </Layout>
         );
     }
 
     const { order, processes } = data;
-    const isGuestPost = order.order_type === 'gp';
-    const isNicheEdit = order.order_type === 'niche';
+    const orderTypeLower = (order.order_type || '').toLowerCase();
+    const isGuestPost = orderTypeLower.includes('gp') || orderTypeLower.includes('guest');
+    const isNicheEdit = orderTypeLower.includes('niche');
 
-    // Find processes by status
     const teamAssignedProcess = processes.find(p => p.status === 1);
     const writerAssignedProcess = processes.find(p => p.status === 2);
     const writerSubmittedProcess = processes.find(p => p.status === 3);
-    const managerReviewProcess = processes.find(p => p.status === 4);
     const bloggerPushedProcess = processes.find(p => p.status === 5);
 
     return (
         <Layout>
-            <div className="p-8 space-y-8 max-w-[1600px] mx-auto min-h-screen">
+            <div className="p-8 space-y-6 max-w-[1600px] mx-auto min-h-screen">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -166,453 +175,270 @@ export const OrderDetails = () => {
                     </button>
                 </div>
 
-                {/* Order Info Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="premium-card p-5">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Order Type</div>
-                        <div className="font-semibold text-lg text-[var(--text-primary)]">
-                            {isGuestPost ? 'Guest Post' : isNicheEdit ? 'Niche Edit' : order.order_type || 'N/A'}
-                        </div>
-                    </div>
-                    <div className="premium-card p-5">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Package</div>
-                        <div className="font-medium text-[var(--text-primary)] text-sm">{order.order_package || 'Standard'}</div>
-                    </div>
-                    <div className="premium-card p-5">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Client</div>
-                        <div className="font-medium text-[var(--text-primary)]">{order.client_name || 'N/A'}</div>
-                    </div>
-                    <div className="premium-card p-5">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Category</div>
-                        <div className="font-medium text-[var(--text-primary)]">{order.category || 'General'}</div>
-                    </div>
-                    <div className="premium-card p-5">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Links</div>
-                        <div className="font-bold text-2xl text-[var(--primary-cyan)]">{order.no_of_links || 0}</div>
-                    </div>
-                </div>
-
-                {/* Client Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="premium-card p-6">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">Client Website</div>
-                        {order.client_website ? (
-                            <a href={order.client_website.startsWith('http') ? order.client_website : `https://${order.client_website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline flex items-center gap-2 text-lg font-medium">
-                                <img src={`https://www.google.com/s2/favicons?domain=${order.client_website}&sz=32`} className="w-5 h-5 rounded-sm" alt="" />
-                                {order.client_website}
-                                <ExternalLink size={16} />
-                            </a>
-                        ) : (
-                            <span className="text-gray-500">Not specified</span>
-                        )}
-                    </div>
-                    <div className="premium-card p-6">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">Manager</div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[var(--background-dark)] flex items-center justify-center border border-[var(--border)]">
-                                <User size={20} className="text-[var(--text-secondary)]" />
-                            </div>
-                            <div>
-                                <div className="font-medium text-[var(--text-primary)]">{order.manager_name}</div>
-                                <div className="text-xs text-[var(--text-muted)]">{order.manager_email}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Order Instructions */}
+                {/* Message / Instructions */}
                 {order.message && (
-                    <div className="premium-card p-6">
-                        <h3 className="font-semibold mb-4 flex items-center gap-2 text-[var(--text-primary)]">
-                            <FileText size={18} className="text-[var(--text-secondary)]" />
-                            Order Instructions
-                        </h3>
-                        <div
-                            className="prose prose-invert prose-sm max-w-none text-[var(--text-secondary)] bg-[var(--background-dark)] p-5 rounded-xl border border-[var(--border)]"
-                            dangerouslySetInnerHTML={{ __html: order.message }}
-                        />
+                    <div className="premium-card overflow-hidden">
+                        <div className="bg-[var(--primary-cyan)]/10 border-b border-[var(--primary-cyan)]/20 px-5 py-2.5">
+                            <span className="text-sm font-bold text-[var(--primary-cyan)]">Message</span>
+                        </div>
+                        <div className="p-5 text-sm text-[var(--text-secondary)]" dangerouslySetInnerHTML={{ __html: order.message }} />
                     </div>
                 )}
 
-                {/* ==================== STEP 1: TEAM ASSIGNED TO ORDER ==================== */}
+                {/* Order Summary Table */}
+                <div className="premium-card overflow-hidden">
+                    <div className="premium-table-container">
+                        <table className="premium-table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Order Id</th>
+                                    <th>Client Name</th>
+                                    <th>Client Website</th>
+                                    <th>No of Links</th>
+                                    <th>Order Type</th>
+                                    <th>Order Package</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span className={`premium-badge ${getStatusBadge(order.current_workflow_status)}`}>
+                                            {order.current_workflow_status || 'Pending'}
+                                        </span>
+                                    </td>
+                                    <td className="font-mono text-[var(--primary-cyan)]">{order.order_id || order.id}</td>
+                                    <td className="font-medium text-[var(--text-primary)]">{order.client_name || '-'}</td>
+                                    <td>
+                                        {order.client_website ? (
+                                            <a href={order.client_website.startsWith('http') ? order.client_website : `https://${order.client_website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline">
+                                                {order.client_website}
+                                            </a>
+                                        ) : '-'}
+                                    </td>
+                                    <td className="text-center">{order.no_of_links || 1}</td>
+                                    <td>{isGuestPost ? 'gp' : 'niche'}</td>
+                                    <td>{order.order_package || 'Standard'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* ==================== STEP 1: NEW ORDER CREATED ==================== */}
                 {teamAssignedProcess && (
-                    <div className="premium-card">
+                    <div className="premium-card overflow-hidden">
+                        <StepTimestamp date={teamAssignedProcess.created_at} />
                         <div className="bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10 p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">1</div>
-                                    <div>
-                                        <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center gap-2">
-                                            Team Assigned To Order
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-muted)]">Team selected websites for this order</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`premium-badge ${getStatusBadge('Team Assigned')}`}>Completed</span>
-                                    <div className="text-xs text-[var(--text-muted)] mt-1">{formatDate(teamAssignedProcess.created_at)}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-[var(--background-dark)] rounded-xl border border-[var(--border)]">
-                                <div>
-                                    <div className="text-xs text-[var(--text-muted)] uppercase mb-1">Team Name</div>
-                                    <div className="text-[var(--text-primary)] font-medium flex items-center gap-2">
-                                        <Users size={14} className="text-blue-400" />
-                                        {teamAssignedProcess.team_name || 'Not assigned'}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-[var(--text-muted)] uppercase mb-1">Team Email</div>
-                                    <div className="text-[var(--text-secondary)]">{teamAssignedProcess.team_email || 'N/A'}</div>
-                                </div>
-                            </div>
-
-                            {teamAssignedProcess.blogger_assignments?.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Submitted Websites ({teamAssignedProcess.blogger_assignments.length})</h4>
-                                    <div className="premium-table-container">
-                                        <table className="premium-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="w-12">#</th>
-                                                    <th>Root Domain</th>
-                                                    <th>DA</th>
-                                                    <th>DR</th>
-                                                    <th className="text-right">Price</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {teamAssignedProcess.blogger_assignments.map((item, idx) => (
-                                                    <tr key={item.id}>
-                                                        <td className="text-[var(--text-muted)]">{idx + 1}</td>
-                                                        <td>
-                                                            <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
-                                                                {item.website}
-                                                            </a>
-                                                        </td>
-                                                        <td className="text-blue-400 font-semibold">{item.da || '-'}</td>
-                                                        <td className="text-green-400 font-semibold">{item.dr || '-'}</td>
-                                                        <td className="text-right text-[var(--text-primary)] font-mono">${item.price || 0}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg">New Order Created</h3>
+                            <p className="text-sm text-[var(--text-muted)] mt-1">
+                                Order Assigned to Team: <span className="text-[var(--primary-cyan)] font-medium">{teamAssignedProcess.team_name || 'N/A'}</span>
+                            </p>
                         </div>
                     </div>
                 )}
 
-                {/* ==================== STEP 2: MANAGER PUSHED TO WRITER ==================== */}
-                {writerAssignedProcess && (
-                    <div className="premium-card">
-                        <div className="bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10 p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-xl shadow-[0_0_15px_rgba(168,85,247,0.2)]">2</div>
-                                    <div>
-                                        <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center gap-2">
-                                            Manager Pushed To Writer
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-muted)]">
-                                            {isGuestPost ? 'Writer creates content with anchor text' : 'Writer identifies link insertion points'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`premium-badge ${getStatusBadge('Writer Assigned')}`}>Completed</span>
-                                    <div className="text-xs text-[var(--text-muted)] mt-1">{formatDate(writerAssignedProcess.created_at)}</div>
-                                </div>
-                            </div>
+                {/* ==================== STEP 2: TEAM PUSHED TO MANAGER ==================== */}
+                {teamAssignedProcess && teamAssignedProcess.blogger_assignments?.length > 0 && (
+                    <div className="premium-card overflow-hidden">
+                        <StepTimestamp date={teamAssignedProcess.created_at} />
+                        <div className="bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-cyan-500/10 p-5">
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg">Team Pushed to Manager</h3>
                         </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-[var(--background-dark)] rounded-xl border border-[var(--border)]">
-                                <div>
-                                    <div className="text-xs text-[var(--text-muted)] uppercase mb-1">Writer Name</div>
-                                    <div className="text-[var(--text-primary)] font-medium flex items-center gap-2">
-                                        <Edit3 size={14} className="text-purple-400" />
-                                        {writerAssignedProcess.writer_name || 'Not assigned'}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-[var(--text-muted)] uppercase mb-1">Writer Email</div>
-                                    <div className="text-[var(--text-secondary)]">{writerAssignedProcess.writer_email || 'N/A'}</div>
-                                </div>
-                            </div>
-
-                            {writerAssignedProcess.blogger_assignments?.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Assigned Work ({writerAssignedProcess.blogger_assignments.length})</h4>
-                                    <div className="premium-table-container">
-                                        <table className="premium-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="w-12">#</th>
-                                                    <th>Root Domain</th>
-                                                    <th>Anchor</th>
-                                                    <th>Client URL</th>
-                                                    <th className="text-right">Content Doc</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {writerAssignedProcess.blogger_assignments.map((item, idx) => (
-                                                    <tr key={item.id}>
-                                                        <td className="text-[var(--text-muted)]">{idx + 1}</td>
-                                                        <td>
-                                                            <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
-                                                                {item.website}
-                                                            </a>
-                                                        </td>
-                                                        <td className="text-[var(--text-primary)]">{item.anchor || '-'}</td>
-                                                        <td>
-                                                            {item.ourl ? (
-                                                                <a href={item.ourl} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline text-xs">
-                                                                    {item.ourl.length > 40 ? item.ourl.substring(0, 40) + '...' : item.ourl}
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                        <td className="text-right">
-                                                            {item.title ? (
-                                                                <a href={item.title} target="_blank" rel="noreferrer" className="premium-badge border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 transition-colors">
-                                                                    <FileText size={12} /> View Doc
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ==================== STEP 3: WRITER SUBMITTED WORK ==================== */}
-                {writerSubmittedProcess && (
-                    <div className="premium-card">
-                        <div className="bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/10 p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xl shadow-[0_0_15px_rgba(99,102,241,0.2)]">3</div>
-                                    <div>
-                                        <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center gap-2">
-                                            Writer Submitted Work
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-muted)]">
-                                            {isGuestPost ? 'Writer submitted articles for review' : 'Writer submitted insertion points'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`premium-badge ${getStatusBadge('Writer Submitted')}`}>Completed</span>
-                                    <div className="text-xs text-[var(--text-muted)] mt-1">{formatDate(writerSubmittedProcess.created_at)}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            {writerSubmittedProcess.blogger_assignments?.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Submitted Work ({writerSubmittedProcess.blogger_assignments.length})</h4>
-                                    <div className="premium-table-container">
-                                        <table className="premium-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="w-12">#</th>
-                                                    <th>Root Domain</th>
-                                                    <th>Anchor</th>
-                                                    <th>Client URL</th>
-                                                    <th>Content Doc</th>
-                                                    {isNicheEdit && <th>Insert After</th>}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {writerSubmittedProcess.blogger_assignments.map((item, idx) => (
-                                                    <tr key={item.id}>
-                                                        <td className="text-[var(--text-muted)]">{idx + 1}</td>
-                                                        <td>
-                                                            <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
-                                                                {item.website}
-                                                            </a>
-                                                        </td>
-                                                        <td className="text-[var(--text-primary)]">{item.anchor || '-'}</td>
-                                                        <td>
-                                                            {item.ourl ? (
-                                                                <a href={item.ourl} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline text-xs">
-                                                                    {item.ourl.length > 40 ? item.ourl.substring(0, 40) + '...' : item.ourl}
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                        <td>
-                                                            {item.doc_urls ? (
-                                                                <a href={item.doc_urls} target="_blank" rel="noreferrer" className="premium-badge border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 transition-colors">
-                                                                    <FileText size={12} /> View Doc
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                        {isNicheEdit && (
-                                                            <td className="text-[var(--text-secondary)]">
-                                                                {item.insert_after ? (
-                                                                    <div className="truncate max-w-[200px]" title={item.insert_after}>
-                                                                        {item.insert_after}
-                                                                    </div>
-                                                                ) : '-'}
-                                                            </td>
-                                                        )}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ==================== STEP 4: MANAGER PUSHED TO BLOGGER ==================== */}
-                {bloggerPushedProcess && (
-                    <div className="premium-card">
-                        <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10 p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xl shadow-[0_0_15px_rgba(16,185,129,0.2)]">4</div>
-                                    <div>
-                                        <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center gap-2">
-                                            Manager Pushed To Blogger
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-muted)]">Bloggers assigned to publish content and submit live URLs</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`premium-badge ${getStatusBadge('Blogger Pushed')}`}>In Progress</span>
-                                    <div className="text-xs text-[var(--text-muted)] mt-1">{formatDate(bloggerPushedProcess.created_at)}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            {bloggerPushedProcess.blogger_assignments?.length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Blogger Assignments ({bloggerPushedProcess.blogger_assignments.length})</h4>
-                                    <div className="premium-table-container">
-                                        <table className="premium-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="w-12">#</th>
-                                                    <th>Root Domain</th>
-                                                    <th>Blogger</th>
-                                                    <th>Anchor</th>
-                                                    <th>Client URL</th>
-                                                    <th>Content</th>
-                                                    <th>Status</th>
-                                                    <th className="text-right">Submit URL</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {bloggerPushedProcess.blogger_assignments.map((item, idx) => (
-                                                    <tr key={item.id}>
-                                                        <td className="text-[var(--text-muted)]">{idx + 1}</td>
-                                                        <td>
-                                                            <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
-                                                                {item.website}
-                                                            </a>
-                                                        </td>
-                                                        <td>
-                                                            <div className="text-[var(--text-primary)] font-medium">{item.blogger_name || 'Not assigned'}</div>
-                                                            {item.blogger_email && <div className="text-xs text-[var(--text-muted)]">{item.blogger_email}</div>}
-                                                        </td>
-                                                        <td className="text-[var(--text-primary)]">{item.anchor || '-'}</td>
-                                                        <td>
-                                                            {item.ourl ? (
-                                                                <a href={item.ourl} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline text-xs">
-                                                                    {item.ourl.length > 30 ? item.ourl.substring(0, 30) + '...' : item.ourl}
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                        <td>
-                                                            {item.doc_urls ? (
-                                                                <a href={item.doc_urls} target="_blank" rel="noreferrer" className="text-green-400 hover:text-green-300">
-                                                                    <FileText size={16} />
-                                                                </a>
-                                                            ) : <span className="text-gray-500">-</span>}
-                                                        </td>
-                                                        <td>
-                                                            <span className={`premium-badge ${getStatusBadge(item.status_label)}`}>
-                                                                {item.status_label}
-                                                            </span>
-                                                        </td>
-                                                        <td className="text-right">
-                                                            {item.submit_url ? (
-                                                                <a href={item.submit_url} target="_blank" rel="noreferrer" className="premium-badge border-green-500/30 bg-green-500/10 text-green-300 hover:bg-green-500/20 transition-colors">
-                                                                    <CheckCircle size={12} /> View Live
-                                                                </a>
-                                                            ) : (
-                                                                <span className="text-orange-400 flex items-center justify-end gap-1 text-xs">
-                                                                    <Clock size={12} /> Pending
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ==================== STEP 5: MANAGER VERIFIED (if applicable) ==================== */}
-                {bloggerPushedProcess?.blogger_assignments?.some(a => a.status === 8 || a.submit_url) && (
-                    <div className="premium-card">
-                        <div className="bg-gradient-to-r from-green-500/10 to-transparent border-b border-green-500/10 p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-xl shadow-[0_0_15px_rgba(34,197,94,0.2)]">5</div>
-                                    <div>
-                                        <h3 className="font-bold text-[var(--text-primary)] text-lg flex items-center gap-2">
-                                            Manager Verified & Completed
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-muted)]">Links verified and order marked complete</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6">
+                        <div className="p-5">
                             <div className="premium-table-container">
                                 <table className="premium-table">
                                     <thead>
                                         <tr>
-                                            <th className="w-12">#</th>
                                             <th>Root Domain</th>
-                                            <th>Live URL</th>
-                                            <th className="text-right">Completed At</th>
+                                            <th>Price</th>
+                                            {isNicheEdit && <th>Url</th>}
+                                            <th>Note</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {bloggerPushedProcess.blogger_assignments
-                                            .filter(a => a.submit_url)
-                                            .map((item, idx) => (
-                                                <tr key={item.id}>
-                                                    <td className="text-[var(--text-muted)]">{idx + 1}</td>
-                                                    <td className="text-[var(--text-primary)] font-medium">{item.website}</td>
+                                        {teamAssignedProcess.blogger_assignments.map((item) => (
+                                            <tr key={item.id}>
+                                                <td>
+                                                    <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
+                                                        {item.website}
+                                                    </a>
+                                                </td>
+                                                <td className="text-[var(--text-primary)] font-mono">{item.price || 0}</td>
+                                                {isNicheEdit && (
                                                     <td>
-                                                        <a href={item.submit_url} target="_blank" rel="noreferrer" className="text-green-400 hover:underline flex items-center gap-1.5 font-medium">
-                                                            <CheckCircle size={14} />
-                                                            {item.submit_url.substring(0, 50)}...
-                                                        </a>
+                                                        {item.post_url ? (
+                                                            <a href={item.post_url.startsWith('http') ? item.post_url : `https://${item.post_url}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline text-xs break-all">
+                                                                {item.post_url}
+                                                            </a>
+                                                        ) : '-'}
                                                     </td>
-                                                    <td className="text-right text-[var(--text-muted)]">{formatDate(item.updated_at)}</td>
-                                                </tr>
-                                            ))}
+                                                )}
+                                                <td className="text-[var(--text-secondary)]">{item.note || '-'}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ==================== STEP 3: MANAGER PUSHED TO WRITER ==================== */}
+                {writerAssignedProcess && (
+                    <div className="premium-card overflow-hidden">
+                        <StepTimestamp date={writerAssignedProcess.created_at} />
+                        <div className="bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10 p-5">
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg">Manager Pushed to Writer</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            {/* Writer info sub-card */}
+                            <div className="bg-[var(--background-dark)] border border-[var(--border)] rounded-xl p-4">
+                                <div className="text-sm font-semibold text-[var(--text-primary)]">
+                                    Writer:{writerAssignedProcess.writer_name || 'N/A'}
+                                </div>
+                            </div>
+                            {/* Details per item */}
+                            {writerAssignedProcess.blogger_assignments?.length > 0 && (
+                                <div className="space-y-4">
+                                    {writerAssignedProcess.blogger_assignments.map((item) => (
+                                        <div key={item.id} className="premium-table-container">
+                                            <table className="premium-table">
+                                                <tbody>
+                                                    <InfoRow label="Root Domain" value={item.website} isLink />
+                                                    {isNicheEdit ? (
+                                                        <>
+                                                            {/* NICHE: Root Domain, Target URL, Anchor, Post URL, Note */}
+                                                            <InfoRow label="Url" value={item.target_url} isLink />
+                                                            <InfoRow label="Anchor" value={item.anchor} />
+                                                            <InfoRow label="Post URL" value={item.post_url} isLink />
+                                                            <InfoRow label="Note" value={item.note} />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {/* GP: Root Domain, URL, Anchor, Post URL, Title, Note */}
+                                                            <InfoRow label="Url" value={item.target_url} isLink />
+                                                            <InfoRow label="Anchor" value={item.anchor} />
+                                                            <InfoRow label="Post URL" value={item.post_url} isLink />
+                                                            <InfoRow label="Title" value={item.title} isLink />
+                                                            <InfoRow label="Note" value={item.note} />
+                                                        </>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ==================== STEP 4: WRITER PUSHED TO MANAGER ==================== */}
+                {writerSubmittedProcess && (
+                    <div className="premium-card overflow-hidden">
+                        <StepTimestamp date={writerSubmittedProcess.created_at} />
+                        <div className="bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/10 p-5">
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg">Writer Pushed to Manager</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            {/* Writer info sub-card */}
+                            <div className="bg-[var(--background-dark)] border border-[var(--border)] rounded-xl p-4">
+                                <div className="text-sm font-semibold text-[var(--text-primary)]">
+                                    Writer:{writerSubmittedProcess.writer_name || 'N/A'}
+                                </div>
+                            </div>
+                            {writerSubmittedProcess.blogger_assignments?.length > 0 && (
+                                <div className="space-y-4">
+                                    {writerSubmittedProcess.blogger_assignments.map((item) => (
+                                        <div key={item.id} className="premium-table-container">
+                                            <table className="premium-table">
+                                                <tbody>
+                                                    <InfoRow label="Root Domain" value={item.website} isLink />
+                                                    {isNicheEdit ? (
+                                                        <>
+                                                            {/* NICHE: Root Domain, Type, [Insert After/Statement OR Replace With/Statement], Target URL, Anchor, Post URL, Note */}
+                                                            <InfoRow label="Type" value={item.type} />
+                                                            {item.type === 'insert' && (
+                                                                <>
+                                                                    <InfoRow label="Insert After" value={item.insert_after} />
+                                                                    <InfoRow label="Insert Statement" value={item.statement} isBold />
+                                                                </>
+                                                            )}
+                                                            {item.type === 'replace' && (
+                                                                <>
+                                                                    <InfoRow label="Replace With" value={item.insert_after} />
+                                                                    <InfoRow label="Replace Statement" value={item.statement} isBold />
+                                                                </>
+                                                            )}
+                                                            <InfoRow label="Url" value={item.target_url} isLink />
+                                                            <InfoRow label="Anchor" value={item.anchor} />
+                                                            <InfoRow label="POST Url" value={item.post_url} isLink />
+                                                            <InfoRow label="Note" value={item.note || item.new_note} />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {/* GP: Root Domain, Upload Doc File, Doc URLs, Target URL, Anchor Text, Post URL, Note */}
+                                                            <InfoRow label="Upload Doc File" value={item.upload_doc_file} isLink />
+                                                            <InfoRow label="Doc URLS" value={item.doc_urls} isLink />
+                                                            <InfoRow label="Url" value={item.target_url} isLink />
+                                                            <InfoRow label="Anchor" value={item.anchor} />
+                                                            <InfoRow label="POST Url" value={item.post_url} isLink />
+                                                            <InfoRow label="Note" value={item.note || item.new_note} />
+                                                        </>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ==================== STEP 5: MANAGER PUSHED TO BLOGGER ==================== */}
+                {bloggerPushedProcess && bloggerPushedProcess.blogger_assignments?.length > 0 && (
+                    <div className="premium-card overflow-hidden">
+                        <StepTimestamp date={bloggerPushedProcess.created_at} />
+                        <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10 p-5">
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg">Manager Pushed to Blogger</h3>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            {bloggerPushedProcess.blogger_assignments.map((item) => (
+                                <div key={item.id} className="premium-table-container">
+                                    <table className="premium-table">
+                                        <tbody>
+                                            {/* Both Niche & GP: Root Domain, Blogger Email, Verified/Rejected Bar, Live URL */}
+                                            <InfoRow label="Root Domain" value={item.website} isLink />
+                                            <InfoRow label="Blogger Email" value={item.blogger_email} />
+                                            {/* Manager Verified Green Bar */}
+                                            {(item.verify || item.status === 8) && (
+                                                <tr>
+                                                    <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#22c55e' }}>
+                                                        Manager Verified and Complete Order
+                                                    </td>
+                                                    <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#22c55e' }}>
+                                                        {item.updated_at ? formatDate(item.updated_at) : '-'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {/* Rejected Red Bar */}
+                                            {item.status === 11 && (
+                                                <tr>
+                                                    <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#ef4444' }}>
+                                                        Manager Rejected
+                                                    </td>
+                                                    <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#ef4444' }}>
+                                                        {item.reject_reason || '-'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            <InfoRow label="Url" value={item.submit_url || item.post_url} isLink />
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { RefreshCw, Users, Lock, BarChart2, SlidersHorizontal, X } from 'lucide-react';
+import { RefreshCw, Users, Lock, BarChart2, SlidersHorizontal, X, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../components/Pagination.jsx';
 import { adminAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 
 export function Bloggers() {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const { impersonateLogin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +98,32 @@ export function Bloggers() {
   // Navigate to Performance
   const handlePerformance = (userId) => {
     navigate(`/admin/bloggers/${userId}/performance`);
+  };
+
+  // Handle Impersonate
+  const handleImpersonate = async (userId, userName) => {
+    if (window.confirm(`Are you sure you want to log in as ${userName || 'this user'}?`)) {
+      try {
+        const data = await adminAPI.impersonateUser(userId);
+        impersonateLogin(data);
+        showSuccess(`Successfully logged in as ${userName}`);
+        
+        const routeMap = {
+          Admin: '/admin',
+          Blogger: '/blogger',
+          Manager: '/manager',
+          Team: '/teams',
+          Writer: '/writer',
+          Accountant: '/accountant'
+        };
+        
+        setTimeout(() => {
+          window.location.href = routeMap[data.user.role] || '/';
+        }, 100);
+      } catch (err) {
+        showError(err.message || 'Failed to impersonate user');
+      }
+    }
   };
 
   // Clear all filters
@@ -384,6 +412,13 @@ export function Bloggers() {
                           title="View Performance"
                         >
                           <BarChart2 className="h-4 w-4 text-cyan-400 group-hover:text-cyan-300" />
+                        </button>
+                        <button
+                          onClick={() => handleImpersonate(b.id, b.name)}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
+                          title={`Log in as ${b.name || 'this user'}`}
+                        >
+                          <LogIn className="h-4 w-4 text-purple-400 group-hover:text-purple-300" />
                         </button>
                       </div>
                     </td>

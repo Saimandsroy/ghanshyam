@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, ExternalLink, ToggleLeft, ToggleRight, Link2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, ExternalLink, ToggleLeft, ToggleRight, Link2, CheckCircle2, AlertCircle, RefreshCw, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { bloggerAPI } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 
@@ -18,6 +18,8 @@ export function OrderDetails() {
     const [error, setError] = useState(null);
     const [submitUrl, setSubmitUrl] = useState('');
     const [submitting, setSubmitting] = useState(false);
+const [checkingLink, setCheckingLink] = useState(false);
+    const [linkCheckResult, setLinkCheckResult] = useState(null);
 
     // Fetch order details
     const fetchOrder = useCallback(async () => {
@@ -78,7 +80,7 @@ export function OrderDetails() {
         return option === 'replace' || option === 'replacement';
     };
 
-    // Handle submit
+    // Handle submit - validates live link & anchor before submitting
     const handleSubmit = async () => {
         if (!submitUrl.trim()) {
             showError('Please enter the submit URL');
@@ -87,14 +89,61 @@ export function OrderDetails() {
 
         try {
             setSubmitting(true);
+
+            // Step 1: Run live link + anchor check first
+            showSuccess('Verifying your link is live and anchor text is correct...');
+            const checkResult = await bloggerAPI.checkLinkStatus({
+                detailId: order?.detail_id || order?.id,
+                bloggerLink: submitUrl.trim(),
+                clientWebsite: order?.target_url || order?.client_website,
+                anchorText: order?.anchor_text
+            });
+
+            // Update the check result display
+            setLinkCheckResult(checkResult);
+
+            // Step 2: Block submission if link is not live
+            if (checkResult.status !== 'Live') {
+                const reason = checkResult.status === 'Not Found'
+                    ? 'The link to the target URL was not found on the page. Please ensure your published page contains the correct backlink.'
+                    : checkResult.status === 'Issue'
+                        ? `Anchor text mismatch: ${checkResult.result}. Please fix the anchor text on your page.`
+                        : `Link check failed: ${checkResult.result}. Please ensure the URL is accessible and contains the correct backlink.`;
+                showError(reason);
+                setSubmitting(false);
+                return;
+            }
+
+            // Step 3: Link is live - proceed with submission
             await bloggerAPI.submitLink(id, submitUrl);
-            showSuccess('Link submitted successfully!');
+            showSuccess('Link verified & submitted successfully!');
             navigate('/blogger/orders');
         } catch (err) {
             console.error('Error submitting link:', err);
             showError('Failed to submit link: ' + err.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    // Live Link Check handler
+    const handleCheckLink = async () => {
+        if (!order?.submitted_url) return;
+        try {
+            setCheckingLink(true);
+            setLinkCheckResult(null);
+            const result = await bloggerAPI.checkLinkStatus({
+                detailId: order?.detail_id || order?.id,
+                bloggerLink: order.submitted_url,
+                clientWebsite: order?.target_url || order?.client_website,
+                anchorText: order?.anchor_text
+            });
+            setLinkCheckResult(result);
+        } catch (err) {
+            console.error('Error checking link:', err);
+            setLinkCheckResult({ status: 'Error', result: err.message || 'Failed to check link' });
+        } finally {
+            setCheckingLink(false);
         }
     };
 
@@ -179,7 +228,7 @@ export function OrderDetails() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Rejection Alert */}
-                {(order?.current_status === 'rejected' || order?.rejection_reason) && (
+                {(order?.current_status === 'rejected') && (
                     <div className="lg:col-span-3">
                         <div className="premium-card bg-red-500/10 border-red-500/20 p-6 flex items-start gap-4">
                             <div className="p-2 bg-red-500/20 rounded-full">
@@ -222,7 +271,7 @@ export function OrderDetails() {
 
                         <div className="space-y-1">
                             <DetailRow label="Website" value={order?.root_domain || order?.website_domain} highlight />
-                            <DetailRow label="Client Name" value={order?.client_name} />
+                            <DetailRow label="Category" value={order?.category} />
 
                             {/* Dynamic Fields based on Type */}
                             {isNicheEdit() && (
@@ -346,10 +395,52 @@ export function OrderDetails() {
 
                             {order?.submitted_url && (
                                 <div className="p-3 bg-[var(--background-dark)] rounded-lg border border-[var(--border)] mt-2">
-                                    <span className="text-xs text-[var(--text-secondary)] block mb-1">Last Submitted Link:</span>
-                                    <a href={order.submitted_url} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--primary-cyan)] truncate block hover:underline">
+                                    <span className="text-xs text-[var(--text-secondary)] block mb-1">Live Published URL:</span>
+                                    <a href={order.submitted_url} target="_blank" rel="noopener noreferrer" className="text-sm text-[var(--primary-cyan)] break-all hover:underline flex items-center gap-1">
                                         {order.submitted_url}
+                                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                     </a>
+
+                                    {/* Check Link Button */}
+                                    <button
+                                        onClick={handleCheckLink}
+                                        disabled={checkingLink}
+                                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--card-background)] border border-[var(--border)] rounded-lg text-sm text-[var(--text-secondary)] hover:border-[var(--primary-cyan)] hover:text-[var(--primary-cyan)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <RefreshCw className={`w-4 h-4 ${checkingLink ? 'animate-spin' : ''}`} />
+                                        {checkingLink ? 'Checking...' : 'Check Live Link & Anchor'}
+                                    </button>
+
+                                    {/* Link Check Result */}
+                                    {linkCheckResult && (
+                                        <div className={`mt-3 p-3 rounded-lg border flex items-start gap-2 ${
+                                            linkCheckResult.status === 'Live'
+                                                ? 'bg-green-500/10 border-green-500/20'
+                                                : linkCheckResult.status === 'Issue'
+                                                    ? 'bg-amber-500/10 border-amber-500/20'
+                                                    : 'bg-red-500/10 border-red-500/20'
+                                        }`}>
+                                            {linkCheckResult.status === 'Live' ? (
+                                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : linkCheckResult.status === 'Issue' ? (
+                                                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <XCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                                            )}
+                                            <div>
+                                                <span className={`text-sm font-semibold ${
+                                                    linkCheckResult.status === 'Live' ? 'text-green-500'
+                                                        : linkCheckResult.status === 'Issue' ? 'text-amber-500'
+                                                            : 'text-red-500'
+                                                }`}>
+                                                    {linkCheckResult.status}
+                                                </span>
+                                                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                                                    {linkCheckResult.result}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -430,7 +430,7 @@ export function WriterSubmissionDetails() {
                                     </button>
                                     <button
                                         onClick={handleRejectSubmission}
-                                        disabled={processing || rejectedCount === 0 || !globalRejectionReason.trim()}
+                                        disabled={processing}
                                         className="premium-btn px-8 py-3 h-auto text-lg min-w-[250px] justify-center bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {processing ? (

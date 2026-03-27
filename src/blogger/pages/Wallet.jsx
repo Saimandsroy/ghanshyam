@@ -100,20 +100,20 @@ export function Wallet() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)] flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)]">
+          <h1 className="text-3xl font-bold text-[var(--text-main)] flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
               <WalletIcon className="h-8 w-8" />
             </div>
             Wallet
           </h1>
-          <p className="text-[var(--text-secondary)] mt-2 ml-1">Track your earnings and withdrawal history.</p>
+          <p className="text-[var(--text-muted)] mt-2 ml-1">Track your earnings and withdrawal history.</p>
         </div>
 
         <div className="flex items-center gap-3 self-start md:self-auto">
           <button
             onClick={fetchWalletData}
             disabled={loading}
-            className="p-2.5 rounded-xl hover:bg-[var(--card-background)] border border-transparent hover:border-[var(--border)] transition-all shadow-sm hover:shadow text-[var(--text-secondary)]"
+            className="p-2.5 rounded-xl hover:bg-[var(--card-background)] border border-transparent hover:border-[var(--border)] transition-all shadow-sm hover:shadow text-[var(--text-muted)]"
             title="Refresh Data"
           >
             <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
@@ -147,16 +147,16 @@ export function Wallet() {
 
       {/* Balance Card - Featured */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="md:col-span-1 premium-card p-6 bg-gradient-to-br from-[var(--card-background)] to-[var(--background-dark)] border-[var(--primary-cyan)]/20 relative overflow-hidden group">
+        <div className="md:col-span-1 premium-card p-6 bg-gradient-to-br from-[var(--card-background)] to-[var(--surface-muted)] border-[var(--color-primary)]/20 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
             <WalletIcon size={80} />
           </div>
-          <h3 className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">Available Balance</h3>
-          <div className="text-4xl font-bold text-[var(--text-primary)] mb-1 flex items-baseline">
+          <h3 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Available Balance</h3>
+          <div className="text-4xl font-bold text-[var(--text-main)] mb-1 flex items-baseline">
             <span className="text-xl mr-1 text-[var(--text-muted)]">$</span>
             {currentBalance.toFixed(2)}
           </div>
-          <div className="text-xs text-[var(--primary-cyan)] font-medium bg-[var(--primary-cyan)]/5 inline-block px-2 py-1 rounded-md border border-[var(--primary-cyan)]/10">
+          <div className="text-xs text-[var(--color-primary)] font-medium bg-[var(--color-primary)]/5 inline-block px-2 py-1 rounded-md border border-[var(--color-primary)]/10">
             Ready for Payout
           </div>
         </div>
@@ -167,12 +167,12 @@ export function Wallet() {
       {/* Filters Section */}
       <div className="premium-card p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="font-bold flex items-center gap-2 text-[var(--text-primary)]">
-            <Filter className="h-4 w-4 text-[var(--primary-cyan)]" />
+          <div className="font-bold flex items-center gap-2 text-[var(--text-main)]">
+            <Filter className="h-4 w-4 text-[var(--color-primary)]" />
             Filter Transactions
           </div>
           {(filters.search || filters.startDate || filters.endDate) && (
-            <button
+             <button
               className="text-xs font-bold uppercase tracking-wider text-[var(--error)] hover:bg-[var(--error)]/10 px-2 py-1 rounded transition-colors"
               onClick={handleResetFilters}
             >
@@ -183,7 +183,7 @@ export function Wallet() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">
               <Search className="h-3 w-3 inline mr-1 mb-0.5" /> Search
             </label>
             <input
@@ -198,7 +198,7 @@ export function Wallet() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">
               <Calendar className="h-3 w-3 inline mr-1 mb-0.5" /> From
             </label>
             <input
@@ -212,7 +212,7 @@ export function Wallet() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2 block">
+            <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">
               <Calendar className="h-3 w-3 inline mr-1 mb-0.5" /> To
             </label>
             <input
@@ -230,8 +230,8 @@ export function Wallet() {
 
       {/* Results Summary */}
       <div className="flex items-center justify-between mb-4 px-1">
-        <div className="text-sm font-medium text-[var(--text-secondary)]">
-          Found <span className="text-[var(--text-primary)] font-bold">{filteredTransactions.length}</span> transaction{filteredTransactions.length !== 1 ? 's' : ''}
+        <div className="text-sm font-medium text-[var(--text-muted)]">
+          Found <span className="text-[var(--text-main)] font-bold">{filteredTransactions.length}</span> transaction{filteredTransactions.length !== 1 ? 's' : ''}
         </div>
       </div>
 

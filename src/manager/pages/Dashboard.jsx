@@ -141,7 +141,7 @@ export const Dashboard = () => {
 
           {/* Today Pending Approvals For Bloggers */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-6">Today Pending Approvals For Bloggers</h2>
+            <h2 className="text-xl font-bold text-[var(--text-main)] mb-6">Today Pending Approvals For Bloggers</h2>
             <div className="card overflow-hidden">
               {pendingApprovals.length > 0 ? (
                 <div className="overflow-x-auto">

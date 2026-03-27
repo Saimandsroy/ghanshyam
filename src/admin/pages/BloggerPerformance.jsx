@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, BarChart2, User, Calendar, Clock } from 'lucide-react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import { Pie } from 'react-chartjs-2';
 import { adminAPI } from '../../lib/api';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
 export function BloggerPerformance() {
     const { id } = useParams();
@@ -50,25 +50,23 @@ export function BloggerPerformance() {
         </div>
     );
 
-    // Chart with Pending, Completed, and Total Orders
+    // Chart with Pending, Completed, and Rejected Orders
     const chartData = {
-        labels: ['Pending Orders', 'Completed Orders', 'Total Orders'],
+        labels: ['Pending Orders', 'Completed Orders', 'Rejected Orders'],
         datasets: [
             {
-                label: '# of Orders',
-                data: [blogger.pending_orders, blogger.completed_orders, blogger.total_orders],
+                data: [blogger.pending_orders, blogger.completed_orders, blogger.rejected_orders || 0],
                 backgroundColor: [
                     'rgba(239, 68, 68, 0.8)',   // Red for Pending
                     'rgba(34, 197, 94, 0.8)',   // Green for Completed
-                    'rgba(59, 130, 246, 0.8)',  // Blue for Total
+                    'rgba(245, 158, 11, 0.8)',  // Amber for Rejected
                 ],
                 borderColor: [
                     'rgba(239, 68, 68, 1)',
                     'rgba(34, 197, 94, 1)',
-                    'rgba(59, 130, 246, 1)',
+                    'rgba(245, 158, 11, 1)',
                 ],
                 borderWidth: 2,
-                borderRadius: 8,
             },
         ],
     };
@@ -98,7 +96,6 @@ export function BloggerPerformance() {
                 cornerRadius: 8,
                 displayColors: true,
                 callbacks: {
-                    title: (items) => items[0].label,
                     label: (item) => {
                         const value = item.raw;
                         const label = item.label;
@@ -107,28 +104,10 @@ export function BloggerPerformance() {
                         } else if (label === 'Completed Orders') {
                             return `Completed: ${value} orders successfully finished`;
                         } else {
-                            return `Total: ${value} orders assigned to this blogger`;
+                            return `Rejected: ${value} orders rejected`;
                         }
                     }
                 }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    color: '#9ca3af',
-                    stepSize: 1,
-                    font: { size: 11 }
-                },
-                grid: { color: 'rgba(255, 255, 255, 0.05)' }
-            },
-            x: {
-                ticks: {
-                    color: '#9ca3af',
-                    font: { size: 11 }
-                },
-                grid: { display: false }
             }
         }
     };
@@ -242,7 +221,7 @@ export function BloggerPerformance() {
                 <div className="card p-6 rounded-2xl" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
                     <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Orders Chart</h3>
                     <div className="h-[350px] w-full rounded-xl p-4" style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
-                        <Bar data={chartData} options={chartOptions} />
+                        <Pie data={chartData} options={chartOptions} />
                     </div>
                     <p className="text-xs text-center mt-3" style={{ color: 'var(--text-muted)' }}>
                         Hover over bars to see detailed information

@@ -73,7 +73,7 @@ export function ChatPage({ userRole = 'User' }) {
         socket.on('new_message', (message) => {
             setMessages(prev => {
                 if (prev.find(m => m.id === message.id)) return prev;
-                return [...prev, message];
+                return [message, ...prev];
             });
             scrollToBottom();
         });
@@ -223,7 +223,7 @@ export function ChatPage({ userRole = 'User' }) {
             is_read: false,
             _optimistic: true
         };
-        setMessages(prev => [...prev, optimisticMsg]);
+        setMessages(prev => [optimisticMsg, ...prev]);
         scrollToBottom();
 
         if (socketRef.current) {
@@ -232,7 +232,15 @@ export function ChatPage({ userRole = 'User' }) {
 
         try {
             const data = await chatAPI.sendMessage(threadId, messageText);
-            setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? data.message : m));
+            setMessages(prev => {
+                // Check if socket already beat the HTTP response and injected the real message
+                if (prev.find(m => m.id === data.message.id)) {
+                    // It exists, so cleanly purge the optimistic UI clone
+                    return prev.filter(m => m.id !== optimisticMsg.id);
+                }
+                // Socket was slower, so securely mutate the optimistic ID into the database ID
+                return prev.map(m => m.id === optimisticMsg.id ? data.message : m);
+            });
             setUsers(prev => prev.map(u =>
                 u.id === selectedUser?.id
                     ? { ...u, last_message: messageText, last_message_at: new Date().toISOString() }
@@ -267,9 +275,17 @@ export function ChatPage({ userRole = 'User' }) {
         }
     };
 
-    const getInitials = (name) => {
-        if (!name) return '?';
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const getDisplayName = useCallback((name, role) => {
+        if (userRole === 'Blogger' && ['manager', 'admin', 'super_admin'].includes(role?.toLowerCase())) {
+            return 'Manager';
+        }
+        return name || 'Unknown';
+    }, [userRole]);
+
+    const getInitials = (name, role) => {
+        const dName = getDisplayName(name, role);
+        if (!dName || dName === '?') return '?';
+        return dName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
 
     const getRoleBadgeColor = (role) => {
@@ -305,12 +321,14 @@ export function ChatPage({ userRole = 'User' }) {
         const now = new Date();
         const diff = now - date;
         const oneDay = 86400000;
+        const opts = { timeZone: 'Asia/Kolkata' };
+
         if (diff < oneDay && date.getDate() === now.getDate()) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleTimeString('en-IN', { ...opts, hour: '2-digit', minute: '2-digit' });
         } else if (diff < 2 * oneDay) {
             return 'Yesterday';
         }
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-IN', { ...opts, month: 'short', day: 'numeric' });
     };
 
     const getDateLabel = (dateStr) => {
@@ -318,9 +336,11 @@ export function ChatPage({ userRole = 'User' }) {
         const now = new Date();
         const diff = now - date;
         const oneDay = 86400000;
+        const opts = { timeZone: 'Asia/Kolkata' };
+
         if (diff < oneDay && date.getDate() === now.getDate()) return 'Today';
         if (diff < 2 * oneDay && date.getDate() === now.getDate() - 1) return 'Yesterday';
-        return date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        return date.toLocaleDateString('en-IN', { ...opts, weekday: 'long', month: 'long', day: 'numeric' });
     };
 
     const isMyMessage = (msg) => msg.user_id === currentUserRef.current?.id;
@@ -350,7 +370,7 @@ export function ChatPage({ userRole = 'User' }) {
                             border: `1px solid ${roleColor.border}`
                         }}
                     >
-                        {getInitials(user.name)}
+                        {getInitials(user.name, user.role)}
                     </div>
                     {isOnline && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--card-background)]" />
@@ -360,7 +380,7 @@ export function ChatPage({ userRole = 'User' }) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm text-[var(--text-primary)] truncate">{user.name}</span>
+                        <span className="font-medium text-sm text-[var(--text-primary)] truncate">{getDisplayName(user.name, user.role)}</span>
                         {user.last_message_at && (
                             <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0 ml-2">
                                 {formatTime(user.last_message_at)}
@@ -412,7 +432,14 @@ export function ChatPage({ userRole = 'User' }) {
                         </h2>
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => { setShowNewChatModal(true); setNewChatSearch(''); setNewChatResults([]); }}
+                                onClick={() => { 
+                                    if (userRole === 'Blogger') {
+                                        const manager = users.find(u => ['manager', 'admin', 'super_admin'].includes(u.role?.toLowerCase()));
+                                        if (manager) handleSelectUser(manager);
+                                    } else {
+                                        setShowNewChatModal(true); setNewChatSearch(''); setNewChatResults([]); 
+                                    }
+                                }}
                                 className="p-1.5 rounded-lg hover:bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)] transition-colors"
                                 title="New Chat"
                             >
@@ -521,11 +548,11 @@ export function ChatPage({ userRole = 'User' }) {
                                                     border: `1px solid ${roleColor.border}`
                                                 }}
                                             >
-                                                {getInitials(user.name)}
+                                                {getInitials(user.name, user.role)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{user.name}</p>
-                                                <p className="text-xs text-[var(--text-muted)] truncate">{user.email}</p>
+                                                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{getDisplayName(user.name, user.role)}</p>
+                                                <p className="text-xs text-[var(--text-muted)] truncate">{userRole === 'Blogger' ? '' : user.email}</p>
                                             </div>
                                             <span
                                                 className="text-[10px] px-2 py-0.5 rounded-full flex-shrink-0"
@@ -577,14 +604,14 @@ export function ChatPage({ userRole = 'User' }) {
                                         border: `1px solid ${getRoleBadgeColor(selectedUser.role).border}`
                                     }}
                                 >
-                                    {getInitials(selectedUser.name)}
+                                    {getInitials(selectedUser.name, selectedUser.role)}
                                 </div>
                                 {onlineUsers.has(selectedUser.id) && (
                                     <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[var(--card-background)]" />
                                 )}
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-semibold text-sm text-[var(--text-primary)]">{selectedUser.name}</h3>
+                                <h3 className="font-semibold text-sm text-[var(--text-primary)]">{getDisplayName(selectedUser.name, selectedUser.role)}</h3>
                                 <p className="text-xs text-[var(--text-muted)]">
                                     {typingUser ? (
                                         <span className="text-[var(--primary-cyan)] animate-pulse">typing...</span>
@@ -612,6 +639,18 @@ export function ChatPage({ userRole = 'User' }) {
                                 </div>
                             ) : (
                                 <>
+                                    <div ref={messagesEndRef} />
+                                    {typingUser && (
+                                        <div className="flex justify-start mb-2">
+                                            <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-2xl rounded-bl-md px-4 py-2">
+                                                <div className="flex gap-1">
+                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     {messages.map((msg, idx) => {
                                         const mine = isMyMessage(msg);
                                         const showDateLabel = idx === 0 ||
@@ -631,7 +670,7 @@ export function ChatPage({ userRole = 'User' }) {
                                                     <div className={`max-w-[75%] ${mine ? 'items-end' : 'items-start'}`}>
                                                         {showSender && !mine && (
                                                             <p className="text-[10px] text-[var(--text-muted)] ml-1 mb-1 font-medium">
-                                                                {msg.sender_name}
+                                                                {getDisplayName(msg.sender_name, msg.sender_role)}
                                                             </p>
                                                         )}
                                                         <div
@@ -642,7 +681,7 @@ export function ChatPage({ userRole = 'User' }) {
                                                         >
                                                             <p className="whitespace-pre-wrap break-words">{msg.message}</p>
                                                             <p className={`text-[9px] mt-1 text-right ${mine ? 'text-black/50' : 'text-[var(--text-muted)]'}`}>
-                                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                {new Date(msg.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -650,18 +689,6 @@ export function ChatPage({ userRole = 'User' }) {
                                             </React.Fragment>
                                         );
                                     })}
-                                    {typingUser && (
-                                        <div className="flex justify-start mt-2">
-                                            <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-2xl rounded-bl-md px-4 py-2">
-                                                <div className="flex gap-1">
-                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                    <span className="w-2 h-2 bg-[var(--text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div ref={messagesEndRef} />
                                 </>
                             )}
                         </div>
@@ -716,7 +743,14 @@ export function ChatPage({ userRole = 'User' }) {
                                 : 'Message your Manager for support.'}
                         </p>
                         <button
-                            onClick={() => { setShowNewChatModal(true); setNewChatSearch(''); setNewChatResults([]); }}
+                            onClick={() => { 
+                                if (userRole === 'Blogger') {
+                                    const manager = users.find(u => ['manager', 'admin', 'super_admin'].includes(u.role?.toLowerCase()));
+                                    if (manager) handleSelectUser(manager);
+                                } else {
+                                    setShowNewChatModal(true); setNewChatSearch(''); setNewChatResults([]); 
+                                }
+                            }}
                             className="premium-btn bg-[var(--primary-cyan)] text-black hover:bg-[var(--primary-cyan)]/80 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                         >
                             <UserPlus className="h-4 w-4" />

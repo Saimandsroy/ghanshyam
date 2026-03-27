@@ -3,6 +3,7 @@ import { Save, Upload, X, User } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import api from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 
 /**
  * Profile Page for Manager Panel
@@ -16,6 +17,7 @@ import { useToast } from '../../context/ToastContext';
  */
 export function Profile() {
     const { showSuccess, showError } = useToast();
+    const { refreshUser } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
@@ -110,28 +112,24 @@ export function Profile() {
             showError('Name is required');
             return;
         }
-        if (!formData.gender) {
-            showError('Please select a gender');
-            return;
-        }
-        if (!formData.mobile.trim()) {
-            showError('Mobile number is required');
-            return;
-        }
 
         try {
             setSaving(true);
+            let imageUploadedSuccessfully = false;
 
             // Upload image if new one selected
             if (imageFile) {
                 const formDataImg = new FormData();
                 formDataImg.append('profile_image', imageFile);
+
+                // Using the exact proven schema from the working Blogger UpdateProfile.jsx
                 await api.post('/manager/profile/image', formDataImg, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
+                imageUploadedSuccessfully = true;
             }
 
-            // Update profile
+            // Update profile info
             await api.put('/manager/profile', {
                 name: formData.name.trim(),
                 gender: formData.gender,
@@ -139,6 +137,9 @@ export function Profile() {
             });
 
             showSuccess('Profile updated successfully');
+
+            // Refresh AuthContext to update sidebar without reload
+            await refreshUser();
         } catch (error) {
             console.error('Error updating profile:', error);
             showError(error.response?.data?.message || 'Failed to update profile');
@@ -202,7 +203,7 @@ export function Profile() {
                         {/* Gender */}
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <label className="text-[var(--text-secondary)] font-medium">
-                                Gender<span className="text-red-500">*</span>
+                                Gender <span className="text-[var(--text-muted)] font-normal text-[0.65rem] lowercase">(optional)</span>
                             </label>
                             <div className="col-span-2">
                                 <select
@@ -222,7 +223,7 @@ export function Profile() {
                         {/* Mobile Number */}
                         <div className="grid grid-cols-3 gap-4 items-center">
                             <label className="text-[var(--text-secondary)] font-medium">
-                                Mobile number<span className="text-red-500">*</span>
+                                Mobile number <span className="text-[var(--text-muted)] font-normal text-[0.65rem] lowercase">(optional)</span>
                             </label>
                             <div className="col-span-2">
                                 <input

@@ -105,13 +105,14 @@ export function InvoiceDetail() {
             <div className="premium-card p-8 bg-white text-black" style={{ backgroundColor: '#fff', color: '#000' }}>
                 {/* Top Section: Bill From + Invoice Info */}
                 <div className="flex justify-between mb-8">
-                    {/* Bill From */}
+                    {/* Bill From - Company */}
                     <div>
                         <h2 className="text-lg font-bold mb-2">Bill From:</h2>
-                        <p className="text-sm">{blogger.name}</p>
-                        <p className="text-sm text-gray-600">Phone: {blogger.phone}</p>
-                        <p className="text-sm text-gray-600">Email: {blogger.email}</p>
-                        <p className="text-sm text-gray-600">Address: {blogger.country}</p>
+                        <p className="text-sm">Rank Me up Services</p>
+                        <p className="text-sm text-gray-600"># Seo 105 Ranjeet Avenew B Block Amritsar</p>
+                        <p className="text-sm text-gray-600">Punjab, India 143001</p>
+                        <p className="text-sm text-gray-600">Email:- Contact@rankmeup.in</p>
+                        <p className="text-sm text-gray-600">Phone no = 7087825869</p>
                     </div>
 
                     {/* Invoice Info */}
@@ -132,12 +133,13 @@ export function InvoiceDetail() {
                 {/* Divider */}
                 <hr className="border-gray-200 mb-6" />
 
-                {/* Bill To */}
+                {/* Bill To - Blogger */}
                 <div className="mb-8">
                     <h2 className="text-lg font-bold mb-2">Bill To:</h2>
-                    <p className="text-sm">Company Name: {company.name}</p>
-                    <p className="text-sm text-gray-600">Address: {company.address}</p>
-                    <p className="text-sm text-gray-600">Email: {company.email}</p>
+                    <p className="text-sm">{blogger.name}</p>
+                    {blogger.phone && <p className="text-sm text-gray-600">Phone: {blogger.phone}</p>}
+                    <p className="text-sm text-gray-600">Email: {blogger.email}</p>
+                    <p className="text-sm text-gray-600">Address: {blogger.country}</p>
                 </div>
 
                 {/* Items Table */}

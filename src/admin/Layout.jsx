@@ -76,7 +76,7 @@ export function AdminLayout() {
   ];
 
   return (
-    <div className="h-screen overflow-hidden flex bg-app-background">
+    <div className="h-screen overflow-hidden flex bg-transparent">
       <ModernSidebar
         navItems={navItems}
         userName={user?.name || "Admin User"}
@@ -89,7 +89,7 @@ export function AdminLayout() {
         changePasswordLink="/admin/change-password"
       />
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        <header className="px-8 py-6 border-b border-[var(--border)] bg-[var(--background-dark)]/80 backdrop-blur-md sticky top-0 z-30">
+        <header className="px-8 py-6 border-b border-[var(--color-border)] bg-white/70 backdrop-blur-md sticky top-0 z-30">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <button

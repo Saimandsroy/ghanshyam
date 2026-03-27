@@ -14,7 +14,7 @@ import { UniversalTableFilter } from '../../components/common/UniversalTableFilt
 export const mapTaskStatus = (status) => {
     // If it's already a string status from backend
     if (typeof status === 'string') {
-        const validStatuses = ['pending', 'waiting', 'completed', 'rejected'];
+        const validStatuses = ['pending', 'waiting', 'completed', 'rejected', 'rejected_by_blogger', 'cancelled'];
         if (validStatuses.includes(status)) {
             return status;
         }
@@ -41,6 +41,7 @@ const getStatusClass = (status) => {
         case 'completed':
             return 'status-badge success';
         case 'rejected':
+        case 'rejected_by_blogger':
             return 'status-badge error';
         case 'waiting':
             return 'status-badge info';
@@ -124,7 +125,7 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                             filteredData.map((task) => {
                                 const displayStatus = mapTaskStatus(task.current_status);
                                 const statusClass = getStatusClass(displayStatus);
-                                const canSubmitLink = (displayStatus === 'pending' || displayStatus === 'rejected') && task.detail_status !== 12;
+                                const canSubmitLink = (displayStatus === 'pending' || displayStatus === 'rejected');
 
                                 // Determine Payment Status
                                 const isCompleted = displayStatus === 'completed';
@@ -165,7 +166,9 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                                         </td>
                                         <td>
                                             <span className={statusClass}>
-                                                {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
+                                                {displayStatus === 'rejected_by_blogger'
+                                                    ? 'Rejected by Blogger'
+                                                    : displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
                                             </span>
                                         </td>
                                         <td>
@@ -185,15 +188,13 @@ export function OrdersTable({ data, onViewDetails, onSubmitLink, onRejectTask, l
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
-                                                {task.detail_status !== 12 && (
-                                                    <button
-                                                        onClick={() => onViewDetails(task)}
-                                                        className="p-2 rounded-lg hover:bg-[var(--background-dark)] text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] transition-colors"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    onClick={() => onViewDetails(task)}
+                                                    className="p-2 rounded-lg hover:bg-[var(--background-dark)] text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] transition-colors"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
 
                                                 {canSubmitLink && onRejectTask && (
                                                     <button

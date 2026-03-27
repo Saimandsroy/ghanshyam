@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, ExternalLink, AlertTriangle, ChevronDown, ChevronUp, Package, User, Globe, Link2, FileText, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { ArrowLeft, RefreshCw, ExternalLink, User, Users, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Link2, Edit3, Send, Eye, Wifi, WifiOff } from 'lucide-react';
 import { adminAPI } from '../../../lib/api';
+import { useSocket } from '../../../context/SocketContext.jsx';
 
 export const AdminOrderDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { socket, isConnected, joinOrderRoom, leaveOrderRoom } = useSocket();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -25,449 +27,426 @@ export const AdminOrderDetails = () => {
     }, [id]);
 
     useEffect(() => {
-        if (id) fetchOrderDetails();
-    }, [fetchOrderDetails, id]);
+        fetchOrderDetails();
+    }, [fetchOrderDetails]);
+
+    // Join order room for real-time updates
+    useEffect(() => {
+        if (socket && isConnected && id) {
+            joinOrderRoom(id);
+            socket.on('order-detail-updated', () => fetchOrderDetails());
+            socket.on('workflow-changed', (d) => {
+                if (String(d.orderId) === String(id)) fetchOrderDetails();
+            });
+            socket.on('url-submitted', (d) => {
+                if (String(d.orderId) === String(id)) fetchOrderDetails();
+            });
+        }
+        return () => {
+            if (socket && id) {
+                leaveOrderRoom(id);
+                socket.off('order-detail-updated');
+                socket.off('workflow-changed');
+                socket.off('url-submitted');
+            }
+        };
+    }, [socket, isConnected, id, joinOrderRoom, leaveOrderRoom, fetchOrderDetails]);
 
     const formatDate = (dateStr) => {
-        if (!dateStr) return '';
+        if (!dateStr) return 'N/A';
         const date = new Date(dateStr);
         return date.toLocaleString('en-US', {
             weekday: 'short',
+            year: 'numeric',
             month: 'short',
             day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
+            hour: '2-digit',
+            minute: '2-digit'
         });
     };
 
-    const getUrl = (item, field = 'url') => item?.[field] || item?.url || item?.ourl || '';
+    const getStatusBadge = (status) => {
+        const style = {
+            'Team Assigned': 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+            'Team Submitted': 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+            'Writer Assigned': 'border-purple-500/30 bg-purple-500/10 text-purple-300',
+            'Writer Submitted': 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300',
+            'Completed': 'border-green-500/30 bg-green-500/10 text-green-300',
+            'Blogger Submitted': 'border-teal-500/30 bg-teal-500/10 text-teal-300',
+            'In Review': 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
+            'Rejected': 'border-red-500/30 bg-red-500/10 text-red-300',
+            'Pending': 'border-orange-500/30 bg-orange-500/10 text-orange-300',
+            'Blogger Pushed': 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        };
+        return style[status] || 'border-gray-500/30 bg-gray-500/10 text-gray-400';
+    };
+
+    // Renders a simple key-value info row
+    const InfoRow = ({ label, value, isLink, isBold }) => (
+        <tr className="border-b border-[var(--border)] last:border-b-0">
+            <td className="py-3 px-4 text-[var(--text-muted)] font-semibold text-sm whitespace-nowrap w-[200px]">{label}</td>
+            <td className={`py-3 px-4 text-sm ${isBold ? 'font-bold' : ''} text-[var(--text-primary)]`}>
+                {isLink && value ? (
+                    <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline break-all">
+                        {value}
+                    </a>
+                ) : (value || '-')}
+            </td>
+        </tr>
+    );
+
+    // Renders the dark timestamp header bar
+    const StepTimestamp = ({ date }) => (
+        <div className="bg-[var(--background-dark)] text-[var(--text-muted)] text-xs font-semibold px-5 py-2.5 border-b border-[var(--border)]">
+            {formatDate(date)}
+        </div>
+    );
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-center">
-                    <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--primary-cyan)' }} />
-                    <p style={{ color: 'var(--text-secondary)' }}>Loading order details...</p>
-                </div>
+            <div className="p-6 flex items-center justify-center min-h-[400px]">
+                <RefreshCw className="h-8 w-8 animate-spin text-[var(--primary-cyan)]" />
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="space-y-6 animate-fadeIn">
-                <div className="premium-card p-8 text-center" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}>
-                    <AlertTriangle className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--error)' }} />
-                    <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--error)' }}>Error Loading Order</h3>
-                    <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{error}</p>
-                    <button onClick={fetchOrderDetails} className="premium-btn premium-btn-accent">
-                        <RefreshCw size={16} /> Retry
-                    </button>
+            <div className="p-6">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+                    <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-400 mb-4">{error}</p>
+                    <button onClick={fetchOrderDetails} className="premium-btn premium-btn-accent">Retry</button>
                 </div>
             </div>
         );
     }
 
     if (!data?.order) {
-        return <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Order not found</div>;
+        return (
+            <div className="p-6">
+                <div className="text-center text-[var(--text-muted)] py-12">Order not found</div>
+            </div>
+        );
     }
 
     const { order, processes } = data;
-    const isGP = order.order_type === 'gp';
-    const isNiche = order.order_type === 'niche';
+    const orderTypeLower = (order.order_type || '').toLowerCase();
+    const isGuestPost = orderTypeLower.includes('gp') || orderTypeLower.includes('guest');
+    const isNicheEdit = orderTypeLower.includes('niche');
 
-    const teamProcess = processes?.find(p => p.status === 1);
-    const teamPushedProcess = processes?.find(p => p.status === 1.5 || p.status_label === 'Team Pushed to Manager');
-    const writerAssignedProcess = processes?.find(p => p.status === 2);
-    const writerSubmittedProcess = processes?.find(p => p.status === 3);
-    const bloggerProcess = processes?.find(p => p.status === 5);
-
-    const assignments = bloggerProcess?.blogger_assignments ||
-        writerSubmittedProcess?.blogger_assignments ||
-        writerAssignedProcess?.blogger_assignments ||
-        teamPushedProcess?.blogger_assignments ||
-        teamProcess?.blogger_assignments || [];
-
-    const isCompleted = assignments.some(a => a.status === 8 || a.submit_url);
+    const teamAssignedProcess = processes.find(p => p.status === 1);
+    const writerAssignedProcess = processes.find(p => p.status === 2);
+    const writerSubmittedProcess = processes.find(p => p.status === 3);
+    const bloggerPushedProcess = processes.find(p => p.status === 5);
 
     return (
-        <div className="space-y-6 animate-fadeIn">
-            {/* Header Section */}
-            <div className="flex items-center justify-between mb-6">
-                <button
-                    onClick={() => navigate('/admin/orders')}
-                    className="premium-btn premium-btn-outline flex items-center gap-2"
-                >
-                    <ArrowLeft size={18} />
-                    <span>Back to Orders</span>
-                </button>
-                <button
-                    onClick={fetchOrderDetails}
-                    className="premium-btn premium-btn-outline flex items-center gap-2"
-                >
-                    <RefreshCw size={16} />
-                    Refresh
+        <div className="p-8 space-y-6 max-w-[1600px] mx-auto min-h-screen animate-fadeIn">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/admin/orders')} className="p-2.5 rounded-xl hover:bg-white/10 text-[var(--text-primary)] transition-colors border border-transparent hover:border-[var(--border)]">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Order #{order.order_id}</h1>
+                            <span className={`premium-badge rounded-md border ${isGuestPost ? 'border-purple-500/30 bg-purple-500/10 text-purple-300' : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'}`}>
+                                {isGuestPost ? 'Guest Post' : 'Niche Edit'}
+                            </span>
+                        </div>
+                        <p className="text-sm text-[var(--text-muted)] mt-1 flex items-center gap-2">
+                            <span>ID: {order.id}</span>
+                            <span>•</span>
+                            <Clock size={12} /> {formatDate(order.created_at)}
+                        </p>
+                    </div>
+                </div>
+                <button onClick={fetchOrderDetails} className="premium-btn border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
                 </button>
             </div>
 
-            {/* Order ID Header */}
-            <div className="premium-card p-6" style={{
-                background: 'linear-gradient(135deg, rgba(255, 140, 66, 0.1) 0%, rgba(255, 85, 0, 0.05) 100%)',
-                borderColor: 'rgba(255, 140, 66, 0.3)'
-            }}>
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{
-                        background: 'var(--gradient-primary)',
-                        boxShadow: '0 4px 15px rgba(255, 140, 66, 0.4)'
-                    }}>
-                        <Package size={24} className="text-white" />
+            {/* Message / Instructions */}
+            {order.message && (
+                <div className="premium-card overflow-hidden">
+                    <div className="bg-[var(--primary-cyan)]/10 border-b border-[var(--primary-cyan)]/20 px-5 py-2.5">
+                        <span className="text-sm font-bold text-[var(--primary-cyan)]">Message</span>
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                            Order #{order.order_id || id}
-                        </h1>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            {order.client_name} • {isGP ? 'Guest Post' : 'Niche Edit'}
-                        </p>
-                    </div>
-                    <div className="ml-auto">
-                        <span className={`status-badge ${isCompleted ? 'success' : 'info'}`}>
-                            {isCompleted ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-                            {isCompleted ? 'Completed' : 'In Progress'}
-                        </span>
-                    </div>
+                    <div className="p-5 text-sm text-[var(--text-secondary)]" dangerouslySetInnerHTML={{ __html: order.message }} />
+                </div>
+            )}
+
+            {/* Order Summary Table */}
+            <div className="premium-card overflow-hidden">
+                <div className="premium-table-container">
+                    <table className="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Order Id</th>
+                                <th>Client Name</th>
+                                <th>Client Website</th>
+                                <th>No of Links</th>
+                                <th>Order Type</th>
+                                <th>Order Package</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <span className={`premium-badge ${getStatusBadge(order.current_workflow_status)}`}>
+                                        {order.current_workflow_status || 'Pending'}
+                                    </span>
+                                </td>
+                                <td className="font-mono text-[var(--primary-cyan)]">{order.order_id || order.id}</td>
+                                <td className="font-medium text-[var(--text-primary)]">{order.client_name || '-'}</td>
+                                <td>
+                                    {order.client_website ? (
+                                        <a href={order.client_website.startsWith('http') ? order.client_website : `https://${order.client_website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline">
+                                            {order.client_website}
+                                        </a>
+                                    ) : '-'}
+                                </td>
+                                <td className="text-center">{order.no_of_links || 1}</td>
+                                <td>{isGuestPost ? 'gp' : 'niche'}</td>
+                                <td>{order.order_package || 'Standard'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            {/* Message Section */}
-            {order.message && (
-                <div className="premium-card overflow-hidden animate-slideUp" style={{ animationDelay: '0.1s' }}>
-                    <div className="px-6 py-4 border-b" style={{
-                        borderColor: 'var(--border)',
-                        background: 'linear-gradient(90deg, rgba(255, 140, 66, 0.1), transparent)'
-                    }}>
-                        <div className="flex items-center gap-2">
-                            <FileText size={18} style={{ color: 'var(--primary-cyan)' }} />
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Message</span>
-                        </div>
-                    </div>
-                    <div className="p-6" style={{ color: 'var(--text-secondary)' }}>
-                        <div dangerouslySetInnerHTML={{ __html: order.message }} />
+            {/* ==================== STEP 1: NEW ORDER CREATED ==================== */}
+            {teamAssignedProcess && (
+                <div className="premium-card overflow-hidden">
+                    <StepTimestamp date={teamAssignedProcess.created_at} />
+                    <div className="bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/10 p-5">
+                        <h3 className="font-bold text-[var(--text-primary)] text-lg">New Order Created</h3>
+                        <p className="text-sm text-[var(--text-muted)] mt-1">
+                            Order Assigned to Team: <span className="text-[var(--primary-cyan)] font-medium">{teamAssignedProcess.team_name || 'N/A'}</span>
+                        </p>
                     </div>
                 </div>
             )}
 
-            {/* Order Summary Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 animate-slideUp" style={{ animationDelay: '0.2s' }}>
-                <SummaryCard label="Status" value={isCompleted ? 'Completed' : 'In Progress'} icon={<CheckCircle2 size={18} />} accent />
-                <SummaryCard label="Order ID" value={order.order_id || '-'} icon={<Package size={18} />} />
-                <SummaryCard label="Client" value={order.client_name || '-'} icon={<User size={18} />} />
-                <SummaryCard label="Website" value={order.client_website || '-'} icon={<Globe size={18} />} link={order.client_website} />
-                <SummaryCard label="Links" value={order.no_of_links || 1} icon={<Link2 size={18} />} />
-                <SummaryCard label="Type" value={isGP ? 'Guest Post' : 'Niche Edit'} icon={<FileText size={18} />} />
-                <SummaryCard label="Package" value={order.order_package || 'Standard'} icon={<Sparkles size={18} />} />
-            </div>
-
-            {/* Workflow Timeline */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                    <Clock size={20} style={{ color: 'var(--primary-cyan)' }} />
-                    Workflow Timeline
-                </h2>
-
-                {/* 1. New Order Created */}
-                <WorkflowCard
-                    step={1}
-                    title="New Order Created"
-                    date={formatDate(order.created_at)}
-                    icon={<Package size={20} />}
-                    delay="0.3s"
-                >
-                    <div className="flex items-center gap-2 p-4" style={{ color: 'var(--text-secondary)' }}>
-                        <User size={16} style={{ color: 'var(--primary-cyan)' }} />
-                        <span>Order Assigned to Team: </span>
-                        <span className="font-semibold" style={{ color: 'var(--primary-cyan)' }}>
-                            {teamProcess?.team_name || 'Not Assigned'}
-                        </span>
+            {/* ==================== STEP 2: TEAM PUSHED TO MANAGER ==================== */}
+            {teamAssignedProcess && teamAssignedProcess.blogger_assignments?.length > 0 && (
+                <div className="premium-card overflow-hidden">
+                    <StepTimestamp date={teamAssignedProcess.created_at} />
+                    <div className="bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-cyan-500/10 p-5">
+                        <h3 className="font-bold text-[var(--text-primary)] text-lg">Team Pushed to Manager</h3>
                     </div>
-                </WorkflowCard>
-
-                {/* 2. Team Pushed to Manager */}
-                {(teamPushedProcess || (teamProcess && assignments.length > 0)) && (
-                    <WorkflowCard
-                        step={2}
-                        title="Team Pushed to Manager"
-                        date={formatDate(teamPushedProcess?.created_at || teamProcess?.created_at)}
-                        icon={<User size={20} />}
-                        delay="0.4s"
-                    >
-                        <div className="overflow-x-auto">
-                            <table className="w-full premium-table">
+                    <div className="p-5">
+                        <div className="premium-table-container">
+                            <table className="premium-table">
                                 <thead>
                                     <tr>
                                         <th>Root Domain</th>
                                         <th>Price</th>
-                                        {isGP && <th>URL</th>}
+                                        {isNicheEdit && <th>Url</th>}
+                                        <th>Note</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {assignments.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td style={{ color: 'var(--text-primary)' }}>{item.website || '-'}</td>
-                                            <td style={{ color: 'var(--success)' }}>${item.price || '0'}</td>
-                                            {isGP && (
+                                    {teamAssignedProcess.blogger_assignments.map((item) => (
+                                        <tr key={item.id}>
+                                            <td>
+                                                <a href={`https://${item.website}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline font-medium">
+                                                    {item.website}
+                                                </a>
+                                            </td>
+                                            <td className="text-[var(--text-primary)] font-mono">{item.price || 0}</td>
+                                            {isNicheEdit && (
                                                 <td>
-                                                    {getUrl(item) && (
-                                                        <a href={getUrl(item)} target="_blank" rel="noreferrer"
-                                                            className="flex items-center gap-1"
-                                                            style={{ color: 'var(--primary-cyan)' }}>
-                                                            <ExternalLink size={14} />
-                                                            Link
+                                                    {item.post_url ? (
+                                                        <a href={item.post_url.startsWith('http') ? item.post_url : `https://${item.post_url}`} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline text-xs break-all">
+                                                            {item.post_url}
                                                         </a>
-                                                    )}
+                                                    ) : '-'}
                                                 </td>
                                             )}
+                                            <td className="text-[var(--text-secondary)]">{item.note || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                        {(teamPushedProcess?.note || teamProcess?.note) && (
-                            <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
-                                <span className="font-semibold" style={{ color: 'var(--text-muted)' }}>Note: </span>
-                                <span style={{ color: 'var(--text-secondary)' }}>{teamPushedProcess?.note || teamProcess?.note}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== STEP 3: MANAGER PUSHED TO WRITER ==================== */}
+            {writerAssignedProcess && (
+                <div className="premium-card overflow-hidden">
+                    <StepTimestamp date={writerAssignedProcess.created_at} />
+                    <div className="bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/10 p-5">
+                        <h3 className="font-bold text-[var(--text-primary)] text-lg">Manager Pushed to Writer</h3>
+                    </div>
+                    <div className="p-5 space-y-4">
+                        {/* Writer info sub-card */}
+                        <div className="bg-[var(--background-dark)] border border-[var(--border)] rounded-xl p-4">
+                            <div className="text-sm font-semibold text-[var(--text-primary)]">
+                                Writer:{writerAssignedProcess.writer_name || 'N/A'}
+                            </div>
+                        </div>
+                        {/* Details per item */}
+                        {writerAssignedProcess.blogger_assignments?.length > 0 && (
+                            <div className="space-y-4">
+                                {writerAssignedProcess.blogger_assignments.map((item) => (
+                                    <div key={item.id} className="premium-table-container">
+                                        <table className="premium-table">
+                                            <tbody>
+                                                <InfoRow label="Root Domain" value={item.website} isLink />
+                                                {isNicheEdit ? (
+                                                    <>
+                                                        {/* NICHE: Root Domain, Target URL, Anchor, Post URL, Note */}
+                                                        <InfoRow label="Url" value={item.target_url} isLink />
+                                                        <InfoRow label="Anchor" value={item.anchor} />
+                                                        <InfoRow label="Post URL" value={item.post_url} isLink />
+                                                        <InfoRow label="Note" value={item.note} />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {/* GP: Root Domain, URL, Anchor, Post URL, Title, Note */}
+                                                        <InfoRow label="Url" value={item.target_url} isLink />
+                                                        <InfoRow label="Anchor" value={item.anchor} />
+                                                        <InfoRow label="Post URL" value={item.post_url} isLink />
+                                                        <InfoRow label="Title" value={item.title} isLink />
+                                                        <InfoRow label="Note" value={item.note} />
+                                                    </>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ))}
                             </div>
                         )}
-                    </WorkflowCard>
-                )}
+                    </div>
+                </div>
+            )}
 
-                {/* 3. Manager Pushed to Writer */}
-                {writerAssignedProcess && (
-                    <WorkflowCard
-                        step={3}
-                        title="Manager Pushed to Writer"
-                        date={formatDate(writerAssignedProcess.created_at)}
-                        icon={<FileText size={20} />}
-                        delay="0.5s"
-                    >
-                        <div className="p-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
-                            <User size={16} style={{ color: 'var(--primary-cyan)' }} />
-                            <span style={{ color: 'var(--text-muted)' }}>Writer:</span>
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                                {writerAssignedProcess.writer_name || 'Not Assigned'}
-                            </span>
+            {/* ==================== STEP 4: WRITER PUSHED TO MANAGER ==================== */}
+            {writerSubmittedProcess && (
+                <div className="premium-card overflow-hidden">
+                    <StepTimestamp date={writerSubmittedProcess.created_at} />
+                    <div className="bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/10 p-5">
+                        <h3 className="font-bold text-[var(--text-primary)] text-lg">Writer Pushed to Manager</h3>
+                    </div>
+                    <div className="p-5 space-y-4">
+                        {/* Writer info sub-card */}
+                        <div className="bg-[var(--background-dark)] border border-[var(--border)] rounded-xl p-4">
+                            <div className="text-sm font-semibold text-[var(--text-primary)]">
+                                Writer:{writerSubmittedProcess.writer_name || 'N/A'}
+                            </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            {assignments.map((item, idx) => (
-                                <DetailGrid key={idx} items={[
-                                    { label: 'Root Domain', value: item.website || '-' },
-                                    { label: 'URL', value: item.ourl || getUrl(item), isLink: true },
-                                    { label: 'Anchor', value: item.anchor || '-' },
-                                    ...(isGP && item.title ? [{ label: 'Title', value: item.title }] : [])
-                                ]} />
-                            ))}
-                        </div>
-                    </WorkflowCard>
-                )}
-
-                {/* 4. Writer Pushed to Manager */}
-                {writerSubmittedProcess && (
-                    <WorkflowCard
-                        step={4}
-                        title="Writer Pushed to Manager"
-                        date={formatDate(writerSubmittedProcess.created_at)}
-                        icon={<CheckCircle2 size={20} />}
-                        delay="0.6s"
-                    >
-                        <div className="p-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
-                            <User size={16} style={{ color: 'var(--primary-cyan)' }} />
-                            <span style={{ color: 'var(--text-muted)' }}>Writer:</span>
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                                {writerSubmittedProcess.writer_name || writerAssignedProcess?.writer_name || 'N/A'}
-                            </span>
-                        </div>
-                        {(writerSubmittedProcess.blogger_assignments || assignments).map((item, idx) => (
-                            <DetailGrid key={idx} items={[
-                                { label: 'Root Domain', value: item.website || '-' },
-                                ...(isNiche ? [
-                                    { label: 'Type', value: 'replace' },
-                                    { label: 'Replace With', value: item.insert_after || '-' },
-                                    { label: 'Replace Statement', value: item.statement || '-' }
-                                ] : []),
-                                ...(isGP && item.doc_urls ? [{ label: 'Doc URLs', value: item.doc_urls, isLink: true }] : []),
-                                { label: 'URL', value: item.ourl || getUrl(item), isLink: true },
-                                { label: 'Anchor', value: item.anchor || '-' },
-                                { label: 'POST URL', value: item.submit_url || item.ourl, isLink: true },
-                                { label: 'Note', value: item.note || 'Done.' }
-                            ]} />
-                        ))}
-                    </WorkflowCard>
-                )}
-
-                {/* 5. Manager Pushed to Blogger */}
-                {bloggerProcess && (
-                    <WorkflowCard
-                        step={5}
-                        title="Manager Pushed to Blogger"
-                        date={formatDate(bloggerProcess.created_at)}
-                        icon={<Globe size={20} />}
-                        completed={isCompleted}
-                        delay="0.7s"
-                    >
-                        {(bloggerProcess.blogger_assignments || assignments).map((item, idx) => (
-                            <div key={idx} className="mb-4 last:mb-0">
-                                <DetailGrid items={[
-                                    { label: 'Root Domain', value: item.website || '-' },
-                                    { label: 'Blogger Email', value: item.blogger_email || '-' }
-                                ]} />
-
-                                {/* Completion Banner */}
-                                {(item.status === 8 || item.submit_url) && (
-                                    <div className="mx-4 mb-4 p-4 rounded-xl flex items-center justify-between" style={{
-                                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.1) 100%)',
-                                        border: '1px solid rgba(34, 197, 94, 0.3)'
-                                    }}>
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle2 size={20} style={{ color: 'var(--success)' }} />
-                                            <span className="font-semibold" style={{ color: 'var(--success)' }}>
-                                                Manager Verified and Complete Order
-                                            </span>
-                                        </div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>
-                                            {item.updated_at ? formatDate(item.updated_at) : ''}
-                                        </span>
+                        {writerSubmittedProcess.blogger_assignments?.length > 0 && (
+                            <div className="space-y-4">
+                                {writerSubmittedProcess.blogger_assignments.map((item) => (
+                                    <div key={item.id} className="premium-table-container">
+                                        <table className="premium-table">
+                                            <tbody>
+                                                <InfoRow label="Root Domain" value={item.website} isLink />
+                                                {isNicheEdit ? (
+                                                    <>
+                                                        {/* NICHE: Root Domain, Type, [Insert After/Statement OR Replace With/Statement], Target URL, Anchor, Post URL, Note */}
+                                                        <InfoRow label="Type" value={item.type} />
+                                                        {item.type === 'insert' && (
+                                                            <>
+                                                                <InfoRow label="Insert After" value={item.insert_after} />
+                                                                <InfoRow label="Insert Statement" value={item.statement} isBold />
+                                                            </>
+                                                        )}
+                                                        {item.type === 'replace' && (
+                                                            <>
+                                                                <InfoRow label="Replace With" value={item.insert_after} />
+                                                                <InfoRow label="Replace Statement" value={item.statement} isBold />
+                                                            </>
+                                                        )}
+                                                        <InfoRow label="Url" value={item.target_url} isLink />
+                                                        <InfoRow label="Anchor" value={item.anchor} />
+                                                        <InfoRow label="POST Url" value={item.post_url} isLink />
+                                                        <InfoRow label="Note" value={item.note || item.new_note} />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {/* GP: Root Domain, Upload Doc File, Doc URLs, Target URL, Anchor Text, Post URL, Note */}
+                                                        <InfoRow label="Upload Doc File" value={item.upload_doc_file} isLink />
+                                                        <InfoRow label="Doc URLS" value={item.doc_urls} isLink />
+                                                        <InfoRow label="Url" value={item.target_url} isLink />
+                                                        <InfoRow label="Anchor" value={item.anchor} />
+                                                        <InfoRow label="POST Url" value={item.post_url} isLink />
+                                                        <InfoRow label="Note" value={item.note || item.new_note} />
+                                                    </>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                )}
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
-                                <DetailGrid items={[
-                                    { label: 'Live URL', value: item.submit_url, isLink: true, highlight: !!item.submit_url }
-                                ]} />
+            {/* ==================== STEP 5: MANAGER PUSHED TO BLOGGER ==================== */}
+            {bloggerPushedProcess && bloggerPushedProcess.blogger_assignments?.length > 0 && (
+                <div className="premium-card overflow-hidden">
+                    <StepTimestamp date={bloggerPushedProcess.created_at} />
+                    <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-emerald-500/10 p-5">
+                        <h3 className="font-bold text-[var(--text-primary)] text-lg">Manager Pushed to Blogger</h3>
+                    </div>
+                    <div className="p-5 space-y-4">
+                        {bloggerPushedProcess.blogger_assignments.map((item) => (
+                            <div key={item.id} className="premium-table-container">
+                                <table className="premium-table">
+                                    <tbody>
+                                        {/* Both Niche & GP: Root Domain, Blogger Email, Verified/Rejected Bar, Live URL */}
+                                        <InfoRow label="Root Domain" value={item.website} isLink />
+                                        <InfoRow label="Blogger Email" value={item.blogger_email} />
+                                        {/* Manager Verified Green Bar */}
+                                        {(item.verify || item.status === 8) && (
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#22c55e' }}>
+                                                    Manager Verified and Complete Order
+                                                </td>
+                                                <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#22c55e' }}>
+                                                    {item.updated_at ? formatDate(item.updated_at) : '-'}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        {/* Rejected Red Bar */}
+                                        {item.status === 11 && (
+                                            <tr>
+                                                <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#ef4444' }}>
+                                                    Manager Rejected
+                                                </td>
+                                                <td className="py-3 px-4 font-bold text-white text-sm" style={{ backgroundColor: '#ef4444' }}>
+                                                    {item.reject_reason || '-'}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        <InfoRow label="Url" value={item.submit_url || item.post_url} isLink />
+                                    </tbody>
+                                </table>
                             </div>
                         ))}
-                    </WorkflowCard>
-                )}
-            </div>
+                    </div>
+                </div>
+            )}
+
+            {/* No Workflow Started */}
+            {(!processes || processes.length === 0) && (
+                <div className="premium-card p-12 text-center border-dashed">
+                    <div className="w-20 h-20 rounded-full bg-[var(--background-dark)] flex items-center justify-center mx-auto mb-4 border border-[var(--border)]">
+                        <Clock className="h-10 w-10 text-[var(--text-muted)]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">No Activity Yet</h3>
+                    <p className="text-[var(--text-muted)]">No workflow processes have started for this order.</p>
+                </div>
+            )}
         </div>
     );
 };
-
-// Premium Summary Card Component
-const SummaryCard = ({ label, value, icon, link, accent }) => (
-    <div className="premium-card p-4 hover:scale-105 transition-transform duration-300" style={accent ? {
-        background: 'linear-gradient(135deg, rgba(255, 140, 66, 0.15) 0%, rgba(255, 85, 0, 0.08) 100%)',
-        borderColor: 'rgba(255, 140, 66, 0.3)'
-    } : {}}>
-        <div className="flex items-center gap-2 mb-2" style={{ color: accent ? 'var(--primary-cyan)' : 'var(--text-muted)' }}>
-            {icon}
-            <span className="text-xs uppercase tracking-wide">{label}</span>
-        </div>
-        {link ? (
-            <a href={link.startsWith('http') ? link : `https://${link}`}
-                target="_blank" rel="noreferrer"
-                className="font-semibold text-sm truncate block hover:underline"
-                style={{ color: 'var(--primary-cyan)' }}>
-                {value}
-            </a>
-        ) : (
-            <p className="font-semibold text-sm truncate" style={{ color: accent ? 'var(--primary-cyan)' : 'var(--text-primary)' }}>
-                {value}
-            </p>
-        )}
-    </div>
-);
-
-// Premium Workflow Card Component
-const WorkflowCard = ({ step, title, date, icon, children, completed, delay = '0s' }) => {
-    const [expanded, setExpanded] = useState(true);
-
-    return (
-        <div
-            className="premium-card overflow-hidden animate-slideUp"
-            style={{
-                animationDelay: delay,
-                ...(completed && {
-                    borderColor: 'rgba(34, 197, 94, 0.3)',
-                    boxShadow: '0 0 20px rgba(34, 197, 94, 0.1)'
-                })
-            }}
-        >
-            {/* Card Header */}
-            <div
-                className="px-6 py-4 cursor-pointer flex items-center justify-between transition-all duration-300"
-                style={{
-                    background: completed
-                        ? 'linear-gradient(90deg, rgba(34, 197, 94, 0.15) 0%, transparent 100%)'
-                        : 'linear-gradient(90deg, rgba(255, 140, 66, 0.1) 0%, transparent 100%)',
-                    borderBottom: expanded ? '1px solid var(--border)' : 'none'
-                }}
-                onClick={() => setExpanded(!expanded)}
-            >
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                        background: completed ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 140, 66, 0.2)',
-                        color: completed ? 'var(--success)' : 'var(--primary-cyan)'
-                    }}>
-                        {icon}
-                    </div>
-                    <div>
-                        <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs mr-2" style={{
-                                background: 'var(--gradient-primary)',
-                                color: 'white'
-                            }}>{step}</span>
-                            {title}
-                        </h3>
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{date}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {completed && (
-                        <span className="status-badge success">
-                            <CheckCircle2 size={12} /> Complete
-                        </span>
-                    )}
-                    {expanded ? <ChevronUp size={20} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={20} style={{ color: 'var(--text-muted)' }} />}
-                </div>
-            </div>
-
-            {/* Card Content */}
-            <div className={`transition-all duration-300 overflow-hidden ${expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                {children}
-            </div>
-        </div>
-    );
-};
-
-// Detail Grid Component for consistent key-value display
-const DetailGrid = ({ items }) => (
-    <div className="grid gap-0">
-        {items.filter(item => item.value).map((item, idx) => (
-            <div key={idx} className="grid grid-cols-3 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                <div className="px-4 py-3 font-medium text-sm" style={{
-                    color: 'var(--text-muted)',
-                    background: 'rgba(0,0,0,0.1)'
-                }}>
-                    {item.label}
-                </div>
-                <div className="col-span-2 px-4 py-3 text-sm" style={{
-                    color: item.highlight ? 'var(--success)' : 'var(--text-primary)'
-                }}>
-                    {item.isLink && item.value ? (
-                        <a href={item.value} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1 hover:underline"
-                            style={{ color: 'var(--primary-cyan)' }}>
-                            <ExternalLink size={14} />
-                            <span className="truncate max-w-md">{item.value}</span>
-                        </a>
-                    ) : (
-                        item.value || '-'
-                    )}
-                </div>
-            </div>
-        ))}
-    </div>
-);
 
 export default AdminOrderDetails;

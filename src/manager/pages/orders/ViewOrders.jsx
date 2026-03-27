@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, X, Eye, Edit2, RefreshCw, User, Tag, ExternalLink, Calendar, Check, Globe, FileText, LayoutTemplate, MoreHorizontal } from 'lucide-react';
+import { Search, Filter, X, Eye, Edit2, RefreshCw, User, Tag, ExternalLink, Calendar, Check, Globe, FileText, LayoutTemplate, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Pagination } from '../../../components/Pagination.jsx';
 import { managerAPI } from '../../../lib/api';
 import { useSocket } from '../../../context/SocketContext.jsx';
@@ -152,15 +152,30 @@ export const ViewOrders = () => {
     }
   };
 
+  const handleDeleteOrder = async (orderId) => {
+    if (window.confirm('Are you strictly sure you want to permanently delete this order? This action cannot be undone and will delete all associated processes.')) {
+      try {
+        setLoading(true);
+        await managerAPI.deleteOrder(orderId);
+        setSuccess('Order permanently deleted.');
+        fetchOrders(); // Refresh table
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        setError(err.message || 'Failed to delete order. Please try again.');
+        setLoading(false);
+      }
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusStyles = {
-      'Pending': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-      'In Progress': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-      'With Writer': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-      'With Blogger': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-      'Completed': 'bg-green-500/10 text-green-400 border-green-500/20',
-      'Rejected': 'bg-red-500/10 text-red-400 border-red-500/20',
-      'Unknown': 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+      'Pending': 'bg-amber-100 text-amber-800 border-amber-200 font-semibold',
+      'In Progress': 'bg-blue-100 text-blue-800 border-blue-200 font-semibold',
+      'With Writer': 'bg-purple-100 text-purple-800 border-purple-200 font-semibold',
+      'With Blogger': 'bg-sky-100 text-sky-800 border-sky-200 font-semibold',
+      'Completed': 'bg-emerald-100 text-emerald-800 border-emerald-200 font-semibold',
+      'Rejected': 'bg-rose-100 text-rose-800 border-rose-200 font-semibold',
+      'Unknown': 'bg-gray-100 text-gray-800 border-gray-200 font-semibold'
     };
     return statusStyles[status] || statusStyles['Unknown'];
   };
@@ -188,7 +203,7 @@ export const ViewOrders = () => {
           <div className="flex gap-3">
             <button
               onClick={fetchOrders}
-              className="premium-btn bg-[var(--card-background)] text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--primary-cyan)]/50"
+              className="premium-btn bg-[var(--card-background)] text-[var(--text-main)] font-semibold border border-[var(--border)] hover:border-[var(--color-primary)]/50"
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -310,9 +325,9 @@ export const ViewOrders = () => {
                     <tr key={order.id}>
                       <td>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[var(--primary-cyan)]">#{order.order_id || order.id}</span>
+                          <span className="font-mono font-semibold text-[var(--color-primary)]">#{order.order_id || order.id}</span>
                           {order.order_package && (
-                            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-white/5 text-[var(--text-muted)] border border-[var(--border)] tracking-wider">
+                            <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-[var(--surface-elevated)] text-[var(--text-muted)] border border-[var(--border)] tracking-wider shadow-sm">
                               {order.order_package.split(' ')[0]}
                             </span>
                           )}
@@ -320,17 +335,17 @@ export const ViewOrders = () => {
                       </td>
                       <td>
                         {order.manager_name ? (
-                          <div className="flex items-center gap-2 text-[var(--text-primary)]">
-                            <div className="w-6 h-6 rounded-full bg-[var(--primary-cyan)]/20 flex items-center justify-center text-[var(--primary-cyan)] text-xs">
+                          <div className="flex items-center gap-3 text-[var(--text-main)]">
+                            <div className="w-7 h-7 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center font-medium text-[var(--color-primary)] text-xs shadow-sm">
                               {order.manager_name.charAt(0)}
                             </div>
-                            <span className="text-sm">{order.manager_name}</span>
+                            <span className="text-sm font-medium">{order.manager_name}</span>
                           </div>
                         ) : (
-                          <span className="text-[var(--text-muted)] text-sm">-</span>
+                          <span className="text-[var(--text-muted)] text-sm font-medium">-</span>
                         )}
                       </td>
-                      <td className="font-medium text-[var(--text-primary)]">{order.client_name || '-'}</td>
+                      <td className="font-medium text-[var(--text-main)]">{order.client_name || '-'}</td>
                       <td>
                         <span className={`premium-badge ${badgeClass} border`}>
                           {order.status_label || 'Unknown'}
@@ -348,12 +363,12 @@ export const ViewOrders = () => {
                         )}
                       </td>
                       <td className="text-center">
-                        <span className="premium-metric-pill bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <span className="premium-metric-pill bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold px-3 py-1 shadow-sm">
                           {order.no_of_links || 1}
                         </span>
                       </td>
                       <td>
-                        <span className={`premium-badge ${order.order_type === 'gp' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-pink-500/10 text-pink-400 border-pink-500/20'}`}>
+                        <span className={`premium-badge shadow-sm font-semibold ${order.order_type === 'gp' ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200' : 'bg-pink-50 text-pink-700 border-pink-200'}`}>
                           {order.order_type === 'gp' ? 'Guest Post' : order.order_type === 'niche' ? 'Niche Edit' : order.order_type || 'N/A'}
                         </span>
                       </td>
@@ -367,17 +382,24 @@ export const ViewOrders = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/manager/orders/${order.id}`)}
-                            className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--primary-cyan)] hover:bg-[var(--primary-cyan)]/10 transition-colors"
+                            className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors"
                             title="View Details"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => openEditModal(order)}
-                            className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--bright-cyan)] hover:bg-[var(--bright-cyan)]/10 transition-colors"
+                            className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                             title="Edit Order"
                           >
                             <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete Order"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>

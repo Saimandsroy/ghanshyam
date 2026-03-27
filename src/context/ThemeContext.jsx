@@ -17,27 +17,23 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  // Initialize theme from localStorage or default to 'dark'
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('dashboard-theme');
-    return savedTheme || 'dark';
-  });
+  const [theme, setTheme] = useState('light');
 
-  // Update localStorage and document class when theme changes
   useEffect(() => {
-    localStorage.setItem('dashboard-theme', theme);
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-  }, [theme]);
+    localStorage.setItem('dashboard-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    // Disabled as per $1M light exclusive redesign
+    console.log("Dark mode disabled for premium aesthetic.");
   };
 
   const value = {
-    theme,
+    theme: 'light',
     toggleTheme,
-    isDark: theme === 'dark'
+    isDark: false
   };
 
   return (

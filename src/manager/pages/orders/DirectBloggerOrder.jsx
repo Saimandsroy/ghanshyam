@@ -80,12 +80,15 @@ export const DirectBloggerOrder = () => {
     const fetchWebsites = useCallback(async () => {
         try {
             setWebsitesLoading(true);
-            const data = await managerAPI.getWebsites({
-                page, limit: pageSize,
-                domain: activeFilters.domain || undefined,
-                traffic: activeFilters.traffic || undefined,
-                category: activeFilters.category || undefined
-            });
+            const params = { page, limit: pageSize };
+            if (activeFilters.domain) params.search_domain = activeFilters.domain;
+            if (activeFilters.traffic) {
+                params.filter_traffic_val = activeFilters.traffic;
+                params.filter_traffic_op = '>'; 
+            }
+            if (activeFilters.category) params.search_category = activeFilters.category;
+
+            const data = await managerAPI.getWebsites(params);
             setWebsites(data.sites || data.websites || []);
             setTotalPages(data.pagination?.totalPages || 1);
             setTotal(data.pagination?.total || 0);
@@ -242,7 +245,7 @@ export const DirectBloggerOrder = () => {
             await managerAPI.createOrderChain(orderData, 'blogger', websitesData, contentData, null);
 
             setSuccess('Order created and pushed to Blogger successfully!');
-            setTimeout(() => navigate('/manager/pending/bloggers'), 1500);
+            setTimeout(() => navigate('/manager/orders'), 1500);
         } catch (err) {
             setError(err.message || 'Failed to create order');
         } finally {
@@ -378,43 +381,96 @@ export const DirectBloggerOrder = () => {
                     </div>
 
                     {/* Website Table */}
-                    <div className="premium-table-container max-h-[250px]">
+                    <div className="premium-table-container max-h-[400px]">
                         <table className="premium-table">
-                            <thead className="sticky top-0 z-10 bg-[var(--background-dark)]">
+                            <thead className="sticky top-0 z-10 bg-[var(--background-dark)] shadow-sm">
                                 <tr>
-                                    <th className="w-10"></th>
-                                    <th>Domain</th>
+                                    <th className="w-10 text-center">
+                                        <span className="sr-only">Select</span>
+                                    </th>
+                                    <th>Root Domain</th>
+                                    <th>Website Status</th>
+                                    <th>Category</th>
+                                    <th>{isNicheEdit ? (form.fc ? 'Niche Price (FC)' : 'Niche Price') : (form.fc ? 'GP Price (FC)' : 'GP Price')}</th>
                                     <th>DR</th>
+                                    <th>RD</th>
+                                    <th>DA</th>
+                                    <th>Spam Score</th>
                                     <th>Traffic</th>
-                                    <th>Price</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredWebsites.map((website) => (
-                                    <tr key={website.id}
-                                        className={`cursor-pointer ${isSelected(website.id) ? 'bg-purple-500/5' : 'hover:bg-white/5'}`}
-                                        onClick={() => handleToggleWebsite(website)}>
-                                        <td className="text-center">
-                                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected(website.id) ? 'bg-purple-500 border-purple-500' : 'border-[var(--text-muted)]'}`}>
+                                    <tr
+                                        key={website.id}
+                                        className={`cursor-pointer transition-colors ${isSelected(website.id) ? 'bg-purple-500/5' : 'hover:bg-white/5'}`}
+                                        onClick={() => handleToggleWebsite(website)}
+                                    >
+                                        <td className="text-center px-2">
+                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected(website.id) ? 'bg-purple-500 border-purple-500' : 'border-[var(--text-muted)] hover:border-[var(--text-secondary)]'}`}>
                                                 {isSelected(website.id) && <CheckCircle className="h-3.5 w-3.5 text-white" />}
                                             </div>
                                         </td>
-                                        <td className={isSelected(website.id) ? 'text-purple-400 font-medium' : ''}>{website.root_domain || website.domain_url}</td>
+                                        <td className={`font-medium ${isSelected(website.id) ? 'text-purple-400' : 'text-[var(--text-primary)]'}`}>
+                                            {website.root_domain || website.domain_url}
+                                        </td>
+                                        <td>
+                                            {(() => {
+                                                const status = website.website_status || '';
+                                                let badgeClass = 'bg-gray-500/10 text-gray-400 border border-gray-500/20';
+                                                if (status === 'Approved' || status === 'Active') {
+                                                    badgeClass = 'bg-green-500/10 text-green-400 border border-green-500/20';
+                                                } else if (status === 'Rejected') {
+                                                    badgeClass = 'bg-red-500/10 text-red-400 border border-red-500/20';
+                                                } else if (status.toLowerCase().includes('acceptable') || status.toLowerCase().includes('accaptable') || status.toLowerCase().includes('acceptaable')) {
+                                                    badgeClass = 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20';
+                                                } else if (status.toLowerCase().includes('traffic') || status.toLowerCase().includes('decline')) {
+                                                    badgeClass = 'bg-orange-500/10 text-orange-400 border border-orange-500/20';
+                                                }
+                                                return (
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
+                                                        {status || '-'}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="max-w-[150px] truncate" title={website.category || website.website_niche || ''}>
+                                            {website.category || website.website_niche || '-'}
+                                        </td>
+                                        <td className="font-mono text-[var(--success)]">
+                                            ${isNicheEdit
+                                                ? (form.fc
+                                                    ? (website.fc_ne || website.niche_price || website.niche_edit_price || 0)
+                                                    : (website.niche_price || website.niche_edit_price || 0))
+                                                : (form.fc
+                                                    ? (website.fc_gp || website.gp_price || 0)
+                                                    : (website.gp_price || 0))
+                                            }
+                                        </td>
                                         <td>{website.dr || '-'}</td>
-                                        <td>{website.traffic?.toLocaleString() || '-'}</td>
-                                        <td className="text-[var(--success)]">${isGuestPost ? (website.gp_price || 0) : (website.niche_price || 0)}</td>
+                                        <td>{website.rd || '-'}</td>
+                                        <td>{website.da || '-'}</td>
+                                        <td>{website.spam_score || '-'}</td>
+                                        <td>{website.traffic?.toLocaleString() || website.traffic_source?.toLocaleString() || '-'}</td>
                                     </tr>
                                 ))}
+                                {filteredWebsites.length === 0 && (
+                                    <tr>
+                                        <td colSpan={10} className="px-6 py-12 text-center text-[var(--text-muted)]">
+                                            No websites found matching your criteria
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
 
                     {/* Pagination */}
                     <div className="flex items-center justify-between mt-4">
-                        <span className="text-sm text-[var(--text-muted)]">{selectedWebsites.length} selected</span>
+                        <span className="text-sm text-[var(--text-muted)]">Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} of {total} websites ({selectedWebsites.length} selected)</span>
                         <div className="flex items-center gap-1">
                             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg hover:bg-[var(--background-dark)] disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-                            <span className="px-3 text-sm">{page}/{totalPages}</span>
+                            <span className="px-3 text-sm">{page} / {totalPages}</span>
                             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg hover:bg-[var(--background-dark)] disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
                         </div>
                     </div>

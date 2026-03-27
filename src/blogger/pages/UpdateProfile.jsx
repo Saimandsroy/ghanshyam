@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Save, ArrowLeft, Upload, X } from 'lucide-react';
 import api from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 
 /**
  * UpdateProfile - Edit blogger's profile information
@@ -15,6 +16,7 @@ import { useToast } from '../../context/ToastContext';
 export function UpdateProfile() {
     const navigate = useNavigate();
     const { showSuccess, showError } = useToast();
+    const { refreshUser } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -202,6 +204,10 @@ export function UpdateProfile() {
             });
 
             showSuccess('Profile updated successfully');
+
+            // Refresh AuthContext to update sidebar without reload
+            await refreshUser();
+
             navigate('/blogger/profile');
         } catch (error) {
             console.error('Error updating profile:', error);

@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
 import { LayoutGrid, CreditCard, Globe, Upload, ShoppingBag, MessageCircle } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { NotificationsPanel } from './components/NotificationsPanel.jsx';
-import api from '../lib/api';
+import api, { authAPI } from '../lib/api';
 
 export function BloggerLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const base = '/blogger';
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  const [userProfile, setUserProfile] = useState({
-    name: 'Blogger User',
-    profile_image: null
-  });
+  const [permissions, setPermissions] = useState(null);
 
   useEffect(() => {
-    fetchUserProfile();
+    const fetchPermissions = async () => {
+        try {
+            const response = await authAPI.getMyPermissions();
+            setPermissions(response.permissions);
+        } catch (error) {
+            console.error('Error fetching permissions:', error);
+            // Default to all enabled on error
+            setPermissions({
+                payments: true,
+                sites: true,
+                bulk_sites: true,
+                orders: true,
+                threads: true
+            });
+        }
+    };
+    fetchPermissions();
   }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await api.get('/blogger/profile');
-      setUserProfile({
-        name: response.data.name || 'Blogger User',
-        profile_image: response.data.profile_image || null
-      });
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
@@ -49,14 +49,15 @@ export function BloggerLayout() {
     navigate('/login');
   };
 
-  const navItems = [
-    { icon: <LayoutGrid size={20} />, label: 'Dashboard', to: `${base}`, active: pathname === `${base}` },
+  const allNavItems = useMemo(() => [
+    { icon: <LayoutGrid size={20} />, label: 'Dashboard', to: `${base}`, active: pathname === `${base}`, permissionKey: null },
     {
       icon: <CreditCard size={20} />,
       label: 'Payments',
       to: '#',
       active: pathname.startsWith(`${base}/payments`),
       hasDropdown: true,
+      permissionKey: 'payments',
       dropdownItems: [
         { label: 'Fill Payment Details', to: `${base}/payments/fill-details` },
         { label: 'Invoice List', to: `${base}/payments/invoices` },
@@ -69,23 +70,32 @@ export function BloggerLayout() {
       to: '#',
       active: pathname.startsWith(`${base}/sites`),
       hasDropdown: true,
+      permissionKey: 'sites',
       dropdownItems: [
         { label: 'Single Site', to: `${base}/sites/single` },
         { label: 'View All Sites', to: `${base}/sites/all` },
       ],
     },
-    { icon: <Upload size={20} />, label: 'Bulk Sites', to: `${base}/bulk-sites`, active: pathname.startsWith(`${base}/bulk-sites`) },
-    { icon: <ShoppingBag size={20} />, label: 'Orders', to: `${base}/orders`, active: pathname.startsWith(`${base}/orders`) },
-    { icon: <MessageCircle size={20} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`) },
-  ];
+    { icon: <Upload size={20} />, label: 'Bulk Sites', to: `${base}/bulk-sites`, active: pathname.startsWith(`${base}/bulk-sites`), permissionKey: 'bulk_sites' },
+    { icon: <ShoppingBag size={20} />, label: 'Orders', to: `${base}/orders`, active: pathname.startsWith(`${base}/orders`), permissionKey: 'orders' },
+    { icon: <MessageCircle size={20} />, label: 'Threads', to: `${base}/threads`, active: pathname.startsWith(`${base}/threads`), permissionKey: 'threads' },
+  ], [pathname, base]);
+
+  const navItems = useMemo(() => {
+    if (!permissions) return allNavItems;
+    return allNavItems.filter(item => {
+        if (!item.permissionKey) return true;
+        return permissions[item.permissionKey] !== false;
+    });
+  }, [allNavItems, permissions]);
 
   return (
     <div className="h-screen overflow-hidden flex bg-[var(--background-dark)] text-[var(--text-primary)] font-sans transition-colors duration-300">
       <ModernSidebar
         navItems={navItems}
-        userName={userProfile.name}
+        userName={user?.name || 'Blogger User'}
         userRole="Blogger"
-        userImage={getImageUrl(userProfile.profile_image)}
+        userImage={getImageUrl(user?.profile_image)}
         profileLink="/blogger/profile"
         changePasswordLink="/blogger/change-password"
         onLogout={handleLogout}
@@ -96,7 +106,7 @@ export function BloggerLayout() {
       <div className="flex-1 flex flex-col min-w-0 h-full bg-[var(--background-dark)] relative">
         {/* Desktop Header / Mobile Header Wrapper used to be here, but ModernSidebar handles mobile toggle. 
             We need a header for the page title and notifications. */}
-        <header className="h-16 lg:h-20 px-6 lg:px-8 flex items-center justify-between bg-[var(--background-dark)]/80 backdrop-blur-xl border-b border-[var(--border)] sticky top-0 z-30 transition-all duration-200">
+        <header className="h-16 lg:h-20 px-6 lg:px-8 flex items-center justify-between bg-white/70 backdrop-blur-md border-b border-[var(--color-border)] sticky top-0 z-30 transition-all duration-200">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileOpen(true)}

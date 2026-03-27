@@ -7,41 +7,75 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'Plus Jakarta Sans', '-apple-system', 'sans-serif'],
+        heading: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        muted: "hsl(var(--muted))",
-        "muted-foreground": "hsl(var(--muted-foreground))",
-        popover: "hsl(var(--popover))",
-        "popover-foreground": "hsl(var(--popover-foreground))",
-        card: "hsl(var(--card))",
-        "card-foreground": "hsl(var(--card-foreground))",
-        primary: "hsl(var(--primary))",
-        "primary-foreground": "hsl(var(--primary-foreground))",
-        secondary: "hsl(var(--secondary))",
-        "secondary-foreground": "hsl(var(--secondary-foreground))",
-        accent: "hsl(var(--accent))",
-        "accent-foreground": "hsl(var(--accent-foreground))",
-        destructive: "hsl(var(--destructive))",
-        "destructive-foreground": "hsl(var(--destructive-foreground))",
-        success: "#10b981",
-        warning: "#f59e0b",
-        error: "#ef4444",
-        surface: "hsl(var(--card))",
-        "text-primary": "hsl(var(--foreground))",
-        "text-secondary": "hsl(var(--muted-foreground))",
+        // Surfaces
+        background: "var(--background-app)",
+        surface: "var(--surface)",
+        "surface-warm": "var(--surface-warm)",
+        "surface-muted": "var(--surface-muted)",
+        border: "var(--color-border)",
+        "border-strong": "var(--color-border-strong)",
+        
+        // Text
+        "text-primary": "var(--text-main)",
+        "text-secondary": "var(--text-body)",
+        "text-muted": "var(--text-muted)",
+        "text-subtle": "var(--text-subtle)",
+
+        // Accents
+        primary: "var(--color-primary)",
+        "primary-hover": "var(--color-primary-hover)",
+        "primary-light": "var(--color-primary-light)",
+        "primary-deep": "var(--color-primary-deep)",
+        
+        // Status
+        success: "var(--color-success)",
+        warning: "var(--color-warning)",
+        error: "var(--color-error)",
+        info: "var(--color-info)",
+        
+        // Shadcn UI mappings
+        input: "var(--color-border)",
+        ring: "var(--color-primary-glow)",
+        foreground: "var(--text-main)",
+        muted: "var(--surface-muted)",
+        "muted-foreground": "var(--text-muted)",
+        popover: "var(--surface)",
+        "popover-foreground": "var(--text-main)",
+        card: "var(--surface)",
+        "card-foreground": "var(--text-main)",
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+        'gradient-page-top': 'linear-gradient(180deg, #FFF7F2 0%, #F8F9FC 100%)',
+        'gradient-table-header': 'linear-gradient(180deg, #FAFBFE 0%, #F1F5F9 100%)',
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius-card)",
+        md: "var(--radius-btn)",
+        sm: "var(--radius-badge)",
+      },
+      boxShadow: {
+        'xs': 'var(--shadow-xs)',
+        'card': 'var(--shadow-sm)',
+        'card-hover': 'var(--shadow-xl)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
+        'xl': 'var(--shadow-xl)',
+        'glow': 'var(--shadow-glow)',
+      },
+      transitionTimingFunction: {
+        'premium': 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
       animation: {
-        "fade-in": "fadeIn 0.5s ease-in-out",
+        "fade-in": "fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
         "pulse-slow": "pulse-slow 3s ease-in-out infinite",
+        "sweep": "sweep 2s ease-in-out infinite",
+        "marquee": "marquee 25s linear infinite",
       },
       keyframes: {
         fadeIn: {
@@ -55,6 +89,14 @@ module.exports = {
           '50%': {
             transform: 'translateX(100%)',
           },
+        },
+        sweep: {
+          '0%': { transform: 'translateX(-100%) skewX(-20deg)' },
+          '100%': { transform: 'translateX(200%) skewX(-20deg)' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-100%)' },
         },
       },
     },

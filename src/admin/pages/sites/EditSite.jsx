@@ -81,26 +81,23 @@ export function EditSite() {
                         category: data.niche || '',
                         website_niche: data.website_niche || '',
                         traffic_source: data.country_source || '',
-                        spam_score: data.spam_score || '',
+                        spam_score: data.spam_score ?? '',
                         sample_url: data.sample_url || '',
                         website_status: data.website_status || '',
                         href_url: data.href_url || '',
 
-                        // New fields might ideally exist in DB or mapped
-                        // The user image shows "Marked sponsor". 
-                        // I'll check if these columns exist in DB later or assume they are generic for now.
                         marked_sponsor: data.marked_sponsor || '',
                         grey_niche_types: data.grey_niche_types || '',
 
-                        da: data.da || '',
-                        dr: data.dr || '',
-                        traffic: data.traffic || '',
-                        gp_price: data.gp_price || '',
-                        rd: data.rd || '',
-                        niche_edit_price: data.niche_edit_price || '',
+                        da: data.da ?? '',
+                        dr: data.dr ?? '',
+                        traffic: data.traffic ?? '',
+                        gp_price: data.gp_price ?? '',
+                        rd: data.rd ?? '',
+                        niche_edit_price: data.niche_edit_price ?? '',
                         deal_cbd_casino: data.deal_cbd_casino || '',
-                        fc_gp: data.fc_gp || '',
-                        fc_ne: data.fc_ne || '',
+                        fc_gp: data.fc_gp ?? '',
+                        fc_ne: data.fc_ne ?? '',
 
                         paypal_id: data.paypal_id || '',
                         whatsapp: data.whatsapp || '',
@@ -232,17 +229,19 @@ export function EditSite() {
                     </div>
                 </Section>
 
-                {/* Submit Button */}
-                <div className="pt-4">
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="px-6 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--primary-orange)', color: 'white' }}
-                    >
-                        {saving && <Loader2 className="animate-spin h-4 w-4" />}
-                        Submit
-                    </button>
+                {/* Submit Button - Sticky at bottom */}
+                <div className="sticky bottom-0 pt-4 pb-2 bg-[var(--background-app)] border-t border-[var(--border)] mt-6 -mx-6 px-6 md:-mx-8 md:px-8 z-10">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-[var(--text-muted)]">Save all changes to this site</p>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="premium-btn premium-btn-primary px-8 py-3 text-base font-bold disabled:opacity-50"
+                        >
+                            {saving && <Loader2 className="animate-spin h-4 w-4" />}
+                            {saving ? 'Saving...' : '✓ Submit Changes'}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

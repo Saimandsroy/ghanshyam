@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Globe, Eye, X, ExternalLink, Search, Filter, Database, Check } from 'lucide-react';
+import { RefreshCw, Globe, Eye, X, ExternalLink, Search, Filter, Database, Check, Download } from 'lucide-react';
 import { teamAPI } from '../../lib/api';
 import { Pagination } from '../../components/Pagination';
+import ExportModal from '../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../utils/exportUtils';
 
 export function NewSites() {
   const [websites, setWebsites] = useState([]);
@@ -14,6 +16,8 @@ export function NewSites() {
   const [pageSize, setPageSize] = useState(50);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Fetch websites from API
   const fetchWebsites = useCallback(async () => {
@@ -53,6 +57,44 @@ export function NewSites() {
   // Calculate showing range
   const showingFrom = (page - 1) * pageSize + 1;
   const showingTo = Math.min(page * pageSize, pagination.total);
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedRows(new Set(rows.map(r => r.id)));
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    const newSet = new Set(selectedRows);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedRows(newSet);
+  };
+
+  const handleExport = ({ filename, format }) => {
+    const dataToExport = rows
+        .filter(r => selectedRows.has(r.id))
+        .map(site => ({
+            'Root Domain': site.root_domain || site.domain_url || '',
+            'Category': site.category || 'General',
+            'DA': site.da || 0,
+            'DR': site.dr || 0,
+            'Traffic': site.traffic || 0,
+            'GP Price': site.gp_price || 0,
+            'Niche Price': site.niche_edit_price || site.niche_price || 0,
+            'Status': site.website_status || (site.site_status === '1' || site.site_status === 1 ? 'Active' : 'Inactive'),
+            'Email': site.email || '',
+            'Date Added': site.created_at ? new Date(site.created_at).toLocaleDateString() : ''
+        }));
+
+    if (format === 'csv') {
+        exportToCSV(dataToExport, filename || 'teams_new_sites');
+    } else {
+        exportToExcel(dataToExport, filename || 'teams_new_sites', format === 'xlsx');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -131,6 +173,16 @@ export function NewSites() {
               Reset
             </button>
           )}
+
+          {selectedRows.size > 0 && (
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="premium-btn bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)] border border-[var(--primary-cyan)]/30 hover:bg-[var(--primary-cyan)]/20 px-4 ml-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export ({selectedRows.size})
+            </button>
+          )}
         </div>
       </div>
 
@@ -146,6 +198,14 @@ export function NewSites() {
         <table className="premium-table">
           <thead>
             <tr>
+              <th className="w-12 text-center p-4">
+                <input 
+                    type="checkbox" 
+                    className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                    checked={rows.length > 0 && selectedRows.size === rows.length}
+                    onChange={handleSelectAll}
+                />
+              </th>
               <th className="w-[250px]">Root Domain</th>
               <th className="text-center">Added on</th>
               <th className="text-center">DR</th>
@@ -161,7 +221,7 @@ export function NewSites() {
           <tbody>
             {loading && websites.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-[var(--text-muted)]">
+                <td colSpan={11} className="px-6 py-12 text-center text-[var(--text-muted)]">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <RefreshCw className="h-6 w-6 animate-spin text-[var(--primary-cyan)]" />
                     <span>Loading websites...</span>
@@ -170,7 +230,7 @@ export function NewSites() {
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-[var(--text-muted)]">
+                <td colSpan={11} className="px-6 py-12 text-center text-[var(--text-muted)]">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <Database className="h-8 w-8 text-[var(--text-muted)] opacity-50" />
                     <span>No websites found matching your filters</span>
@@ -180,6 +240,14 @@ export function NewSites() {
             ) : (
               rows.map((site) => (
                 <tr key={site.id}>
+                  <td className="text-center p-4">
+                     <input 
+                        type="checkbox" 
+                        className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                        checked={selectedRows.has(site.id)}
+                        onChange={() => handleSelectRow(site.id)}
+                    />
+                  </td>
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded bg-[var(--background-dark)] border border-[var(--border)] flex items-center justify-center overflow-hidden">
@@ -368,6 +436,14 @@ export function NewSites() {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          onExport={handleExport}
+          selectedCount={selectedRows.size}
+      />
     </div>
   );
 }

@@ -63,61 +63,47 @@ export function CreateCareer() {
     };
 
     return (
-        <div style={{ padding: '24px' }}>
+        <div className="p-6">
             {/* Breadcrumb */}
-            <div style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--text-muted, #888)' }}>
-                <Link to="/admin/more/careers" style={{ color: 'var(--text-muted, #888)', textDecoration: 'none' }}>Careers</Link>
+            <div className="mb-2 text-sm text-[var(--text-muted)]">
+                <Link to="/admin/more/careers" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Careers</Link>
                 {' > '} Create
             </div>
 
             {/* Header */}
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary, #fff)', margin: '0 0 24px 0' }}>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-6">
                 Create Career
             </h1>
 
             {/* Form Card */}
-            <div style={{
-                backgroundColor: 'var(--card-background, #1a1a2e)',
-                border: '1px solid var(--border, #2a2a4a)',
-                borderRadius: '12px', padding: '24px'
-            }}>
-                <h3 style={{ margin: '0 0 24px 0', color: 'var(--text-primary, #fff)', fontSize: '16px', fontWeight: '500' }}>
+            <div className="bg-[var(--card-background)] border border-[var(--border)] rounded-xl p-6">
+                <h3 className="mb-6 text-[var(--text-primary)] text-base font-medium">
                     Add New Career Post
                 </h3>
 
                 {/* Form Fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                            Title<span style={{ color: '#ef4444' }}>*</span>
+                        <label className="block mb-2 text-[var(--text-primary)] text-sm">
+                            Title<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text" name="title" value={form.title} onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '12px', borderRadius: '6px',
-                                backgroundColor: 'var(--background, #0f0f1a)',
-                                border: '1px solid var(--border, #2a2a4a)',
-                                color: 'var(--text-primary, #fff)', fontSize: '14px'
-                            }}
+                            className="w-full p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                            Experience<span style={{ color: '#ef4444' }}>*</span>
+                        <label className="block mb-2 text-[var(--text-primary)] text-sm">
+                            Experience<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text" name="experience" value={form.experience} onChange={handleChange}
-                            style={{
-                                width: '100%', padding: '12px', borderRadius: '6px',
-                                backgroundColor: 'var(--background, #0f0f1a)',
-                                border: '1px solid var(--border, #2a2a4a)',
-                                color: 'var(--text-primary, #fff)', fontSize: '14px'
-                            }}
+                            className="w-full p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
                         />
                     </div>
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
+                <div className="mb-5">
                     <RichTextEditor
                         label="Qualification"
                         value={form.qualification}
@@ -127,7 +113,7 @@ export function CreateCareer() {
                     />
                 </div>
 
-                <div style={{ marginBottom: '24px' }}>
+                <div className="mb-6">
                     <RichTextEditor
                         label="Skills"
                         value={form.skills}
@@ -138,58 +124,37 @@ export function CreateCareer() {
                 </div>
 
                 {/* Active Toggle */}
-                <div style={{ marginBottom: '32px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                        <div style={{
-                            width: '44px', height: '24px', borderRadius: '12px',
-                            backgroundColor: form.is_active ? '#f59e0b' : '#444',
-                            position: 'relative', transition: 'background-color 0.2s'
-                        }}>
-                            <div style={{
-                                width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#fff',
-                                position: 'absolute', top: '2px',
-                                left: form.is_active ? '22px' : '2px',
-                                transition: 'left 0.2s'
-                            }} />
+                <div className="mb-8">
+                    <label className="flex items-center gap-3 cursor-pointer w-max">
+                        <div className={`relative w-11 h-6 rounded-full transition-colors ${form.is_active ? 'bg-amber-500' : 'bg-gray-600'}`}>
+                            <div className={`absolute top-[2px] w-5 h-5 rounded-full bg-white transition-all ${form.is_active ? 'left-[22px]' : 'left-[2px]'}`} />
                         </div>
-                        <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} style={{ display: 'none' }} />
-                        <span style={{ color: 'var(--text-primary, #fff)', fontSize: '14px' }}>
-                            Active<span style={{ color: '#ef4444' }}>*</span>
+                        <input type="checkbox" name="is_active" checked={form.is_active} onChange={handleChange} className="hidden" />
+                        <span className="text-[var(--text-primary)] text-sm">
+                            Active<span className="text-red-500">*</span>
                         </span>
                     </label>
                 </div>
 
                 {/* Buttons */}
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="flex gap-3">
                     <button
                         onClick={() => handleSubmit(false)}
                         disabled={loading}
-                        style={{
-                            padding: '10px 20px', backgroundColor: '#3b82f6',
-                            color: '#fff', border: 'none', borderRadius: '6px',
-                            fontWeight: '500', cursor: 'pointer', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 disabled:opacity-50 transition-colors"
                     >
                         Create
                     </button>
                     <button
                         onClick={() => handleSubmit(true)}
                         disabled={loading}
-                        style={{
-                            padding: '10px 20px', backgroundColor: 'var(--background, #0f0f1a)',
-                            color: 'var(--text-primary, #fff)', border: '1px solid var(--border, #2a2a4a)',
-                            borderRadius: '6px', fontWeight: '500', cursor: 'pointer', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg font-medium text-sm hover:bg-white/5 disabled:opacity-50 transition-colors"
                     >
                         Create & create another
                     </button>
                     <Link
                         to="/admin/more/careers"
-                        style={{
-                            padding: '10px 20px', backgroundColor: 'var(--background, #0f0f1a)',
-                            color: 'var(--text-primary, #fff)', border: '1px solid var(--border, #2a2a4a)',
-                            borderRadius: '6px', fontWeight: '500', textDecoration: 'none', fontSize: '14px'
-                        }}
+                        className="px-5 py-2.5 bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] rounded-lg font-medium text-sm hover:bg-white/5 transition-colors block text-center"
                     >
                         Cancel
                     </Link>

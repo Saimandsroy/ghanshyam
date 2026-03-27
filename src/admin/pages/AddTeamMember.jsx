@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users2, ChevronRight, X, UserPlus } from 'lucide-react';
 import { adminAPI } from '../../lib/api';
 
-const CREATE_ROLES = ['Manager', 'Writer', 'Blogger', 'Team'];
+const CREATE_ROLES = ['Manager', 'Writer', 'Blogger', 'Team', 'Accountant'];
 
 export function AddTeamMember() {
     const navigate = useNavigate();

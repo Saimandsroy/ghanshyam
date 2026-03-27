@@ -212,7 +212,7 @@ export function RejectedOrderDetails() {
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="premium-badge bg-red-500/10 text-red-400 border-red-500/20">
-                            Order #{task.id}
+                            Order #{task.manual_order_id || task.id}
                         </span>
                         <span className="text-[var(--text-muted)] text-sm">•</span>
                         <span className="text-[var(--text-secondary)] text-sm">{task.client_name || 'Client'}</span>
@@ -379,7 +379,7 @@ export function RejectedOrderDetails() {
                                                                     value={site.replace_with}
                                                                     onChange={(e) => handleContentChange(index, 'replace_with', e.target.value)}
                                                                     placeholder="Exact text to find and replace..."
-                                                                    rows={3}
+                                                                    rows={4}
                                                                     className={`premium-input font-mono text-sm ${isRejected ? 'border-red-500/50 focus:border-red-500' : ''}`}
                                                                 />
                                                             </div>
@@ -414,7 +414,7 @@ export function RejectedOrderDetails() {
                                                                     value={site.insert_after}
                                                                     onChange={(e) => handleContentChange(index, 'insert_after', e.target.value)}
                                                                     placeholder="Text segment to insert after..."
-                                                                    rows={3}
+                                                                    rows={4}
                                                                     className={`premium-input font-mono text-sm ${isRejected ? 'border-red-500/50 focus:border-red-500' : ''}`}
                                                                 />
                                                             </div>

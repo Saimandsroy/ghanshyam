@@ -147,7 +147,7 @@ export function RejectedNotifications() {
               {/* Action button - navigate to task to revise and resubmit */}
               <div className="flex justify-end">
                 <button
-                  onClick={() => navigate(`/writer/rejected/${task.id}`)}
+                  onClick={() => navigate(`/writer/order-added-notifications/detail/${task.id}`)}
                   className="premium-btn premium-btn-primary flex items-center gap-2"
                 >
                   <Edit className="h-4 w-4" />

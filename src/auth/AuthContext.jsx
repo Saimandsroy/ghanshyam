@@ -49,6 +49,13 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const impersonateLogin = (data) => {
+    setToken(data.token);
+    setUser(data.user);
+    setRole(data.user.role);
+    return { success: true, role: data.user.role };
+  };
+
   const logout = () => {
     setToken('');
     setUser(null);
@@ -73,6 +80,18 @@ export function AuthProvider({ children }) {
     validateToken();
   }, []);
 
+  const refreshUser = async () => {
+    try {
+      const data = await authAPI.getCurrentUser();
+      if (data?.user) {
+        setUser(data.user);
+        setRole(data.user.role);
+      }
+    } catch (err) {
+      console.warn('refreshUser failed:', err);
+    }
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -80,7 +99,9 @@ export function AuthProvider({ children }) {
       token,
       isAuthenticated: Boolean(token && user),
       login,
+      impersonateLogin,
       logout,
+      refreshUser,
       loading,
       error
     }),

@@ -15,4 +15,16 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['lucide-react', 'framer-motion', 'embla-carousel-react', 'chart.js', 'react-chartjs-2'],
+          utils: ['axios', 'clsx', 'tailwind-merge', 'socket.io-client']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  }
 })

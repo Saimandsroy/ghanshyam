@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Globe, Eye, X, ExternalLink, Search, SlidersHorizontal, ChevronDown, Settings, Check } from 'lucide-react';
+import { RefreshCw, Globe, Eye, X, ExternalLink, Search, SlidersHorizontal, ChevronDown, Settings, Check, Download } from 'lucide-react';
 import { managerAPI } from '../../lib/api';
 import { Layout } from '../components/layout/Layout';
+import ExportModal from '../../components/ExportModal';
+import { exportToCSV, exportToExcel } from '../../utils/exportUtils';
 
 export function Sites() {
   const [websites, setWebsites] = useState([]);
@@ -20,6 +22,8 @@ export function Sites() {
   const [pageSize, setPageSize] = useState(50);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Column Visibility State (Persisted)
   const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -113,6 +117,58 @@ export function Sites() {
     setPage(1);
   };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedRows(new Set(websites.map(w => w.id)));
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    const newSet = new Set(selectedRows);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedRows(newSet);
+  };
+
+  const handleExport = ({ filename, format }) => {
+    const dataToExport = websites
+        .filter(w => selectedRows.has(w.id))
+        .map(site => ({
+            'Root Domain': site.root_domain || '',
+            'Category': site.category || '',
+            'Niche': site.website_niche || '',
+            'DA': site.da || 0,
+            'DR': site.dr || 0,
+            'Traffic': site.traffic || 0,
+            'RD': site.rd || 0,
+            'Spam Score': site.spam_score || 0,
+            'GP Price': site.gp_price || 0,
+            'Niche Edit Price': site.niche_edit_price || 0,
+            'FC GP': site.fc_gp || '',
+            'FC NE': site.fc_ne || '',
+            'Status': site.site_status === '1' ? 'Approved' : site.site_status === '2' ? 'Rejected' : 'Pending',
+            'Email': site.email || '',
+            'Date Added': site.created_at ? new Date(site.created_at).toLocaleDateString() : ''
+        }));
+
+    if (format === 'csv') {
+        exportToCSV(dataToExport, filename || 'manager_sites');
+    } else {
+        exportToExcel(dataToExport, filename || 'manager_sites', format === 'xlsx');
+    }
+  };
+
+  // Check if a site is "NEW" (added within the last 30 days)
+  const isSiteNew = (createdAt) => {
+    if (!createdAt) return false;
+    const addedDate = new Date(createdAt);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return addedDate >= thirtyDaysAgo;
+  };
+
   // Calculate showing range
   const showingFrom = (page - 1) * pageSize + 1;
   const showingTo = Math.min(page * pageSize, pagination.total);
@@ -188,6 +244,17 @@ export function Sites() {
                 )}
               </div>
 
+              {selectedRows.size > 0 && (
+                <button
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="premium-btn px-3 py-2 flex items-center gap-2 text-[var(--primary-cyan)]"
+                  style={{ border: '1px solid var(--primary-cyan)', backgroundColor: 'rgba(107, 240, 255, 0.1)' }}
+                >
+                  <Download className="h-5 w-5" />
+                  <span className="hidden sm:inline">Export ({selectedRows.size})</span>
+                </button>
+              )}
+
               <button
                 onClick={fetchWebsites}
                 disabled={loading}
@@ -204,83 +271,93 @@ export function Sites() {
         <div className="flex flex-1 overflow-hidden px-6 pb-6 gap-6">
 
           {/* Sidebar Filters */}
-          <aside className="w-72 flex-shrink-0 bg-[var(--card-background)] border border-[var(--border)] rounded-xl overflow-y-auto custom-scrollbar p-4 hidden lg:block">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center gap-2 text-[var(--text-primary)]">
-                  <SlidersHorizontal className="h-4 w-4" /> Filters
-                </h3>
-                <button onClick={resetFilters} className="text-xs hover:underline text-[var(--primary-cyan)]">Reset All</button>
+          <aside className="group w-16 hover:w-72 transition-all duration-300 ease-in-out flex-shrink-0 bg-[var(--card-background)] border border-[var(--border)] rounded-xl overflow-hidden hidden lg:flex flex-col z-30 ring-1 ring-black/5 hover:ring-[var(--primary-cyan)]/30 hover:shadow-xl hover:shadow-[var(--primary-cyan)]/5">
+            {/* Collapsed View Header (Always Visible) */}
+            <div className="h-16 flex items-center justify-center border-b border-[var(--border)] shrink-0 group-hover:justify-start group-hover:px-6 transition-all duration-300 w-72">
+              <SlidersHorizontal className="h-5 w-5 text-[var(--primary-cyan)] shrink-0" />
+              <h3 className="font-semibold flex items-center gap-2 text-[var(--text-primary)] ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 truncate">
+                Filters
+              </h3>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 w-72 custom-scrollbar">
+              <div className="space-y-6">
+                <div className="flex justify-end">
+                  <button onClick={resetFilters} className="text-xs hover:underline text-[var(--primary-cyan)]">Reset All</button>
+                </div>
+
+                {/* Status Group */}
+                <FilterSection title="Status">
+                  <select value={filters.website_status} onChange={(e) => updateFilter(null, 'website_status', e.target.value)} className="w-full premium-input text-sm px-3 py-2">
+                    <option value="">All Statuses</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </FilterSection>
+
+                {/* Category Group */}
+                <FilterSection title="Category / Niche">
+                  <input
+                    placeholder="e.g. Technology"
+                    value={filters.category}
+                    onChange={(e) => updateFilter(null, 'category', e.target.value)}
+                    className="w-full premium-input text-sm px-3 py-2 mb-2"
+                  />
+                  <input
+                    placeholder="Sub-niche"
+                    value={filters.website_niche}
+                    onChange={(e) => updateFilter(null, 'website_niche', e.target.value)}
+                    className="w-full premium-input text-sm px-3 py-2"
+                  />
+                </FilterSection>
+
+                {/* Contact Group (Added to match Admin) */}
+                <FilterSection title="Contact">
+                  <input
+                    placeholder="Search by email"
+                    value={filters.email}
+                    onChange={(e) => updateFilter(null, 'email', e.target.value)}
+                    className="w-full premium-input text-sm px-3 py-2"
+                  />
+                </FilterSection>
+
+                <FilterSection title="Metrics">
+                  <div className="space-y-4">
+                    <RangeInput label="DA (Domain Authority)" state={filters.da} onChange={(k, v) => updateFilter('da', k, v)} />
+                    <RangeInput label="DR (Domain Rating)" state={filters.dr} onChange={(k, v) => updateFilter('dr', k, v)} />
+                    <RangeInput label="Traffic" state={filters.traffic} onChange={(k, v) => updateFilter('traffic', k, v)} />
+                  </div>
+                </FilterSection>
+
+                <FilterSection title="Budget (USD)">
+                  <div className="space-y-4">
+                    <RangeInput label="GP Price" state={filters.gp_price} onChange={(k, v) => updateFilter('gp_price', k, v)} />
+                    <RangeInput label="Niche Edit Price" state={filters.niche_edit_price} onChange={(k, v) => updateFilter('niche_edit_price', k, v)} />
+                  </div>
+                </FilterSection>
+
+                <FilterSection title="Attributes">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--text-secondary)]">FC GP Comp.</span>
+                      <select value={filters.fc_gp} onChange={(e) => updateFilter(null, 'fc_gp', e.target.value)} className="bg-[var(--background-dark)] border border-[var(--border)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--primary-cyan)]">
+                        <option value="">Any</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--text-secondary)]">FC NE Comp.</span>
+                      <select value={filters.fc_ne} onChange={(e) => updateFilter(null, 'fc_ne', e.target.value)} className="bg-[var(--background-dark)] border border-[var(--border)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--primary-cyan)]">
+                        <option value="">Any</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  </div>
+                </FilterSection>
               </div>
-
-              {/* Status Group */}
-              <FilterSection title="Status">
-                <select value={filters.website_status} onChange={(e) => updateFilter(null, 'website_status', e.target.value)} className="w-full premium-input text-sm px-3 py-2">
-                  <option value="">All Statuses</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-              </FilterSection>
-
-              <FilterSection title="Category / Niche">
-                <input
-                  placeholder="e.g. Technology"
-                  value={filters.category}
-                  onChange={(e) => updateFilter(null, 'category', e.target.value)}
-                  className="w-full premium-input text-sm px-3 py-2 mb-2"
-                />
-                <input
-                  placeholder="Sub-niche"
-                  value={filters.website_niche}
-                  onChange={(e) => updateFilter(null, 'website_niche', e.target.value)}
-                  className="w-full premium-input text-sm px-3 py-2"
-                />
-              </FilterSection>
-
-              <FilterSection title="Metrics">
-                <div className="space-y-4">
-                  <RangeInput label="DA (Domain Authority)" state={filters.da} onChange={(k, v) => updateFilter('da', k, v)} />
-                  <RangeInput label="DR (Domain Rating)" state={filters.dr} onChange={(k, v) => updateFilter('dr', k, v)} />
-                  <RangeInput label="Traffic" state={filters.traffic} onChange={(k, v) => updateFilter('traffic', k, v)} />
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Budget (USD)">
-                <div className="space-y-4">
-                  <RangeInput label="GP Price" state={filters.gp_price} onChange={(k, v) => updateFilter('gp_price', k, v)} />
-                  <RangeInput label="Niche Edit Price" state={filters.niche_edit_price} onChange={(k, v) => updateFilter('niche_edit_price', k, v)} />
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Attributes">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[var(--text-secondary)]">FC GP Comp.</span>
-                    <select value={filters.fc_gp} onChange={(e) => updateFilter(null, 'fc_gp', e.target.value)} className="bg-[var(--background-dark)] border border-[var(--border)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--primary-cyan)]">
-                      <option value="">Any</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[var(--text-secondary)]">FC NE Comp.</span>
-                    <select value={filters.fc_ne} onChange={(e) => updateFilter(null, 'fc_ne', e.target.value)} className="bg-[var(--background-dark)] border border-[var(--border)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--primary-cyan)]">
-                      <option value="">Any</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[var(--text-secondary)]">New Arrival</span>
-                    <select value={filters.new_arrival} onChange={(e) => updateFilter(null, 'new_arrival', e.target.value)} className="bg-[var(--background-dark)] border border-[var(--border)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--primary-cyan)]">
-                      <option value="">Any</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </select>
-                  </div>
-                </div>
-              </FilterSection>
             </div>
           </aside>
 
@@ -320,6 +397,14 @@ export function Sites() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-[var(--background-dark)] sticky top-0 z-10 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                     <tr>
+                      <th className="p-4 w-12 text-center">
+                        <input 
+                            type="checkbox" 
+                            className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                            checked={websites.length > 0 && selectedRows.size === websites.length}
+                            onChange={handleSelectAll}
+                        />
+                      </th>
                       {visibleColumns.root_domain && <th className="p-4">Root Domain</th>}
                       {visibleColumns.added_on && <th className="p-4 text-center">Added</th>}
                       {visibleColumns.metrics && <th className="p-4 text-center">Metrics</th>}
@@ -334,7 +419,7 @@ export function Sites() {
                   <tbody className="divide-y divide-[var(--border)]">
                     {websites.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="p-12 text-center text-[var(--text-muted)]">
+                        <td colSpan={11} className="p-12 text-center text-[var(--text-muted)]">
                           <div className="text-4xl mb-4">🔍</div>
                           <p className="text-lg font-medium text-[var(--text-primary)]">No websites found</p>
                           <p className="text-sm text-[var(--text-secondary)]">Try adjusting your filters</p>
@@ -344,6 +429,16 @@ export function Sites() {
                     ) : (
                       websites.map((site) => (
                         <tr key={site.id} className="hover:bg-white/5 transition-colors group">
+                          
+                          {/* CHECKBOX */}
+                          <td className="p-4 text-center">
+                             <input 
+                                type="checkbox" 
+                                className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
+                                checked={selectedRows.has(site.id)}
+                                onChange={() => handleSelectRow(site.id)}
+                            />
+                          </td>
 
                           {/* ROOT DOMAIN */}
                           {visibleColumns.root_domain && (
@@ -355,7 +450,7 @@ export function Sites() {
                                 <div>
                                   <div className="font-medium text-[var(--text-primary)] flex items-center gap-2">
                                     {site.root_domain}
-                                    {site.new_arrival && <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-orange-500 text-white uppercase tracking-wider">NEW</span>}
+                                    {isSiteNew(site.created_at) && <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-orange-500 text-white uppercase tracking-wider">NEW</span>}
                                   </div>
                                   <div className="text-xs text-[var(--text-secondary)]">{site.category || 'General'}</div>
                                 </div>
@@ -424,9 +519,9 @@ export function Sites() {
                           {/* STATUS */}
                           {visibleColumns.status && (
                             <td className="p-4 text-center">
-                              <span className="premium-badge bg-green-500/10 text-green-400 border-green-500/20 uppercase text-[10px] px-2 py-0.5">
-                                Active
-                              </span>
+                                <div className={`flex flex-col items-center justify-center p-1 rounded w-8 h-8 mx-auto border font-bold text-sm ${site.site_status === '1' ? 'bg-green-500/10 text-green-400 border-green-500/20' : site.site_status === '2' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
+                                    {site.site_status === '1' ? 'A' : site.site_status === '2' ? 'R' : 'P'}
+                                </div>
                             </td>
                           )}
 
@@ -525,6 +620,14 @@ export function Sites() {
             </div>
           </div>
         )}
+
+        {/* Export Modal */}
+        <ExportModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+            onExport={handleExport}
+            selectedCount={selectedRows.size}
+        />
       </div>
     </Layout>
   );

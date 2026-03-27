@@ -158,6 +158,14 @@ export const authAPI = {
     const response = await api.put('/auth/change-password', data);
     return response.data;
   },
+
+  /**
+   * Get dynamic UI permissions
+   */
+  getMyPermissions: async () => {
+    const response = await api.get('/auth/permissions');
+    return response.data;
+  },
 };
 
 // ==================== Admin APIs ====================
@@ -197,6 +205,11 @@ export const adminAPI = {
     return response.data;
   },
 
+  impersonateUser: async (userId) => {
+    const response = await api.post(`/admin/users/${userId}/impersonate`);
+    return response.data;
+  },
+
   // Websites
   getWebsites: async () => {
     const response = await api.get('/admin/websites');
@@ -213,8 +226,18 @@ export const adminAPI = {
     return response.data;
   },
 
+  getDeletedWebsitesList: async (params = {}) => {
+    const response = await api.get('/admin/sites/deleted-list', { params });
+    return response.data;
+  },
+
   deleteWebsite: async (websiteId) => {
-    const response = await api.delete(`/admin/websites/${websiteId}`);
+    const response = await api.put(`/admin/sites/${websiteId}/delete`);
+    return response.data;
+  },
+
+  restoreWebsite: async (websiteId) => {
+    const response = await api.put(`/admin/sites/${websiteId}/restore`);
     return response.data;
   },
 
@@ -488,6 +511,7 @@ export const managerAPI = {
     return response.data;
   },
 
+
   // Withdrawals
   getWithdrawals: async () => {
     const response = await api.get('/manager/withdrawals');
@@ -520,10 +544,12 @@ export const managerAPI = {
     return response.data;
   },
 
-  getPendingFromBloggers: async () => {
-    const response = await api.get('/manager/pending-from-bloggers');
+  deleteOrder: async (orderId) => {
+    const response = await api.delete(`/manager/orders/${orderId}`);
     return response.data;
   },
+
+
 
   getPendingFromTeams: async () => {
     const response = await api.get('/manager/pending-from-teams');
@@ -556,6 +582,11 @@ export const managerAPI = {
 
   getRejectedOrders: async (page = 1, limit = 20) => {
     const response = await api.get('/manager/rejected-orders', { params: { page, limit } });
+    return response.data;
+  },
+
+  getRejectedWriterOrders: async (page = 1, limit = 20) => {
+    const response = await api.get('/manager/rejected-orders/writers', { params: { page, limit } });
     return response.data;
   },
 
@@ -797,6 +828,13 @@ export const writerAPI = {
     const response = await api.get(`/writer/completed-orders/${id}`);
     return response.data;
   },
+
+  rejectTask: async (taskId, reason) => {
+    const response = await api.post(`/writer/tasks/${taskId}/reject`, {
+      reject_reason: reason,
+    });
+    return response.data;
+  },
 };
 
 // ==================== Blogger APIs ====================
@@ -826,6 +864,12 @@ export const bloggerAPI = {
     const response = await api.post(`/blogger/tasks/${taskId}/reject`, {
       rejection_reason: reason,
     });
+    return response.data;
+  },
+
+  // Live Link Checker - verify submitted URL contains backlink & anchor
+  checkLinkStatus: async (data) => {
+    const response = await api.post('/blogger/check-link', data);
     return response.data;
   },
 

@@ -1,11 +1,31 @@
+Forced re-optimization of dependencies
 
-> frontend@1.0.0 dev
-> vite
-
-
-  VITE v5.4.21  ready in 92 ms
+  VITE v5.4.21  ready in 122 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://10.151.17.43:5173/
-  ➜  press h + enter to show help
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Error:   Failed to scan for dependencies from entries:
+  /Users/saimandsroy/Coding/LM/ghanshyam/index.html
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "src/admin/pages/sites/DeletedSites.jsx" for import "DeletedSites"[0m
+
+    src/App.jsx:26:9:
+[37m      26 │ import { [32mDeletedSites[37m } from './admin/pages/sites/DeletedSites.jsx';
+         ╵          [32m~~~~~~~~~~~~[0m
+
+
+    at failureErrorWithLog (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:1472:15)
+    at /Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:945:25
+    at runOnEndCallbacks (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:1315:45)
+    at buildResponseToResult (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:943:7)
+    at /Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:955:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:954:54)
+    at handleRequest (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:647:17)
+    at handleIncomingPacket (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:672:7)
+    at Socket.readFromStdout (/Users/saimandsroy/Coding/LM/ghanshyam/node_modules/esbuild/lib/main.js:600:7)
+5:46:41 PM [vite] hmr update /src/admin/pages/sites/DeletedSites.jsx, /src/index.css, /src/manager/index.css
+5:52:10 PM [vite] hmr update /src/admin/pages/sites/DeletedSites.jsx, /src/index.css, /src/manager/index.css
+5:52:40 PM [vite] hmr update /src/admin/pages/sites/DeletedSites.jsx, /src/index.css, /src/manager/index.css
+5:52:42 PM [vite] hmr update /src/admin/pages/sites/SitesList.jsx, /src/index.css, /src/manager/index.css

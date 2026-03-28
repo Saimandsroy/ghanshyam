@@ -102,16 +102,15 @@ const [checkingLink, setCheckingLink] = useState(false);
             // Update the check result display
             setLinkCheckResult(checkResult);
 
-            // Step 2: Block submission if link is not live
+            // Step 2: Warn if link is not live, but allow submission anyway
             if (checkResult.status !== 'Live') {
                 const reason = checkResult.status === 'Not Found'
-                    ? 'The link to the target URL was not found on the page. Please ensure your published page contains the correct backlink.'
+                    ? 'Link verification: target URL not found on page. Submitting for manager review.'
                     : checkResult.status === 'Issue'
-                        ? `Anchor text mismatch: ${checkResult.result}. Please fix the anchor text on your page.`
-                        : `Link check failed: ${checkResult.result}. Please ensure the URL is accessible and contains the correct backlink.`;
+                        ? `Link verification: ${checkResult.result}. Submitting for manager review.`
+                        : `Link verification failed: ${checkResult.result}. Submitting for manager review.`;
                 showError(reason);
-                setSubmitting(false);
-                return;
+                // Do NOT return — allow submission to proceed
             }
 
             // Step 3: Link is live - proceed with submission

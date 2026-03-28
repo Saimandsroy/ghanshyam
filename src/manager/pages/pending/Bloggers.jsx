@@ -162,6 +162,7 @@ export function PendingBloggers() {
                   <th>Vendor</th>
                   <th>Root Domain</th>
                   <th>Submitted URL</th>
+                  <th>Verified</th>
                   <th>Status</th>
                   <th className="text-right">Actions</th>
                 </tr>
@@ -169,7 +170,7 @@ export function PendingBloggers() {
               <tbody>
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-[var(--text-muted)]">
+                    <td colSpan={8} className="text-center py-12 text-[var(--text-muted)]">
                       No pending blogger submissions found
                     </td>
                   </tr>
@@ -215,6 +216,17 @@ export function PendingBloggers() {
                           </a>
                         ) : (
                           <span className="text-[var(--text-muted)]">-</span>
+                        )}
+                      </td>
+                      <td>
+                        {approval.link_status === 'Live' ? (
+                          <span className="premium-badge bg-green-500/10 text-green-400 border-green-500/20">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="premium-badge bg-red-500/10 text-red-400 border-red-500/20" title={approval.link_check_result || 'Verification pending'}>
+                            No
+                          </span>
                         )}
                       </td>
                       <td>

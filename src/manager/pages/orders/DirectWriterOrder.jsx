@@ -96,7 +96,7 @@ export const DirectWriterOrder = () => {
     const fetchWebsites = useCallback(async () => {
         try {
             setWebsitesLoading(true);
-            const params = { page, limit: pageSize };
+            const params = { page, limit: pageSize, filter_website_status: 'Approved' };
             if (activeFilters.domain) params.search_domain = activeFilters.domain;
             if (activeFilters.traffic) {
                 params.filter_traffic_val = activeFilters.traffic;

@@ -3,7 +3,6 @@ import { Layout } from '../../components/layout/Layout';
 import { managerAPI, adminAPI } from '../../../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { RichTextEditor } from '../../../components/RichTextEditor';
-import { useAutoSaveForm, AutoSaveIndicator } from '../../../hooks/useAutoSave';
 
 // Dropdown options based on production deep dive analysis
 const ORDER_TYPE_OPTIONS = ['New Order', 'Sub Order'];
@@ -104,8 +103,8 @@ export const CreateOrder = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
 
-  // Auto-save form state - survives browser close/power outage
-  const { formData: form, setFormData: setForm, setField, clearAllSaved, isSaved } = useAutoSaveForm('manager-create-order', {
+  // Standard form state — no auto-save, fresh on every visit
+  const [form, setForm] = useState({
     // Row 1
     orderType: 'New Order',      // New Order vs Sub Order
     assigned_team_id: '',        // Select Team dropdown
@@ -192,8 +191,7 @@ export const CreateOrder = () => {
       setSuccess('Order created successfully!');
 
       if (stayOnPage) {
-        // Reset form for new entry and clear auto-saved data
-        clearAllSaved();
+        // Reset form for new entry
         setForm({
           ...form,
           manual_order_id: '',
@@ -207,8 +205,7 @@ export const CreateOrder = () => {
         });
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        // Clear auto-saved data and navigate
-        clearAllSaved();
+        // Navigate away
         setTimeout(() => navigate('/manager/orders'), 1000);
       }
     } catch (err) {
@@ -219,7 +216,6 @@ export const CreateOrder = () => {
   };
 
   const reset = () => {
-    clearAllSaved(); // Clear auto-saved data from localStorage
     setForm({
       orderType: 'New Order',
       assigned_team_id: '',
@@ -253,7 +249,6 @@ export const CreateOrder = () => {
           <div>
             <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-3">
               Create New Order
-              <AutoSaveIndicator isSaved={isSaved} />
             </h1>
             <p className="text-[var(--text-muted)] mt-1">Fill in the details below to create a new client order.</p>
           </div>

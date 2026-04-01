@@ -6,6 +6,7 @@ import { ArrowLeft, Search, Trash2, Send, AlertCircle, ChevronLeft, ChevronRight
 import { RichTextEditor } from '../../../components/RichTextEditor';
 
 // Dropdown options
+const ORDER_TYPE_OPTIONS = ['New Order', 'Sub Order'];
 const CONTENT_TYPE_OPTIONS = ['Guest Post', 'Niche Edit'];
 const GP_PACKAGE_OPTIONS = [
     'Basic Ahrefs Traffic 500 To 1000', 'Silver Ahrefs Traffic 1000 To 3000',
@@ -36,6 +37,7 @@ export const DirectWriterOrder = () => {
 
     // Order form state
     const [form, setForm] = useState({
+        order_type_toggle: 'New Order',
         manual_order_id: '',
         client_name: '',
         client_website: '',
@@ -45,6 +47,8 @@ export const DirectWriterOrder = () => {
         category: '',
         notes: ''
     });
+
+    const isSubOrder = form.order_type_toggle === 'Sub Order';
 
     // Website selection state
     const [websites, setWebsites] = useState([]);
@@ -276,6 +280,12 @@ export const DirectWriterOrder = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div>
+                            <label className="premium-label">Order Type</label>
+                            <select className="premium-input" value={form.order_type_toggle} onChange={onChange('order_type_toggle')}>
+                                {ORDER_TYPE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                        <div>
                             <label className="premium-label">Client Name <span className="text-red-400">*</span></label>
                             <input className="premium-input" value={form.client_name} onChange={onChange('client_name')} placeholder="Enter client's name" />
                         </div>
@@ -305,8 +315,8 @@ export const DirectWriterOrder = () => {
                             </select>
                         </div>
                         <div>
-                            <label className="premium-label">Order Reference ID</label>
-                            <input className="premium-input" value={form.manual_order_id} onChange={onChange('manual_order_id')} placeholder="Optional" />
+                            <label className="premium-label">{isSubOrder ? 'Existing Order ID' : 'Order Reference ID'} {isSubOrder && <span className="text-red-400">*</span>}</label>
+                            <input className="premium-input" value={form.manual_order_id} onChange={onChange('manual_order_id')} placeholder={isSubOrder ? 'Enter existing order ID' : 'Optional'} />
                         </div>
                         <div>
                             <label className="premium-label">No. of Links (Auto)</label>

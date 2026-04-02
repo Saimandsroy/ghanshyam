@@ -108,10 +108,10 @@ export function InvoiceDetail() {
                     {/* Bill From - Company */}
                     <div>
                         <h2 className="text-lg font-bold mb-2">Bill From:</h2>
-                        <p className="text-sm">Rank Me up Services</p>
-                        <p className="text-sm text-gray-600"># Seo 105 Ranjeet Avenew B Block Amritsar</p>
+                        <p className="text-sm">RankMeup Services</p>
+                        <p className="text-sm text-gray-600"># SCO 105 3rd Floor Ranjit Avenue B Block Amritsar</p>
                         <p className="text-sm text-gray-600">Punjab, India 143001</p>
-                        <p className="text-sm text-gray-600">Email:- Contact@rankmeup.in</p>
+                        <p className="text-sm text-gray-600">Email:- contact@rankmeup.in</p>
                         <p className="text-sm text-gray-600">Phone no = 7087825869</p>
                     </div>
 
@@ -137,7 +137,6 @@ export function InvoiceDetail() {
                 <div className="mb-8">
                     <h2 className="text-lg font-bold mb-2">Bill To:</h2>
                     <p className="text-sm">{blogger.name}</p>
-                    {blogger.phone && <p className="text-sm text-gray-600">Phone: {blogger.phone}</p>}
                     <p className="text-sm text-gray-600">Email: {blogger.email}</p>
                     <p className="text-sm text-gray-600">Address: {blogger.country}</p>
                 </div>

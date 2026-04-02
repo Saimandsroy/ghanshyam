@@ -29,7 +29,7 @@ export function TransactionsTable({ transactions, loading }) {
                 { value: 'all', label: 'All Statuses' },
                 { value: 'pending', label: 'Pending' },
                 { value: 'approved', label: 'Approved' },
-                { value: 'not_requested', label: 'Not Requested' }
+                { value: 'not_requested', label: 'Pending (Unwithdrawn)' }
             ]
         }
     ];
@@ -88,11 +88,11 @@ export function TransactionsTable({ transactions, loading }) {
             };
         }
         return {
-            label: '-',
+            label: 'Pending',
             date: null,
-            color: 'var(--text-muted)',
-            icon: Minus,
-            badgeClass: 'bg-gray-100 text-gray-800 border-gray-200'
+            color: 'var(--color-warning)',
+            icon: Clock,
+            badgeClass: 'bg-amber-100 text-amber-800 border-amber-200'
         };
     };
 

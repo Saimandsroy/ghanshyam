@@ -1,28 +1,35 @@
-import React from 'react';
-import { ExternalLink, CheckCircle, XCircle, Clock, Minus } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ExternalLink, CheckCircle, Clock, Minus, FileText } from 'lucide-react';
 
 /**
- * TransactionsTable - Production matching wallet history table
- * Columns: Date | Order Id (with URL) | Credit | Withdrawal Status | Approved Status
+ * TransactionsTable - Blogger Wallet History Table
+ * Columns: Date | Order Id (with full URL) | Credit | Status (Pending/Approved) | Invoice
  */
 import { useTableFilter } from '../../hooks/useTableFilter';
 import { UniversalTableFilter } from '../../components/common/UniversalTableFilter';
 
-/**
- * TransactionsTable - Production matching wallet history table
- * Columns: Date | Order Id (with URL) | Credit | Withdrawal Status | Approved Status
- */
 export function TransactionsTable({ transactions, loading }) {
-    // Define filter options
+    const navigate = useNavigate();
+
+    // Add a computed 'display_status' property so useTableFilter can match on it
+    const enrichedTransactions = useMemo(() => {
+        return (transactions || []).map(tx => ({
+            ...tx,
+            display_status: tx.approved_date ? 'approved' : tx.request_date ? 'pending' : 'not_requested'
+        }));
+    }, [transactions]);
+
+    // Define filter options using the computed display_status field
     const filterOptions = [
         {
-            key: 'status', // withdrawal status code (1=pending, 2=approved, 3=rejected)
-            label: 'Withdrawal Status',
+            key: 'display_status',
+            label: 'Status',
             options: [
                 { value: 'all', label: 'All Statuses' },
-                { value: '1', label: 'Pending' },
-                { value: '2', label: 'Approved' },
-                { value: '3', label: 'Rejected' }
+                { value: 'pending', label: 'Pending' },
+                { value: 'approved', label: 'Approved' },
+                { value: 'not_requested', label: 'Not Requested' }
             ]
         }
     ];
@@ -34,7 +41,7 @@ export function TransactionsTable({ transactions, loading }) {
         handleSearchChange,
         handleFilterChange,
         clearFilters
-    } = useTableFilter(transactions, { status: 'all' });
+    } = useTableFilter(enrichedTransactions, { display_status: 'all' });
 
     if (loading) {
         return (
@@ -60,60 +67,38 @@ export function TransactionsTable({ transactions, loading }) {
         }
     };
 
-    // Format approved date like production: "Tue, Dec 30, 2025 8:45 PM"
-    const formatApprovedDate = (dateStr) => {
-        if (!dateStr) return null;
-        try {
-            return new Date(dateStr).toLocaleDateString('en-US', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-        } catch {
-            return null;
-        }
-    };
-
-    // Get withdrawal status display
-    const getWithdrawalStatus = (tx) => {
-        if (!tx.request_date && tx.type === 'credit') {
-            return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-100 text-gray-800 border-gray-200' };
-        }
-        if (Number(tx.status) === 1) {
-            return { label: 'Pending', color: 'var(--color-warning)', icon: Clock, badgeClass: 'bg-amber-100 text-amber-800 border-amber-200' };
-        }
-        if (Number(tx.status) === 2) {
-            return { label: 'Approved', color: 'var(--color-success)', icon: CheckCircle, badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
-        }
-        if (Number(tx.status) === 3) {
-            return { label: 'Rejected', color: 'var(--color-error)', icon: XCircle, badgeClass: 'bg-rose-100 text-rose-800 border-rose-200' };
-        }
-        return { label: '-', color: 'var(--text-muted)', icon: Minus, badgeClass: 'bg-gray-100 text-gray-800 border-gray-200' };
-    };
-
-    // Get approved status display with formatted date
-    const getApprovedStatus = (tx) => {
+    // Get combined status display (merges old Withdrawal Status + Approved Status)
+    const getStatus = (tx) => {
         if (tx.approved_date) {
             return {
                 label: 'Approved',
-                date: formatApprovedDate(tx.approved_date),
+                date: formatDate(tx.approved_date),
                 color: 'var(--color-success)',
-                icon: CheckCircle
+                icon: CheckCircle,
+                badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200'
             };
         }
-        if (tx.request_date && !tx.approved_date) {
-            return { label: 'Pending', date: null, color: 'var(--color-warning)', icon: Clock };
+        if (tx.request_date) {
+            return {
+                label: 'Pending',
+                date: formatDate(tx.request_date),
+                color: 'var(--color-warning)',
+                icon: Clock,
+                badgeClass: 'bg-amber-100 text-amber-800 border-amber-200'
+            };
         }
-        return { label: '-', date: null, color: 'var(--text-muted)', icon: Minus };
+        return {
+            label: '-',
+            date: null,
+            color: 'var(--text-muted)',
+            icon: Minus,
+            badgeClass: 'bg-gray-100 text-gray-800 border-gray-200'
+        };
     };
 
     return (
         <div className="space-y-4">
-            {(transactions.length > 0 || searchQuery || filters.status !== 'all') && (
+            {(enrichedTransactions.length > 0 || searchQuery || filters.display_status !== 'all') && (
                 <UniversalTableFilter
                     searchQuery={searchQuery}
                     onSearchChange={handleSearchChange}
@@ -124,7 +109,7 @@ export function TransactionsTable({ transactions, loading }) {
                 />
             )}
 
-            {filteredData.length === 0 && transactions.length > 0 ? (
+            {filteredData.length === 0 && enrichedTransactions.length > 0 ? (
                 <div className="premium-card p-12 text-center">
                     <p className="text-[var(--text-muted)]">No matching transactions found.</p>
                 </div>
@@ -144,14 +129,13 @@ export function TransactionsTable({ transactions, loading }) {
                                 <th>Date</th>
                                 <th>Order Id</th>
                                 <th>Credit</th>
-                                <th>Withdrawal Status</th>
-                                <th>Approved Status</th>
+                                <th>Status</th>
+                                <th>Invoice</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredData.map((tx) => {
-                                const withdrawalStatus = getWithdrawalStatus(tx);
-                                const approvedStatus = getApprovedStatus(tx);
+                                const status = getStatus(tx);
 
                                 return (
                                 <tr key={tx.id} className="group transition-colors duration-200">
@@ -162,7 +146,7 @@ export function TransactionsTable({ transactions, loading }) {
                                             </span>
                                         </td>
 
-                                        {/* Order Id Column - use order_id from new_orders table, fallback to order_detail_id */}
+                                        {/* Order Id Column - with full URL shown */}
                                         <td>
                                             <div>
                                                 <div className="text-sm font-semibold text-[var(--color-primary)]">
@@ -173,12 +157,10 @@ export function TransactionsTable({ transactions, loading }) {
                                                         href={tx.submit_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-xs flex items-center gap-1 mt-1 text-[var(--text-body)] hover:text-[var(--color-primary)] hover:underline opacity-80 hover:opacity-100 transition-opacity"
+                                                        className="text-xs flex items-center gap-1 mt-1 text-[var(--text-body)] hover:text-[var(--color-primary)] hover:underline opacity-80 hover:opacity-100 transition-opacity break-all"
                                                     >
-                                                        {tx.submit_url.length > 30
-                                                            ? tx.submit_url.substring(0, 30) + '...'
-                                                            : tx.submit_url}
-                                                        <ExternalLink className="h-3 w-3" />
+                                                        {tx.submit_url}
+                                                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                                     </a>
                                                 )}
                                             </div>
@@ -191,27 +173,34 @@ export function TransactionsTable({ transactions, loading }) {
                                             </span>
                                         </td>
 
-                                        {/* Withdrawal Status Column */}
-                                        <td>
-                                            <span className={`premium-badge ${withdrawalStatus.badgeClass}`}>
-                                                <withdrawalStatus.icon className="h-3 w-3" />
-                                                {withdrawalStatus.label}
-                                            </span>
-                                        </td>
-
-                                        {/* Approved Status Column - shows status and formatted date */}
+                                        {/* Status Column - merged Withdrawal + Approved */}
                                         <td>
                                             <div>
-                                                <div className={`flex items-center gap-1.5 font-medium text-sm`} style={{ color: approvedStatus.color }}>
-                                                    {approvedStatus.icon && <approvedStatus.icon className="h-3.5 w-3.5" />}
-                                                    {approvedStatus.label}
-                                                </div>
-                                                {approvedStatus.date && (
+                                                <span className={`premium-badge ${status.badgeClass}`}>
+                                                    <status.icon className="h-3 w-3" />
+                                                    {status.label}
+                                                </span>
+                                                {status.date && (
                                                     <div className="text-[10px] mt-1 text-[var(--text-muted)] font-mono">
-                                                        {approvedStatus.date}
+                                                        {status.date}
                                                     </div>
                                                 )}
                                             </div>
+                                        </td>
+
+                                        {/* Invoice Column - link to invoice if credited */}
+                                        <td>
+                                            {tx.withdraw_request_id ? (
+                                                <button
+                                                    onClick={() => navigate(`/blogger/payments/invoices/${tx.withdraw_request_id}`)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                                                >
+                                                    <FileText className="h-3.5 w-3.5" />
+                                                    View Invoice
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs text-[var(--text-muted)]">-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 );

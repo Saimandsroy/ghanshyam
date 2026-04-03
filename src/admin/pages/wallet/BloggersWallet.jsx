@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import api from '../../../lib/api';
 
 export function BloggersWallet() {
@@ -8,6 +8,8 @@ export function BloggersWallet() {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'wallet_balance', direction: 'desc' });
+    const [recalculating, setRecalculating] = useState(null); // userId being recalculated
+    const [recalcResult, setRecalcResult] = useState(null); // success result toast
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -88,6 +90,31 @@ export function BloggersWallet() {
         }
     };
 
+    const handleRecalculate = async (bloggerId, bloggerName) => {
+        if (!window.confirm(`Recalculate wallet for "${bloggerName}"?\n\nThis will remove any credits from rejected orders and fix the balance.`)) return;
+        setRecalculating(bloggerId);
+        setRecalcResult(null);
+        try {
+            const response = await api.post(`/admin/wallet/recalculate/${bloggerId}`);
+            const data = response.data;
+            setRecalcResult({
+                type: 'success',
+                bloggerName,
+                oldBalance: data.old_balance,
+                newBalance: data.new_balance,
+                orphanedTotal: data.orphaned_total,
+                removed: data.orphaned_credits_removed?.length || 0
+            });
+            // Refresh the table to reflect updated balance
+            fetchBloggers();
+        } catch (err) {
+            setRecalcResult({ type: 'error', bloggerName, message: err.response?.data?.message || 'Recalculation failed' });
+        } finally {
+            setRecalculating(null);
+            setTimeout(() => setRecalcResult(null), 8000);
+        }
+    };
+
     const SortIcon = ({ column }) => {
         if (sortConfig.key !== column) return <ChevronDown size={14} className="opacity-30" />;
         return sortConfig.direction === 'asc'
@@ -130,6 +157,27 @@ export function BloggersWallet() {
                     {total} total
                 </span>
             </div>
+
+            {/* Recalculation Result Toast */}
+            {recalcResult && (
+                <div className="p-4 rounded-lg" style={{
+                    backgroundColor: recalcResult.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${recalcResult.type === 'success' ? 'var(--success)' : 'var(--error)'}`,
+                }}>
+                    {recalcResult.type === 'success' ? (
+                        <div>
+                            <p className="font-semibold" style={{ color: 'var(--success)' }}>✅ Wallet recalculated for {recalcResult.bloggerName}</p>
+                            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                                Old Balance: ${recalcResult.oldBalance} → New Balance: ${recalcResult.newBalance}
+                                {recalcResult.removed > 0 && ` | ${recalcResult.removed} orphaned credit(s) removed ($${recalcResult.orphanedTotal})`}
+                                {recalcResult.removed === 0 && ' | No orphaned credits found — balance was already correct.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <p style={{ color: 'var(--error)' }}>❌ {recalcResult.message}</p>
+                    )}
+                </div>
+            )}
 
             {/* Search and Table Container */}
             <div className="card overflow-hidden" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
@@ -199,12 +247,18 @@ export function BloggersWallet() {
                                         <SortIcon column="wallet_balance" />
                                     </div>
                                 </th>
+                                <th
+                                    className="text-center px-6 py-4 font-medium"
+                                    style={{ color: 'var(--text-secondary)' }}
+                                >
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center">
+                                    <td colSpan={3} className="px-6 py-8 text-center">
                                         <div className="flex items-center justify-center">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
                                         </div>
@@ -212,7 +266,7 @@ export function BloggersWallet() {
                                 </tr>
                             ) : bloggers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                                    <td colSpan={3} className="px-6 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                                         No bloggers found
                                     </td>
                                 </tr>
@@ -236,6 +290,24 @@ export function BloggersWallet() {
                                             >
                                                 {blogger.wallet_balance}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button
+                                                onClick={() => handleRecalculate(blogger.id, blogger.name)}
+                                                disabled={recalculating === blogger.id}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                                                style={{
+                                                    backgroundColor: 'rgba(var(--primary-cyan-rgb, 6, 182, 212), 0.1)',
+                                                    color: 'var(--primary-cyan)',
+                                                    border: '1px solid var(--primary-cyan)',
+                                                    opacity: recalculating === blogger.id ? 0.6 : 1,
+                                                    cursor: recalculating === blogger.id ? 'wait' : 'pointer'
+                                                }}
+                                                title="Remove orphaned credits from rejected orders and recalculate balance"
+                                            >
+                                                <RefreshCw size={14} className={recalculating === blogger.id ? 'animate-spin' : ''} />
+                                                {recalculating === blogger.id ? 'Fixing...' : 'Recalculate'}
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

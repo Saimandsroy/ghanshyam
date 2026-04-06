@@ -278,10 +278,10 @@ export function RequestWithdrawal() {
                                                         href={order.submit_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-xs flex items-center gap-1 text-[var(--primary-cyan)] hover:underline"
+                                                        className="text-xs flex items-center gap-1 text-[var(--primary-cyan)] hover:underline break-all"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        View Link <ExternalLink className="h-3 w-3" />
+                                                        {order.submit_url} <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                                     </a>
                                                 )}
                                             </td>

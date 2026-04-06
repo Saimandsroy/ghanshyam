@@ -111,17 +111,17 @@ export const RejectedBloggers = () => {
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-background-dark">
+      <div className="premium-table-container">
+        <table className="premium-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-sm text-muted">Order Id</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Order Type</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Blogger</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Root Domain</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Status</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Reject Reason</th>
-              <th className="px-4 py-3 text-left text-sm text-muted">Date</th>
+              <th>Order Id</th>
+              <th>Order Type</th>
+              <th>Blogger</th>
+              <th>Root Domain</th>
+              <th>Status</th>
+              <th>Reject Reason</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>

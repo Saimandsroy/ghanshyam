@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../components/ModernSidebar';
-import { DollarSign, LayoutGrid, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 export function AccountantLayout() {
@@ -15,7 +15,6 @@ export function AccountantLayout() {
     navigate('/login');
   };
   const navItems = [
-    { icon: <LayoutGrid size={20} />, label: 'Payments', to: `${base}`, active: pathname === `${base}` },
     {
       icon: <Wallet size={20} />,
       label: 'Wallet',

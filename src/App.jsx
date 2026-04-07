@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
@@ -74,7 +74,7 @@ import { RejectedOrderDetails as WriterRejectedOrderDetails } from './writer/pag
 import { Threads as WriterThreads } from './writer/pages/Threads.jsx';
 import { Profile as WriterProfile } from './writer/pages/Profile.jsx';
 import { AccountantLayout } from './accountant/Layout.jsx';
-import { Payments as AccountantPayments } from './accountant/pages/Payments.jsx';
+
 import { RequireAuth } from './auth/AuthContext.jsx';
 
 function App() {
@@ -171,7 +171,7 @@ function App() {
 
         {/* Accountant Routes */}
         <Route path="/accountant" element={<AccountantLayout />}>
-          <Route index element={<AccountantPayments />} />
+          <Route index element={<Navigate to="wallet/bloggers" replace />} />
           <Route path="wallet/bloggers" element={<BloggersWallet />} />
           <Route path="wallet/payment-history" element={<PaymentHistory />} />
           <Route path="wallet/invoices/:id" element={<AdminInvoiceDetail />} />

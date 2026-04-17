@@ -445,21 +445,33 @@ export function SitesList() {
                 </main>
             </div>
 
-            {/* Modal (Restored & Enhanced) */}
+            {/* Site Details Modal */}
             {selectedSite && (
                 <div
                     className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
                     style={{ zIndex: 9999 }}
                 >
-                    <div className="rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto flex flex-col shadow-2xl relative" style={{ backgroundColor: '#18181b', border: '1px solid var(--border)' }}>
-                        <div className="sticky top-0 p-4 border-b flex items-center justify-between bg-[#18181b] z-10" style={{ borderColor: 'var(--border)' }}>
+                    <div className="premium-card flex flex-col p-0 overflow-hidden shadow-2xl relative w-full max-w-2xl max-h-[85vh]" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+                        <div className="p-6 border-b flex items-center justify-between shrink-0" style={{ backgroundColor: 'var(--background-dark)', borderColor: 'var(--border)' }}>
                             <div>
-                                <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{selectedSite.root_domain}</h3>
-                                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>ID: #{selectedSite.id}</p>
+                                <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                                    <Globe className="h-5 w-5" style={{ color: 'var(--primary-cyan)' }} />
+                                    {selectedSite.root_domain}
+                                </h3>
+                                <div className="flex gap-2 mt-2 font-medium">
+                                    <span className="text-xs px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(6,182,212,0.1)', color: 'var(--primary-cyan)', borderColor: 'rgba(6,182,212,0.2)' }}>
+                                        {selectedSite.category || 'General'}
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                                        ID: #{selectedSite.id}
+                                    </span>
+                                </div>
                             </div>
-                            <button onClick={() => setSelectedSite(null)} className="p-2 rounded-lg hover:bg-white/10 transition-colors"><X className="h-5 w-5" style={{ color: 'var(--text-muted)' }} /></button>
+                            <button onClick={() => setSelectedSite(null)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                                <X className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+                            </button>
                         </div>
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
                             {/* Layout matching user screenshot: Label - Value list */}
                             <div className="space-y-4">
                                 <InfoRow label="Website niche" value={selectedSite.website_niche || '-'} />
@@ -471,19 +483,18 @@ export function SitesList() {
                                 <InfoRow label="Country source" value={selectedSite.country_source || '-'} />
                             </div>
 
-                            {/* SEO Metrics (Keeping these as they are valuable) */}
-                            <div className="pt-4 border-t border-white/5">
-                                <h4 className="font-semibold mb-3 text-sm uppercase tracking-wide opacity-70">SEO Metrics</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <MetricBox label="DA" value={selectedSite.da} color="#FF6B6B" />
-                                    <MetricBox label="DR" value={selectedSite.dr} color="#4ECDC4" />
-                                    <MetricBox label="Traffic" value={selectedSite.traffic} color="#FFD166" />
-                                    <MetricBox label="RD" value={selectedSite.rd} color="#1A535C" />
+                            <div className="pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
+                                <h4 className="font-semibold mb-4 text-xs uppercase tracking-wide text-[var(--text-muted)]">SEO Metrics</h4>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <MetricBox label="DA" value={selectedSite.da} color="#3b82f6" />
+                                    <MetricBox label="DR" value={selectedSite.dr} color="#a855f7" />
+                                    <MetricBox label="Traffic" value={selectedSite.traffic} color="#eab308" />
+                                    <MetricBox label="RD" value={selectedSite.rd} color="#f97316" />
                                 </div>
                             </div>
 
                             {/* Status & Action Buttons */}
-                            <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
+                            <div className="pt-6 border-t flex flex-col gap-4" style={{ borderColor: 'var(--border)' }}>
                                 <div className="flex items-center justify-between">
                                     <div className="text-lg font-bold text-white">
                                         Status: <span className={`${selectedSite.site_status === '1' ? 'text-green-500' : selectedSite.site_status === '2' ? 'text-red-500' : 'text-yellow-500'}`}>
@@ -522,6 +533,11 @@ export function SitesList() {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                        
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t shrink-0 flex items-center justify-end" style={{ backgroundColor: 'var(--background-dark)', borderColor: 'var(--border)' }}>
+                            <button onClick={() => setSelectedSite(null)} className="premium-btn py-2 px-6">Close Details</button>
                         </div>
                     </div>
                 </div>
@@ -879,9 +895,9 @@ function MetricBox({ label, value, color }) {
 
 function InfoRow({ label, value, isLink }) {
     return (
-        <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 py-1">
-            <div className="w-full sm:w-40 font-bold text-gray-400 text-sm shrink-0">{label}</div>
-            <div className="flex-1 text-sm font-medium text-white break-all">
+        <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 py-2 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+            <div className="w-full sm:w-40 font-bold text-xs uppercase tracking-wider shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</div>
+            <div className="flex-1 text-sm font-medium break-all" style={{ color: 'var(--text-primary)' }}>
                 {isLink && value ? (
                     <a href={value} target="_blank" rel="noreferrer" className="text-[var(--primary-cyan)] hover:underline flex items-center gap-1">
                         {value} <ExternalLink className="h-3 w-3" />

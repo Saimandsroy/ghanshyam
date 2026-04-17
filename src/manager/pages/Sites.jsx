@@ -553,8 +553,8 @@ export function Sites() {
 
         {/* Site Details Modal */}
         {selectedSite && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="premium-card w-full max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden bg-[#18181b] border border-[var(--border)] shadow-2xl">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="premium-card w-full max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl relative" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
               {/* Modal Header */}
               <div className="p-6 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--background-dark)]">
                 <div>

@@ -242,7 +242,7 @@ export function SitesList() {
                     <button
                         onClick={fetchWebsites}
                         disabled={loading}
-                        className="p-2 rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50 border border-[var(--border)]"
+                        className="p-2 rounded-xl hover:bg-[var(--background-light)] transition-colors disabled:opacity-50 border border-[var(--border)]"
                         title="Refresh Results"
                     >
                         <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
@@ -448,7 +448,7 @@ export function SitesList() {
             {/* Site Details Modal */}
             {selectedSite && (
                 <div
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
                     style={{ zIndex: 9999 }}
                 >
                     <div className="premium-card flex flex-col p-0 overflow-hidden shadow-2xl relative w-full max-w-2xl max-h-[85vh]" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
@@ -467,7 +467,7 @@ export function SitesList() {
                                     </span>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedSite(null)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                            <button onClick={() => setSelectedSite(null)} className="p-2 rounded-lg hover:bg-[var(--background-light)] transition-colors">
                                 <X className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                             </button>
                         </div>
@@ -527,7 +527,7 @@ export function SitesList() {
                                     {/* Delete Button */}
                                     <button
                                         onClick={() => handleDelete(selectedSite.id)}
-                                        className="px-6 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-colors border border-white/10 ml-auto"
+                                        className="px-6 py-2.5 rounded-lg bg-[var(--background-light)] hover:bg-[var(--border)] text-[var(--text-primary)] font-bold transition-colors border border-[var(--border)] ml-auto"
                                     >
                                         Delete
                                     </button>
@@ -566,7 +566,7 @@ function FilterSection({ title, children }) {
 
 function RangeInput({ label, state, onChange }) {
     return (
-        <div className="bg-white/5 rounded-lg p-2">
+        <div className="bg-[var(--background-dark)] border border-[var(--border)] rounded-lg p-2">
             <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-400">{label}</span>
                 <span className="text-[var(--primary-cyan)]">{state.op} {state.val}</span>
@@ -575,7 +575,7 @@ function RangeInput({ label, state, onChange }) {
                 <select
                     value={state.op}
                     onChange={(e) => onChange('op', e.target.value)}
-                    className="w-1/3 bg-black/20 rounded px-1 py-1 text-xs border border-white/10 outline-none"
+                    className="w-1/3 bg-[var(--background-light)] rounded px-1 py-1 text-xs border border-[var(--border)] outline-none text-[var(--text-primary)]"
                 >
                     <option value="">Op</option>
                     <option value=">">&gt;</option>
@@ -587,7 +587,7 @@ function RangeInput({ label, state, onChange }) {
                     placeholder="Val"
                     value={state.val}
                     onChange={(e) => onChange('val', e.target.value)}
-                    className="w-2/3 bg-black/20 rounded px-2 py-1 text-xs border border-white/10 outline-none"
+                    className="w-2/3 bg-[var(--background-light)] rounded px-2 py-1 text-xs border border-[var(--border)] outline-none text-[var(--text-primary)]"
                 />
             </div>
         </div>
@@ -612,7 +612,7 @@ function PaginationControls({ page, totalPages, onPageChange, pageSize, onPageSi
                 <button
                     onClick={() => onPageChange(page - 1)}
                     disabled={page === 1}
-                    className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-[var(--background-light)] disabled:opacity-30 transition-colors text-[var(--text-primary)]"
                 >
                     <ChevronDown className="h-4 w-4 rotate-90" />
                 </button>
@@ -620,7 +620,7 @@ function PaginationControls({ page, totalPages, onPageChange, pageSize, onPageSi
                 <button
                     onClick={() => onPageChange(page + 1)}
                     disabled={page >= totalPages}
-                    className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-[var(--background-light)] disabled:opacity-30 transition-colors text-[var(--text-primary)]"
                 >
                     <ChevronDown className="h-4 w-4 -rotate-90" />
                 </button>
@@ -695,7 +695,7 @@ function ExpandableSiteRow({ site, onOpenModal, isSelected, onToggleSelect, styl
                             onChange={() => onToggleSelect()}
                         />
                     </div>
-                    <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-bold text-lg border transition-colors ${expanded ? 'bg-[var(--primary-cyan)] text-black border-[var(--primary-cyan)]' : 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-[var(--primary-cyan)] border-white/10'}`}>
+                    <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-bold text-lg border transition-colors ${expanded ? 'bg-[var(--primary-cyan)] text-black border-[var(--primary-cyan)]' : 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-[var(--primary-cyan)] border-[var(--border)]'}`}>
                         {site.root_domain.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -760,12 +760,12 @@ function ExpandableSiteRow({ site, onOpenModal, isSelected, onToggleSelect, styl
                     <div className="flex items-center gap-3">
                         <button
                             onClick={(e) => { e.stopPropagation(); onOpenModal(); }}
-                            className="p-2 rounded-lg hover:bg-white/10 text-[var(--primary-cyan)] hover:text-white transition-colors relative z-20"
+                            className="p-2 rounded-lg hover:bg-[var(--background-light)] text-[var(--primary-cyan)] hover:text-[var(--text-primary)] transition-colors relative z-20"
                             title="Quick View / Status"
                         >
                             <Eye className="h-5 w-5 pointer-events-none" />
                         </button>
-                        <button className={`p-2 rounded-full transition-transform duration-300 ${expanded ? 'rotate-180 bg-white/10' : 'hover:bg-white/5'}`}>
+                        <button className={`p-2 rounded-full transition-transform duration-300 ${expanded ? 'rotate-180 bg-[var(--background-light)]' : 'hover:bg-[var(--background-light)]'}`}>
                             <ChevronDown className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                         </button>
                     </div>
@@ -870,7 +870,7 @@ function DetailItem({ label, value, highlight }) {
 
 function ActionButton({ icon: Icon, label, color = "text-gray-400" }) {
     return (
-        <button className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-white/5 hover:bg-white/5 transition-colors ${color} text-sm font-medium`}>
+        <button className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--background-light)] transition-colors ${color} text-sm font-medium`}>
             <Icon className="h-4 w-4" /> {label}
         </button>
     )

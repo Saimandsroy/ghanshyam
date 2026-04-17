@@ -428,7 +428,7 @@ export function Sites() {
                       </tr>
                     ) : (
                       websites.map((site) => (
-                        <tr key={site.id} className="hover:bg-white/5 transition-colors group">
+                        <tr key={site.id} className="hover:bg-[var(--background-light)] transition-colors group">
                           
                           {/* CHECKBOX */}
                           <td className="p-4 text-center">
@@ -535,7 +535,7 @@ export function Sites() {
                           <td className="p-4 text-right">
                             <button
                               onClick={() => setSelectedSite(site)}
-                              className="p-2 rounded-lg hover:bg-white/10 text-[var(--primary-cyan)] hover:text-white transition-colors"
+                              className="p-2 rounded-lg hover:bg-[var(--background-light)] text-[var(--primary-cyan)] hover:text-[var(--text-primary)] transition-colors"
                               title="View Details"
                             >
                               <Eye size={18} />
@@ -553,7 +553,7 @@ export function Sites() {
 
         {/* Site Details Modal */}
         {selectedSite && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="premium-card w-full max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl relative" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
               {/* Modal Header */}
               <div className="p-6 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--background-dark)]">
@@ -564,12 +564,12 @@ export function Sites() {
                   </h3>
                   <div className="flex gap-2 mt-1">
                     <span className="text-xs px-2 py-0.5 bg-[var(--primary-cyan)]/10 text-[var(--primary-cyan)] rounded border border-[var(--primary-cyan)]/20">{selectedSite.category}</span>
-                    <span className="text-xs px-2 py-0.5 bg-white/5 text-[var(--text-secondary)] rounded border border-white/5">ID: #{selectedSite.id}</span>
+                    <span className="text-xs px-2 py-0.5 bg-[var(--background-dark)] text-[var(--text-secondary)] rounded border border-[var(--border)]">ID: #{selectedSite.id}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedSite(null)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors text-[var(--text-muted)] hover:text-white"
+                  className="p-2 rounded-lg hover:bg-[var(--background-light)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
                   <X size={20} />
                 </button>
@@ -725,7 +725,7 @@ function MetricBadge({ label, value, color }) {
 
 function DetailRow({ label, value, isLink }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 border-b border-white/5 pb-2 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4 border-b border-[var(--border)] pb-2 last:border-0">
       <span className="sm:w-32 flex-shrink-0 text-xs uppercase tracking-wider font-bold text-[var(--text-muted)]">
         {label}
       </span>

@@ -2,7 +2,7 @@ import { Facebook, Twitter, Linkedin, Youtube, Instagram, ArrowRight } from 'luc
 
 export function Footer() {
   return (
-    <footer className="relative bg-white text-slate-800 border-t border-slate-200 pt-20 pb-10 overflow-hidden font-sans">
+    <footer className="relative bg-white text-slate-800 border-t border-slate-200 pt-20 overflow-hidden font-sans">
 
       {/* Background Grid Pattern */}
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:40px_40px]"></div>
@@ -87,7 +87,7 @@ export function Footer() {
         </div>
 
         {/* Footer Bottom */}
-        <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-slate-200 pt-8 pb-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-500 font-medium text-sm">
             Copyright &copy; {new Date().getFullYear()} Esoftec. All rights reserved.
           </p>
@@ -96,6 +96,42 @@ export function Footer() {
             <a href="#" className="text-slate-500 font-medium hover:text-[#F97316] text-sm transition-colors">Privacy Policy</a>
           </div>
         </div>
+      </div>
+
+      {/* Femur Studio Premium Branding */}
+      <div className="bg-gradient-to-b from-white to-slate-50 w-full py-16 flex justify-center items-center z-20 border-t border-slate-100 relative overflow-hidden">
+        {/* Subtle decorative glow for premium feel */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#F97316]/[0.04] blur-[80px] rounded-full pointer-events-none"></div>
+        
+        <a 
+          href="https://femur.studio" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex flex-col items-center group cursor-pointer transition-all duration-700 hover:-translate-y-1 no-underline relative z-10"
+        >
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-8 h-[1px] bg-slate-200 group-hover:bg-[#F97316]/40 transition-colors duration-500"></div>
+            <span className="text-[10px] sm:text-[11px] tracking-[0.4em] text-slate-400 font-bold uppercase transition-colors duration-500 group-hover:text-[#F97316]">
+              Designed & Developed by
+            </span>
+            <div className="w-8 h-[1px] bg-slate-200 group-hover:bg-[#F97316]/40 transition-colors duration-500"></div>
+          </div>
+          
+          <h2 className="text-3xl sm:text-4xl font-black tracking-[0.2em] bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent group-hover:from-[#F97316] group-hover:to-[#fb923c] transition-all duration-700 uppercase mb-7 drop-shadow-sm pb-1">
+            Femur Studio
+          </h2>
+          
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100 group-hover:border-[#F97316]/30 transition-all duration-500 relative overflow-hidden mb-7 group-hover:shadow-[0_8px_40px_rgba(249,115,22,0.15)] bg-clip-padding">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-transparent"></div>
+            <span className="relative text-slate-800 font-serif text-4xl sm:text-5xl font-normal tracking-tight flex items-center justify-center leading-none mt-1 group-hover:text-[#F97316] transition-colors duration-500" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+              F<span className="relative -ml-1.5 sm:-ml-2">S</span>
+            </span>
+          </div>
+
+          <span className="text-[9px] sm:text-[10px] tracking-[0.4em] text-slate-400 group-hover:text-[#F97316]/80 transition-colors duration-500 uppercase font-bold">
+            Architecting Digital Excellence
+          </span>
+        </a>
       </div>
     </footer>
   );

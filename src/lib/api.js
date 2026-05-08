@@ -356,6 +356,14 @@ export const adminAPI = {
     return response.data;
   },
 
+  downloadBulkInvoicesPdf: async (startDate, endDate) => {
+    const response = await api.get('/admin/wallet/invoices/bulk-pdf', {
+      params: { filter_start_date: startDate, filter_end_date: endDate },
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
   // Link Completed (Link Inspection)
   getCompletedLinks: async (params = {}) => {
     const response = await api.get('/admin/sites/link-completed', { params });

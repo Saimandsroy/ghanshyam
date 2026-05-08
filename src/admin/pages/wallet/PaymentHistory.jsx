@@ -14,26 +14,55 @@ export function PaymentHistory() {
     const basePath = location.pathname.startsWith('/accountant') ? '/accountant' : '/admin';
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+    const [searchTerm, setSearchTerm] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_searchTerm');
+        return saved ? saved : '';
+    });
+    const [sortConfig, setSortConfig] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_sortConfig');
+        return saved ? JSON.parse(saved) : { key: 'created_at', direction: 'desc' };
+    });
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
 
     // Pagination state
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(50);
+    const [page, setPage] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_page');
+        return saved ? parseInt(saved) : 1;
+    });
+    const [limit, setLimit] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_limit');
+        return saved ? parseInt(saved) : 50;
+    });
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     // Filter state
-    const [filtersExpanded, setFiltersExpanded] = useState(false);
-    const [filters, setFilters] = useState({
-        name: '',
-        email: '',
-        paymentMethod: '',
-        startDate: '',
-        endDate: ''
+    const [filtersExpanded, setFiltersExpanded] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_filtersExpanded');
+        return saved ? JSON.parse(saved) : false;
     });
+    const [filters, setFilters] = useState(() => {
+        const saved = sessionStorage.getItem('paymentHistory_filters');
+        return saved ? JSON.parse(saved) : {
+            name: '',
+            email: '',
+            paymentMethod: '',
+            startDate: '',
+            endDate: ''
+        };
+    });
+
+    // Persist state to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('paymentHistory_searchTerm', searchTerm);
+        sessionStorage.setItem('paymentHistory_sortConfig', JSON.stringify(sortConfig));
+        sessionStorage.setItem('paymentHistory_page', page.toString());
+        sessionStorage.setItem('paymentHistory_limit', limit.toString());
+        sessionStorage.setItem('paymentHistory_filtersExpanded', JSON.stringify(filtersExpanded));
+        sessionStorage.setItem('paymentHistory_filters', JSON.stringify(filters));
+    }, [searchTerm, sortConfig, page, limit, filtersExpanded, filters]);
 
     useEffect(() => {
         fetchPayments();
@@ -327,6 +356,34 @@ export function PaymentHistory() {
     // Check if any filter is active
     const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.startDate || filters.endDate;
 
+    const handleBulkDownload = async () => {
+        if (!filters.startDate || !filters.endDate) return;
+        
+        try {
+            setIsDownloadingBulk(true);
+            const response = await api.get('/admin/wallet/invoices/bulk-pdf', {
+                params: { filter_start_date: filters.startDate, filter_end_date: filters.endDate },
+                responseType: 'blob'
+            });
+            const blob = response.data;
+            
+            // Create object URL and trigger download
+            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `bulk-invoices-${filters.startDate}-to-${filters.endDate}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Bulk PDF download failed:', err);
+            setError(err.message || 'Failed to download bulk invoices');
+        } finally {
+            setIsDownloadingBulk(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -338,21 +395,48 @@ export function PaymentHistory() {
                         {total.toLocaleString()} total
                     </span>
                 </div>
-                {/* Filter Icon Button */}
-                <button
-                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                <div className="flex items-center gap-3">
+                    {filters.startDate && filters.endDate && (
+                        <button
+                            onClick={handleBulkDownload}
+                            disabled={isDownloadingBulk || payments.length === 0}
+                            className="text-xs px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                        >
+                            {isDownloadingBulk ? (
+                                <>
+                                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                    Generating PDF...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download Bulk Invoices
+                                </>
+                            )}
+                        </button>
+                    )}
+                    {/* Filter Icon Button */}
+                    <button
+                        onClick={() => setFiltersExpanded(!filtersExpanded)}
 
-                    className="relative p-2 rounded-lg transition-colors hover:bg-white/10"
-                    style={{ border: '1px solid var(--border)' }}
-                    title="Toggle Filters"
-                >
-                    <Filter size={20} style={{ color: filtersExpanded ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
-                    {
-                        hasActiveFilters && (
-                            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--primary-orange)]"></span>
-                        )
-                    }
-                </button >
+                        className="relative p-2 rounded-lg transition-colors hover:bg-white/10"
+                        style={{ border: '1px solid var(--border)' }}
+                        title="Toggle Filters"
+                    >
+                        <Filter size={20} style={{ color: filtersExpanded ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
+                        {
+                            hasActiveFilters && (
+                                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--color-primary)]"></span>
+                            )
+                        }
+                    </button >
+                </div>
             </div >
 
             {/* Collapsible Filters Section */}

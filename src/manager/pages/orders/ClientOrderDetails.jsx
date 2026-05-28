@@ -462,48 +462,44 @@ export const ClientOrderDetails = () => {
                       disabled={!canPush} />
                   </div>
 
-                  {/* Hide detailed inputs for delegated order pending review */}
-                  {!(isDelegated && order.status === 'pending_review') && (
+                  {/* Show detailed inputs for all orders so managers can always fill them */}
+                  {isGuestPost ? (
                     <>
-                      {isGuestPost ? (
-                        <>
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Article Title</label>
-                            <input className="premium-input w-full" placeholder="Title"
-                              value={d.article_title || ''} onChange={(e) => handleFieldChange(d.id, 'article_title', e.target.value)}
-                              disabled={!canPush} />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">
-                              <Link2 className="h-3 w-3 inline mr-1" /> Doc URL
-                            </label>
-                            <input className="premium-input w-full" placeholder="https://docs.google.com/..."
-                              value={d.doc_url || ''} onChange={(e) => handleFieldChange(d.id, 'doc_url', e.target.value)}
-                              disabled={!canPush} />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Post URL</label>
-                            <input className="premium-input w-full" placeholder="https://blog.com/existing-post"
-                              value={d.post_url || ''} onChange={(e) => handleFieldChange(d.id, 'post_url', e.target.value)}
-                              disabled={!canPush} />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Insert After</label>
-                            <input className="premium-input w-full" placeholder="Text to insert after..."
-                              value={d.insert_after || ''} onChange={(e) => handleFieldChange(d.id, 'insert_after', e.target.value)}
-                              disabled={!canPush} />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Insert Statement</label>
-                            <textarea className="premium-input w-full min-h-[80px]" rows={3} placeholder="Statement..."
-                              value={d.insert_statement || ''} onChange={(e) => handleFieldChange(d.id, 'insert_statement', e.target.value)}
-                              disabled={!canPush} />
-                          </div>
-                        </>
-                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Article Title</label>
+                        <input className="premium-input w-full" placeholder="Title"
+                          value={d.article_title || ''} onChange={(e) => handleFieldChange(d.id, 'article_title', e.target.value)}
+                          disabled={!canPush} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">
+                          <Link2 className="h-3 w-3 inline mr-1" /> Doc URL
+                        </label>
+                        <input className="premium-input w-full" placeholder="https://docs.google.com/..."
+                          value={d.doc_url || ''} onChange={(e) => handleFieldChange(d.id, 'doc_url', e.target.value)}
+                          disabled={!canPush} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Post URL</label>
+                        <input className="premium-input w-full" placeholder="https://blog.com/existing-post"
+                          value={d.post_url || ''} onChange={(e) => handleFieldChange(d.id, 'post_url', e.target.value)}
+                          disabled={!canPush} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Insert After</label>
+                        <input className="premium-input w-full" placeholder="Text to insert after..."
+                          value={d.insert_after || ''} onChange={(e) => handleFieldChange(d.id, 'insert_after', e.target.value)}
+                          disabled={!canPush} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 uppercase tracking-wider">Insert Statement</label>
+                        <textarea className="premium-input w-full min-h-[80px]" rows={3} placeholder="Statement..."
+                          value={d.insert_statement || ''} onChange={(e) => handleFieldChange(d.id, 'insert_statement', e.target.value)}
+                          disabled={!canPush} />
+                      </div>
                     </>
                   )}
 

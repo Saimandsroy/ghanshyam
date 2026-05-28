@@ -66,6 +66,7 @@
     --text-primary: var(--text-main);
     --text-secondary: var(--text-body);
     --primary-cyan: var(--color-primary); 
+    --primary-orange: var(--color-primary);
     --icon-on-gradient: #FFFFFF;
     --hover-overlay: var(--surface-muted);
     --success: var(--color-success);

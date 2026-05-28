@@ -445,11 +445,11 @@ export function Sites() {
                             <td className="p-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-[var(--primary-cyan)] font-bold text-xs border border-white/10">
-                                  {site.root_domain.charAt(0).toUpperCase()}
+                                  {site.root_domain ? site.root_domain.charAt(0).toUpperCase() : 'W'}
                                 </div>
                                 <div>
                                   <div className="font-medium text-[var(--text-primary)] flex items-center gap-2">
-                                    {site.root_domain}
+                                    {site.root_domain || 'Unknown Domain'}
                                     {isSiteNew(site.created_at) && <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-orange-500 text-white uppercase tracking-wider">NEW</span>}
                                   </div>
                                   <div className="text-xs text-[var(--text-secondary)]">{site.category || 'General'}</div>

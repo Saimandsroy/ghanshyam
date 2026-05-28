@@ -184,6 +184,10 @@ export const adminAPI = {
     const response = await api.get(`/admin/bloggers/${id}/performance`);
     return response.data;
   },
+  getFinancialReport: async (filters = {}) => {
+    const response = await api.get('/admin/reports/financial', { params: filters });
+    return response.data;
+  },
 
   resetUserPassword: async (id) => {
     const response = await api.put(`/admin/users/${id}/reset-password`);
@@ -223,6 +227,17 @@ export const adminAPI = {
 
   updateWebsite: async (websiteId, updates) => {
     const response = await api.put(`/admin/websites/${websiteId}`, updates);
+    return response.data;
+  },
+
+  // Client Orders from Admin
+  getClientOrders: async (params = {}) => {
+    const response = await api.get('/admin/client-orders', { params });
+    return response.data;
+  },
+
+  reassignClientOrder: async (orderId, managerId) => {
+    const response = await api.put(`/admin/client-orders/${orderId}/reassign`, { manager_id: managerId });
     return response.data;
   },
 
@@ -356,14 +371,6 @@ export const adminAPI = {
     return response.data;
   },
 
-  downloadBulkInvoicesPdf: async (startDate, endDate) => {
-    const response = await api.get('/admin/wallet/invoices/bulk-pdf', {
-      params: { filter_start_date: startDate, filter_end_date: endDate },
-      responseType: 'blob'
-    });
-    return response.data;
-  },
-
   // Link Completed (Link Inspection)
   getCompletedLinks: async (params = {}) => {
     const response = await api.get('/admin/sites/link-completed', { params });
@@ -426,6 +433,17 @@ export const adminAPI = {
     const response = await api.put(`/admin/users/${userId}/permissions`, { permissions });
     return response.data;
   },
+
+  // Client Wallet Management
+  addManualWalletBalance: async (userId, amount, remarks) => {
+    const response = await api.post(`/admin/users/${userId}/wallet/add`, { amount, remarks });
+    return response.data;
+  },
+
+  withdrawManualWalletBalance: async (userId, amount, remarks) => {
+    const response = await api.post(`/admin/users/${userId}/wallet/withdraw`, { amount, remarks });
+    return response.data;
+  },
 };
 
 // ==================== Manager APIs ====================
@@ -434,6 +452,17 @@ export const managerAPI = {
   // Dashboard stats
   getDashboard: async () => {
     const response = await api.get('/manager/dashboard');
+    return response.data;
+  },
+
+  // Link Completed
+  getCompletedLinks: async (params = {}) => {
+    const response = await api.get('/manager/sites/link-completed', { params });
+    return response.data;
+  },
+
+  checkLinkStatus: async (data) => {
+    const response = await api.post('/manager/sites/check-link-status', data);
     return response.data;
   },
 
@@ -644,6 +673,44 @@ export const managerAPI = {
       websites,
       content_data: contentData,
       assigned_writer_id: writerId
+    });
+    return response.data;
+  },
+
+  // ==================== CLIENT ORDER MANAGEMENT ====================
+  getClientOrders: async (params = {}) => {
+    const response = await api.get('/manager/client-orders', { params });
+    return response.data;
+  },
+
+  getClientOrderDetails: async (orderId) => {
+    const response = await api.get(`/manager/client-orders/${orderId}`);
+    return response.data;
+  },
+
+  updateClientOrder: async (orderId, data) => {
+    const response = await api.put(`/manager/client-orders/${orderId}`, data);
+    return response.data;
+  },
+
+  rejectClientOrder: async (orderId, managerNotes) => {
+    const response = await api.post(`/manager/client-orders/${orderId}/reject`, {
+      manager_notes: managerNotes
+    });
+    return response.data;
+  },
+
+  pushClientOrderToBlogger: async (orderId, sendEmail = true) => {
+    const response = await api.post(`/manager/client-orders/${orderId}/push-to-blogger`, {
+      send_email: sendEmail
+    });
+    return response.data;
+  },
+
+  sendClientOrderToWriter: async (orderId, writerId, instructions = '') => {
+    const response = await api.post(`/manager/client-orders/${orderId}/send-to-writer`, {
+      writer_id: writerId,
+      instructions
     });
     return response.data;
   },
@@ -974,6 +1041,72 @@ export const accountantAPI = {
 
   markAsPaid: async (paymentId) => {
     const response = await api.patch(`/accountant/payments/${paymentId}/pay`);
+    return response.data;
+  },
+};
+
+// ==================== Client APIs ====================
+
+export const clientAPI = {
+  // Dashboard
+  getDashboard: async () => {
+    const response = await api.get('/client/dashboard');
+    return response.data;
+  },
+
+  // Link Completed
+  getCompletedLinks: async (params = {}) => {
+    const response = await api.get('/client/sites/link-completed', { params });
+    return response.data;
+  },
+
+  checkLinkStatus: async (data) => {
+    const response = await api.post('/client/sites/check-link-status', data);
+    return response.data;
+  },
+
+  // Wallet
+  getWallet: async () => {
+    const response = await api.get('/client/wallet');
+    return response.data;
+  },
+
+  // Transactions
+  getTransactions: async (params = {}) => {
+    const response = await api.get('/client/transactions', { params });
+    return response.data;
+  },
+
+  // Payments (Razorpay)
+  createPaymentOrder: async (amount) => {
+    const response = await api.post('/client/payments/create-order', { amount });
+    return response.data;
+  },
+
+  verifyPayment: async (paymentData) => {
+    const response = await api.post('/client/payments/verify', paymentData);
+    return response.data;
+  },
+
+  // Sites
+  getSites: async (params = {}) => {
+    const response = await api.get('/client/sites', { params });
+    return response.data;
+  },
+
+  // Orders
+  createOrder: async (orderData) => {
+    const response = await api.post('/client/orders', orderData);
+    return response.data;
+  },
+
+  getOrders: async (params = {}) => {
+    const response = await api.get('/client/orders', { params });
+    return response.data;
+  },
+
+  getOrderDetails: async (orderId) => {
+    const response = await api.get(`/client/orders/${orderId}`);
     return response.data;
   },
 };

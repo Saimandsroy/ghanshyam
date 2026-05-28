@@ -110,7 +110,7 @@ export function Users() {
                     <button
                         onClick={() => { setEditingUser(null); setFormData({ name: '', email: '', password: '', role: 'Blogger' }); setShowAddModal(true); }}
                         className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                        style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}
+                        style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--text-main)' }}
                     >
                         <Plus className="h-4 w-4" /> Add User
                     </button>
@@ -306,7 +306,7 @@ export function Users() {
                                 >Cancel</button>
                                 <button type="submit"
                                     className="px-4 py-2 rounded-lg text-sm font-medium"
-                                    style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}
+                                    style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--text-main)' }}
                                 >{editingUser ? 'Update' : 'Create'}</button>
                             </div>
                         </form>

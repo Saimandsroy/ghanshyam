@@ -325,7 +325,7 @@ export function Bloggers() {
         <div className="rounded-2xl p-4 flex items-center justify-between" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
           <p className="text-red-400">{error}</p>
           <button onClick={() => fetchUsers(page, pageSize, filters)} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--background-dark)' }}>
+            style={{ background: 'linear-gradient(135deg, #6BF0FF 0%, #3ED9EB 100%)', color: 'var(--text-main)' }}>
             <RefreshCw className="h-4 w-4" /> Retry
           </button>
         </div>

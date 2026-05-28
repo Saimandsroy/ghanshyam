@@ -74,6 +74,15 @@ import { RejectedOrderDetails as WriterRejectedOrderDetails } from './writer/pag
 import { Threads as WriterThreads } from './writer/pages/Threads.jsx';
 import { Profile as WriterProfile } from './writer/pages/Profile.jsx';
 import { AccountantLayout } from './accountant/Layout.jsx';
+import { ClientLayout } from './client/Layout.jsx';
+import { Dashboard as ClientDashboard } from './client/pages/Dashboard.jsx';
+import { TopUp as ClientTopUp } from './client/pages/TopUp.jsx';
+import { ViewSites as ClientViewSites } from './client/pages/ViewSites.jsx';
+import { CreateOrder as ClientCreateOrder } from './client/pages/CreateOrder.jsx';
+import { ViewOrders as ClientViewOrders } from './client/pages/ViewOrders.jsx';
+import { OrderDetails as ClientOrderDetails } from './client/pages/OrderDetails.jsx';
+import { LinkCompleted as ClientLinkCompleted } from './client/pages/LinkCompleted.jsx';
+import { Transactions as ClientTransactions } from './client/pages/Transactions.jsx';
 
 import { RequireAuth } from './auth/AuthContext.jsx';
 
@@ -177,6 +186,18 @@ function App() {
           <Route path="wallet/invoices/:id" element={<AdminInvoiceDetail />} />
           <Route path="wallet/withdrawal-requests" element={<WithdrawalRequests />} />
           <Route path="wallet/withdrawal-requests/:id" element={<WithdrawalRequestDetail />} />
+        </Route>
+
+        {/* Client Routes */}
+        <Route path="/client" element={<ClientLayout />}>
+          <Route index element={<ClientDashboard />} />
+          <Route path="topup" element={<ClientTopUp />} />
+          <Route path="transactions" element={<ClientTransactions />} />
+          <Route path="sites" element={<ClientViewSites />} />
+          <Route path="sites/link-completed" element={<ClientLinkCompleted />} />
+          <Route path="orders/create" element={<ClientCreateOrder />} />
+          <Route path="orders" element={<ClientViewOrders />} />
+          <Route path="orders/:id" element={<ClientOrderDetails />} />
         </Route>
 
         {/* Dynamic Routes */}

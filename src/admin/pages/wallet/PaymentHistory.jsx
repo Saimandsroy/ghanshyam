@@ -14,55 +14,25 @@ export function PaymentHistory() {
     const basePath = location.pathname.startsWith('/accountant') ? '/accountant' : '/admin';
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_searchTerm');
-        return saved ? saved : '';
-    });
-    const [sortConfig, setSortConfig] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_sortConfig');
-        return saved ? JSON.parse(saved) : { key: 'created_at', direction: 'desc' };
-    });
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
 
     // Pagination state
-    const [page, setPage] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_page');
-        return saved ? parseInt(saved) : 1;
-    });
-    const [limit, setLimit] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_limit');
-        return saved ? parseInt(saved) : 50;
-    });
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(50);
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     // Filter state
-    const [filtersExpanded, setFiltersExpanded] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_filtersExpanded');
-        return saved ? JSON.parse(saved) : false;
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const [filters, setFilters] = useState({
+        name: '',
+        email: '',
+        paymentMethod: '',
+        clearanceDate: ''
     });
-    const [filters, setFilters] = useState(() => {
-        const saved = sessionStorage.getItem('paymentHistory_filters');
-        return saved ? JSON.parse(saved) : {
-            name: '',
-            email: '',
-            paymentMethod: '',
-            startDate: '',
-            endDate: ''
-        };
-    });
-
-    // Persist state to sessionStorage whenever it changes
-    useEffect(() => {
-        sessionStorage.setItem('paymentHistory_searchTerm', searchTerm);
-        sessionStorage.setItem('paymentHistory_sortConfig', JSON.stringify(sortConfig));
-        sessionStorage.setItem('paymentHistory_page', page.toString());
-        sessionStorage.setItem('paymentHistory_limit', limit.toString());
-        sessionStorage.setItem('paymentHistory_filtersExpanded', JSON.stringify(filtersExpanded));
-        sessionStorage.setItem('paymentHistory_filters', JSON.stringify(filters));
-    }, [searchTerm, sortConfig, page, limit, filtersExpanded, filters]);
 
     useEffect(() => {
         fetchPayments();
@@ -113,23 +83,17 @@ export function PaymentHistory() {
     const fetchPayments = async () => {
         try {
             setLoading(true);
-            // Auto-switch to clearance_date ASC when date filter is active
-            const hasDateFilter = filters.startDate || filters.endDate;
-            const effectiveSortBy = hasDateFilter ? 'clearance_date' : sortConfig.key;
-            const effectiveSortOrder = hasDateFilter ? 'asc' : sortConfig.direction;
-
             const response = await api.get('/admin/wallet/payment-history', {
                 params: {
                     page,
                     limit,
-                    sort_by: effectiveSortBy,
-                    sort_order: effectiveSortOrder,
+                    sort_by: sortConfig.key,
+                    sort_order: sortConfig.direction,
                     // Server-side filter params
                     filter_name: filters.name || undefined,
                     filter_email: filters.email || undefined,
                     filter_payment_method: filters.paymentMethod || undefined,
-                    filter_start_date: filters.startDate || undefined,
-                    filter_end_date: filters.endDate || undefined
+                    filter_clearance_date: filters.clearanceDate || undefined
                 }
             });
             setPayments(response.data.payments || []);
@@ -349,40 +313,12 @@ export function PaymentHistory() {
 
     // Reset filters - also reset to page 1
     const resetFilters = () => {
-        setFilters({ name: '', email: '', paymentMethod: '', startDate: '', endDate: '' });
+        setFilters({ name: '', email: '', paymentMethod: '', clearanceDate: '' });
         setPage(1);
     };
 
     // Check if any filter is active
-    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.startDate || filters.endDate;
-
-    const handleBulkDownload = async () => {
-        if (!filters.startDate || !filters.endDate) return;
-        
-        try {
-            setIsDownloadingBulk(true);
-            const response = await api.get('/admin/wallet/invoices/bulk-pdf', {
-                params: { filter_start_date: filters.startDate, filter_end_date: filters.endDate },
-                responseType: 'blob'
-            });
-            const blob = response.data;
-            
-            // Create object URL and trigger download
-            const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `bulk-invoices-${filters.startDate}-to-${filters.endDate}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error('Bulk PDF download failed:', err);
-            setError(err.message || 'Failed to download bulk invoices');
-        } finally {
-            setIsDownloadingBulk(false);
-        }
-    };
+    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.clearanceDate;
 
     return (
         <div className="space-y-6">
@@ -395,48 +331,21 @@ export function PaymentHistory() {
                         {total.toLocaleString()} total
                     </span>
                 </div>
-                <div className="flex items-center gap-3">
-                    {filters.startDate && filters.endDate && (
-                        <button
-                            onClick={handleBulkDownload}
-                            disabled={isDownloadingBulk || payments.length === 0}
-                            className="text-xs px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                        >
-                            {isDownloadingBulk ? (
-                                <>
-                                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    Generating PDF...
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    Download Bulk Invoices
-                                </>
-                            )}
-                        </button>
-                    )}
-                    {/* Filter Icon Button */}
-                    <button
-                        onClick={() => setFiltersExpanded(!filtersExpanded)}
+                {/* Filter Icon Button */}
+                <button
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
 
-                        className="relative p-2 rounded-lg transition-colors hover:bg-white/10"
-                        style={{ border: '1px solid var(--border)' }}
-                        title="Toggle Filters"
-                    >
-                        <Filter size={20} style={{ color: filtersExpanded ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
-                        {
-                            hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--color-primary)]"></span>
-                            )
-                        }
-                    </button >
-                </div>
+                    className="relative p-2 rounded-lg transition-colors hover:bg-white/10"
+                    style={{ border: '1px solid var(--border)' }}
+                    title="Toggle Filters"
+                >
+                    <Filter size={20} style={{ color: filtersExpanded ? 'var(--primary-cyan)' : 'var(--text-muted)' }} />
+                    {
+                        hasActiveFilters && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[var(--primary-orange)]"></span>
+                        )
+                    }
+                </button >
             </div >
 
             {/* Collapsible Filters Section */}
@@ -496,32 +405,17 @@ export function PaymentHistory() {
                                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
-                            {/* Clearance Date Range Filter */}
-                            <div className="md:col-span-2">
-                                <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Clearance Date Range</label>
-                                <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <input
-                                            type="date"
-                                            value={filters.startDate}
-                                            onChange={e => setFilters({ ...filters, startDate: e.target.value })}
-                                            className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
-                                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                                            placeholder="Start Date"
-                                        />
-                                    </div>
-                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>to</span>
-                                    <div className="relative flex-1">
-                                        <input
-                                            type="date"
-                                            value={filters.endDate}
-                                            onChange={e => setFilters({ ...filters, endDate: e.target.value })}
-                                            min={filters.startDate || undefined}
-                                            className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
-                                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                                            placeholder="End Date"
-                                        />
-                                    </div>
+                            {/* Clearance Date Filter */}
+                            <div>
+                                <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Clearance Date</label>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        value={filters.clearanceDate}
+                                        onChange={e => setFilters({ ...filters, clearanceDate: e.target.value })}
+                                        className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -550,7 +444,7 @@ export function PaymentHistory() {
                             </button>
                         )}
                     </div>
-                
+
                     {/* Rows per page */}
                     <div className="flex items-center gap-2">
                         <span style={{ color: 'var(--text-muted)' }}>Show:</span>
@@ -596,8 +490,8 @@ export function PaymentHistory() {
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
                                 <th className="text-left px-4 py-3" style={{ width: '5%' }}>
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         className="rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
                                         checked={payments.length > 0 && selectedRows.size === payments.length}
                                         onChange={handleSelectAll}
@@ -659,7 +553,7 @@ export function PaymentHistory() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center">
+                                    <td colSpan={6} className="px-4 py-8 text-center">
                                         <div className="flex items-center justify-center">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
                                         </div>
@@ -667,7 +561,7 @@ export function PaymentHistory() {
                                 </tr>
                             ) : payments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
+                                    <td colSpan={6} className="px-4 py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                                         {hasActiveFilters ? 'No payments match your filters' : 'No payments found'}
                                     </td>
                                 </tr>
@@ -680,14 +574,14 @@ export function PaymentHistory() {
                                     >
                                         {/* Checkbox */}
                                         <td className="px-4 py-4 align-top">
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 className="mt-1 rounded border-[var(--border)] text-[var(--primary-cyan)] focus:ring-[var(--primary-cyan)] cursor-pointer"
                                                 checked={selectedRows.has(payment.id)}
                                                 onChange={() => handleSelectRow(payment.id)}
                                             />
                                         </td>
-                                        
+
                                         {/* User */}
                                         <td className="px-4 py-4 align-top">
                                             <div>
@@ -844,7 +738,7 @@ export function PaymentHistory() {
                     </div>
                 </div>
             </div>
-            
+
             <ExportModal
                 isOpen={isExportModalOpen}
                 onClose={() => setIsExportModalOpen(false)}

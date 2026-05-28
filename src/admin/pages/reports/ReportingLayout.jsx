@@ -6,10 +6,12 @@ import { ClientUrlReport } from './ClientUrlReport.jsx';
 import { PriceReport } from './PriceReport.jsx';
 import { SiteReport } from './SiteReport.jsx';
 import { VendorReport } from './VendorReport.jsx';
+import { FinancialReport } from './FinancialReport.jsx';
 
 export function ReportingLayout() {
   const location = useLocation();
   const nav = [
+    { to: 'financial', label: 'Financial Report' },
     { to: 'blogger', label: 'Blogger Report' },
     { to: '', label: 'Client Report' },
     { to: 'client-urls', label: 'Client URL Report' },
@@ -44,6 +46,7 @@ export function ReportingLayout() {
           <Route path="price" element={<PriceReport />} />
           <Route path="site" element={<SiteReport />} />
           <Route path="vendor" element={<VendorReport />} />
+          <Route path="financial" element={<FinancialReport />} />
         </Routes>
       </section>
     </div>

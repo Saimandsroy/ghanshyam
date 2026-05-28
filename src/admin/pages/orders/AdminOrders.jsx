@@ -12,6 +12,15 @@ export function AdminOrders() {
     const [error, setError] = useState('');
     const [selectedRows, setSelectedRows] = useState(new Set());
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    
+    // Managers data for filtering and reassigning
+    const [managers, setManagers] = useState([]);
+    
+    // Reassign modal state
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+    const [reassignOrderId, setReassignOrderId] = useState(null);
+    const [selectedManagerId, setSelectedManagerId] = useState('');
+    const [reassignLoading, setReassignLoading] = useState(false);
 
     // Pagination state
     const [page, setPage] = useState(1);
@@ -29,8 +38,24 @@ export function AdminOrders() {
         client_name: '',
         client_website: '',
         ordered_at_from: '',
-        ordered_at_to: ''
+        ordered_at_to: '',
+        manager_id: ''
     });
+
+    // Fetch managers for filter dropdowns
+    useEffect(() => {
+        const fetchManagers = async () => {
+            try {
+                const response = await adminAPI.getUsers();
+                if (response && response.users) {
+                    setManagers(response.users.filter(m => m.role === 'Manager' && m.status === 1));
+                }
+            } catch (error) {
+                console.error('Failed to fetch managers:', error);
+            }
+        };
+        fetchManagers();
+    }, []);
 
     // Column visibility state
     const [visibleColumns, setVisibleColumns] = useState({
@@ -75,6 +100,7 @@ export function AdminOrders() {
             if (filters.client_website) queryParams.client_website = filters.client_website;
             if (filters.ordered_at_from) queryParams.ordered_at_from = filters.ordered_at_from;
             if (filters.ordered_at_to) queryParams.ordered_at_to = filters.ordered_at_to;
+            if (filters.manager_id) queryParams.manager_id = filters.manager_id;
 
             const response = await adminAPI.getOrders(queryParams);
             setOrders(response.orders || []);
@@ -141,14 +167,15 @@ export function AdminOrders() {
             client_name: '',
             client_website: '',
             ordered_at_from: '',
-            ordered_at_to: ''
+            ordered_at_to: '',
+            manager_id: ''
         });
         setPage(1);
     };
 
     const hasActiveFilters = filters.status || filters.order_id || filters.category ||
         filters.client_name || filters.client_website ||
-        filters.ordered_at_from || filters.ordered_at_to;
+        filters.ordered_at_from || filters.ordered_at_to || filters.manager_id;
 
     const totalPages = Math.ceil(total / pageSize);
 
@@ -166,6 +193,21 @@ export function AdminOrders() {
         if (newSet.has(id)) newSet.delete(id);
         else newSet.add(id);
         setSelectedRows(newSet);
+    };
+
+    const handleReassign = async () => {
+        if (!selectedManagerId) return;
+        try {
+            setReassignLoading(true);
+            await adminAPI.reassignClientOrder(reassignOrderId, selectedManagerId);
+            setIsReassignModalOpen(false);
+            fetchOrders();
+        } catch (err) {
+            console.error('Failed to reassign:', err);
+            setError('Failed to reassign order');
+        } finally {
+            setReassignLoading(false);
+        }
     };
 
     const handleExport = ({ filename, format }) => {
@@ -195,18 +237,20 @@ export function AdminOrders() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
-                    <div>
-                        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders Views</h1>
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} results
-                        </p>
+            {/* Header and Tabs */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FileText className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
+                        <div>
+                            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Orders</h1>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                                Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} results
+                            </p>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-2">
                     {/* Export Toggle */}
                     {selectedRows.size > 0 && (
                         <button
@@ -288,8 +332,9 @@ export function AdminOrders() {
                     </button>
                 </div>
             </div>
+        </div>
 
-            {/* Collapsible Filters Panel */}
+        {/* Collapsible Filters Panel */}
             <div className={`overflow-hidden transition-all duration-500 ease-in-out ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div
                     className="card p-5 rounded-2xl"
@@ -392,7 +437,21 @@ export function AdminOrders() {
                                 <option value="Blogger">Blogger</option>
                             </select>
                         </div>
-
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Assigned Manager</label>
+                                <select
+                                    value={filters.manager_id}
+                                    onChange={e => { setFilters(f => ({ ...f, manager_id: e.target.value })); setPage(1); }}
+                                    className="w-full px-3 py-2 rounded-xl text-sm"
+                                    style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                >
+                                    <option value="">All Managers</option>
+                                    <option value="unassigned">Unassigned</option>
+                                    {managers.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                     </div>
                 </div>
             </div>
@@ -483,7 +542,9 @@ export function AdminOrders() {
                                             </td>
                                             {/* Manager */}
                                             {visibleColumns.manager && (
-                                                <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{order.manager_name || 'N/A'}</td>
+                                                <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>
+                                                    {order.manager_name || 'Unassigned'}
+                                                </td>
                                             )}
                                             {/* Client Name */}
                                             {visibleColumns.client_name && (
@@ -562,13 +623,28 @@ export function AdminOrders() {
                                             )}
                                             {/* Actions */}
                                             <td className="px-4 py-3 text-center">
-                                                <button
-                                                    onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                                    className="p-2 rounded-lg transition-all hover:bg-white/10"
-                                                    title="View Order Details"
-                                                >
-                                                    <Eye size={16} style={{ color: 'var(--primary-cyan)' }} />
-                                                </button>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                                                        className="p-2 rounded-lg transition-all hover:bg-white/10"
+                                                        title="View Order Details"
+                                                    >
+                                                        <Eye size={16} style={{ color: 'var(--primary-cyan)' }} />
+                                                    </button>
+                                                    {order.is_unapproved_client_order && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setReassignOrderId(order.id);
+                                                                setSelectedManagerId(order.manager_id || '');
+                                                                setIsReassignModalOpen(true);
+                                                            }}
+                                                            className="p-2 rounded-lg transition-all hover:bg-white/10"
+                                                            title="Reassign Manager"
+                                                        >
+                                                            <RefreshCw size={16} className="text-purple-400" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -665,6 +741,55 @@ export function AdminOrders() {
                 onExport={handleExport}
                 selectedCount={selectedRows.size}
             />
+
+            {/* Reassign Manager Modal */}
+            {isReassignModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-[var(--card-background)] rounded-2xl w-full max-w-md p-6 border border-[var(--border)] shadow-xl mx-4">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Reassign Order</h3>
+                            <button onClick={() => setIsReassignModalOpen(false)} className="text-[var(--text-muted)] hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-muted)' }}>
+                                    Select New Manager
+                                </label>
+                                <select
+                                    value={selectedManagerId}
+                                    onChange={(e) => setSelectedManagerId(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background-dark)] focus:outline-none focus:border-[var(--primary-cyan)] transition-colors"
+                                    style={{ color: 'var(--text-primary)' }}
+                                >
+                                    <option value="">Select a manager...</option>
+                                    {managers.map(m => (
+                                        <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    onClick={() => setIsReassignModalOpen(false)}
+                                    className="flex-1 px-4 py-2.5 rounded-xl font-medium border border-[var(--border)] hover:bg-white/5 transition-colors"
+                                    style={{ color: 'var(--text-muted)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleReassign}
+                                    disabled={!selectedManagerId || reassignLoading}
+                                    className="flex-1 px-4 py-2.5 rounded-xl font-medium flex items-center justify-center disabled:opacity-50 transition-colors"
+                                    style={{ backgroundColor: 'var(--primary-cyan)', color: 'var(--background-dark)' }}
+                                >
+                                    {reassignLoading ? <RefreshCw className="h-5 w-5 animate-spin" /> : 'Confirm Reassign'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

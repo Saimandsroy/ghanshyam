@@ -1,17 +1,24 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Users2, Filter, RotateCcw, Shield, Key, X, ChevronDown, ChevronUp, UserPlus, LogIn } from 'lucide-react';
+import { RefreshCw, Users2, Filter, RotateCcw, Shield, Key, X, ChevronDown, ChevronUp, UserPlus, LogIn, Wallet, ArrowDownCircle, PlusCircle } from 'lucide-react';
 import { Pagination } from '../../components/Pagination.jsx';
 import { adminAPI } from '../../lib/api';
 import { useAuth } from '../../auth/AuthContext';
 
 const TEAM_ROLES = ['Team', 'Manager', 'Writer', 'Accountant'];
 const CREATE_ROLES = ['Manager', 'Writer', 'Blogger', 'Accountant'];
+const CLIENT_ROLES = ['Client'];
 
 export function TeamMembers() {
   const navigate = useNavigate();
   const { impersonateLogin } = useAuth();
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('team');
+
+  // Shared state
   const [users, setUsers] = useState([]);
+  const [clientUsers, setClientUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({ role: 'all', name: '', email: '' });
@@ -30,14 +37,18 @@ export function TeamMembers() {
   const [createForm, setCreateForm] = useState({ role: '', name: '', email: '', password: '' });
   const [createLoading, setCreateLoading] = useState(false);
 
-  // Fetch users from API
-  const fetchUsers = useCallback(async () => {
+  // Wallet Modal State
+  const [walletModal, setWalletModal] = useState({ open: false, userId: null, userName: '', type: 'add', currentBalance: 0 });
+  const [walletAmount, setWalletAmount] = useState('');
+  const [walletRemarks, setWalletRemarks] = useState('');
+  const [walletLoading, setWalletLoading] = useState(false);
+
+  // Fetch team members from API
+  const fetchTeamUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch all three roles separately and combine
-      // Backend pagination returns only 50 records, so we need to filter by role on the server side
       const [teamRes, managerRes, writerRes, accountantRes] = await Promise.all([
         adminAPI.getUsers({ role: 'Team', limit: 100 }),
         adminAPI.getUsers({ role: 'Manager', limit: 100 }),
@@ -61,9 +72,30 @@ export function TeamMembers() {
     }
   }, []);
 
+  // Fetch client members from API
+  const fetchClientUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const clientRes = await adminAPI.getUsers({ role: 'Client', limit: 100 });
+      setClientUsers(clientRes.users || []);
+    } catch (err) {
+      console.error('Error fetching client members:', err);
+      setError(err.message || 'Failed to load client members');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch data based on active tab
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (activeTab === 'team') {
+      fetchTeamUsers();
+    } else {
+      fetchClientUsers();
+    }
+  }, [activeTab, fetchTeamUsers, fetchClientUsers]);
 
   // Auto-hide success message
   useEffect(() => {
@@ -73,14 +105,17 @@ export function TeamMembers() {
     }
   }, [successMessage]);
 
-  // Filter users
+  // Filter users based on tab
+  const currentUsers = activeTab === 'team' ? users : clientUsers;
+  const currentFilterRoles = activeTab === 'team' ? TEAM_ROLES : CLIENT_ROLES;
+
   const rows = useMemo(() => {
-    let r = users;
+    let r = currentUsers;
     if (filters.role !== 'all') r = r.filter(m => m.role === filters.role);
     if (filters.name) r = r.filter(m => (m.name || '').toLowerCase().includes(filters.name.toLowerCase()));
     if (filters.email) r = r.filter(m => (m.email || '').toLowerCase().includes(filters.email.toLowerCase()));
     return r;
-  }, [users, filters]);
+  }, [currentUsers, filters]);
 
   const total = rows.length;
   const pageData = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -89,6 +124,12 @@ export function TeamMembers() {
   const resetFilters = () => {
     setFilters({ role: 'all', name: '', email: '' });
     setPage(1);
+  };
+
+  // Switch tab
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    resetFilters();
   };
 
   // Format date for display
@@ -160,7 +201,8 @@ export function TeamMembers() {
         Manager: '/manager',
         Team: '/teams',
         Writer: '/writer',
-        Accountant: '/accountant'
+        Accountant: '/accountant',
+        Client: '/client'
       };
       
       // Wait a moment for context to persist, then forcibly navigate
@@ -183,9 +225,14 @@ export function TeamMembers() {
       await adminAPI.updateUser(userId, { is_active: newStatus === 1 });
       setSuccessMessage(`${userName} is now ${newStatus === 1 ? 'Active' : 'Blocked'}`);
       // Update local state
-      setUsers(prev => prev.map(u =>
+      const updateFn = prev => prev.map(u =>
         u.id === userId ? { ...u, is_active: newStatus === 1, status: newStatus } : u
-      ));
+      );
+      if (activeTab === 'team') {
+        setUsers(updateFn);
+      } else {
+        setClientUsers(updateFn);
+      }
     } catch (err) {
       setError(err.message || 'Failed to update status');
     } finally {
@@ -195,7 +242,9 @@ export function TeamMembers() {
 
   // Action: Create new user
   const handleCreateUser = async (createAnother = false) => {
-    if (!createForm.role) {
+    const effectiveRole = activeTab === 'client' ? 'Client' : createForm.role;
+
+    if (activeTab === 'team' && !createForm.role) {
       setError('Please select a role');
       return;
     }
@@ -218,20 +267,65 @@ export function TeamMembers() {
         name: createForm.name,
         email: createForm.email,
         password: createForm.password,
-        role: createForm.role
+        role: effectiveRole
       });
-      setSuccessMessage(`Team member ${createForm.name} created successfully!`);
+      setSuccessMessage(`${activeTab === 'client' ? 'Client' : 'Team'} member ${createForm.name} created successfully!`);
       if (createAnother) {
         setCreateForm({ role: '', name: '', email: '', password: '' });
       } else {
         setShowCreateModal(false);
         setCreateForm({ role: '', name: '', email: '', password: '' });
       }
-      fetchUsers();
+      if (activeTab === 'team') {
+        fetchTeamUsers();
+      } else {
+        fetchClientUsers();
+      }
     } catch (err) {
       setError(err.message || 'Failed to create user');
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  // Action: Add money to wallet
+  const handleWalletAction = async () => {
+    if (!walletAmount || isNaN(walletAmount) || parseFloat(walletAmount) <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    setWalletLoading(true);
+    try {
+      let result;
+      if (walletModal.type === 'add') {
+        result = await adminAPI.addManualWalletBalance(walletModal.userId, parseFloat(walletAmount), walletRemarks);
+        setSuccessMessage(`₹${walletAmount} added to ${walletModal.userName}'s wallet. New balance: ₹${result.new_balance}`);
+      } else {
+        result = await adminAPI.withdrawManualWalletBalance(walletModal.userId, parseFloat(walletAmount), walletRemarks);
+        setSuccessMessage(`₹${walletAmount} withdrawn from ${walletModal.userName}'s wallet. New balance: ₹${result.new_balance}`);
+      }
+
+      // Update local client user balance
+      setClientUsers(prev => prev.map(u =>
+        u.id === walletModal.userId ? { ...u, wallet_balance: result.new_balance } : u
+      ));
+
+      setWalletModal({ open: false, userId: null, userName: '', type: 'add', currentBalance: 0 });
+      setWalletAmount('');
+      setWalletRemarks('');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Wallet operation failed');
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  const refreshData = () => {
+    if (activeTab === 'team') {
+      fetchTeamUsers();
+    } else {
+      fetchClientUsers();
     }
   };
 
@@ -241,19 +335,18 @@ export function TeamMembers() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           <Users2 className="h-6 w-6" style={{ color: 'var(--primary-cyan)' }} />
-          Team Members
+          {activeTab === 'team' ? 'Team Members' : 'Client Members'}
         </h2>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/admin/team-members/add')}
-            className="px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors text-sm"
-            style={{ backgroundColor: '#22c55e', color: 'white' }}
+            onClick={() => setShowCreateModal(true)}
+            className="premium-btn text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/10 hover:shadow-lg hover:shadow-emerald-600/20 active:scale-95 transition-all border-none font-semibold text-sm"
           >
-            <UserPlus className="h-4 w-4" />
-            Add Team Member
+            <UserPlus className="h-4.5 w-4.5" />
+            {activeTab === 'team' ? 'Add Team Member' : 'Add Client'}
           </button>
           <button
-            onClick={fetchUsers}
+            onClick={refreshData}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
             title="Refresh"
@@ -261,6 +354,32 @@ export function TeamMembers() {
             <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: 'var(--text-muted)' }} />
           </button>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl p-1 bg-[var(--background-dark)] border border-[var(--border)]">
+        <button
+          onClick={() => handleTabChange('team')}
+          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+            activeTab === 'team'
+              ? 'bg-[var(--color-primary)] text-white shadow-md'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-muted)]'
+          }`}
+        >
+          <Users2 className="h-4 w-4" />
+          <span>Team Members</span>
+        </button>
+        <button
+          onClick={() => handleTabChange('client')}
+          className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+            activeTab === 'client'
+              ? 'bg-[var(--color-primary)] text-white shadow-md'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-muted)]'
+          }`}
+        >
+          <Wallet className="h-4 w-4" />
+          <span>Client Members</span>
+        </button>
       </div>
 
       {/* Success Message */}
@@ -292,7 +411,7 @@ export function TeamMembers() {
             <Filter className="h-4 w-4" style={{ color: 'var(--primary-cyan)' }} />
             <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Filters</span>
             {(filters.role !== 'all' || filters.name || filters.email) && (
-              <span className="px-2 py-0.5 rounded-full text-xs" style={{ backgroundColor: 'var(--primary-cyan)', color: 'var(--background-dark)' }}>
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--primary-cyan)', color: '#ffffff' }}>
                 Active
               </span>
             )}
@@ -311,18 +430,20 @@ export function TeamMembers() {
         {filtersExpanded && (
           <div className="p-4 pt-0 border-t" style={{ borderColor: 'var(--border)' }}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-              <div>
-                <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Role</label>
-                <select
-                  value={filters.role}
-                  onChange={e => { setFilters({ ...filters, role: e.target.value }); setPage(1); }}
-                  className="w-full rounded-xl px-3 py-2"
-                  style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                >
-                  <option value="all">All Roles</option>
-                  {TEAM_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
+              {activeTab === 'team' && (
+                <div>
+                  <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Role</label>
+                  <select
+                    value={filters.role}
+                    onChange={e => { setFilters({ ...filters, role: e.target.value }); setPage(1); }}
+                    className="w-full rounded-xl px-3 py-2"
+                    style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="all">All Roles</option>
+                    {currentFilterRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Name</label>
                 <input
@@ -358,128 +479,170 @@ export function TeamMembers() {
       </div>
 
       {/* Loading State */}
-      {loading && users.length === 0 && (
+      {loading && currentUsers.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--primary-cyan)' }}></div>
-          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading team members...</p>
+          <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>Loading {activeTab === 'team' ? 'team' : 'client'} members...</p>
         </div>
       )}
 
       {/* Table */}
       {!loading && (
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--background-dark)' }}>
-              <tr>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Name</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Email</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Role</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Last Login</th>
-                <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Login Counts</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Account Status</th>
-                <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.map(m => (
-                <tr key={m.id}>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{m.name || 'N/A'}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{m.email}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'rgba(107, 240, 255, 0.1)', color: 'var(--primary-cyan)' }}>
-                      {m.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    {formatDate(m.last_login)}
-                  </td>
-                  <td className="px-4 py-3 text-center" style={{ color: 'var(--text-primary)' }}>
-                    <span className="font-medium">{m.login_count || 0}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {/* Toggle Switch for Account Status */}
-                    <button
-                      onClick={() => handleToggleStatus(m.id, m.name, m.is_active)}
-                      disabled={actionLoading === `status-${m.id}`}
-                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                      style={{
-                        backgroundColor: m.is_active ? '#22c55e' : '#475569'
-                      }}
-                      title={m.is_active ? 'Click to block' : 'Click to activate'}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${m.is_active ? 'translate-x-6' : 'translate-x-1'}`}
-                      />
-                    </button>
-                    <span
-                      className="ml-2 text-xs"
-                      style={{ color: m.is_active ? 'var(--success)' : 'var(--error)' }}
-                    >
-                      {m.is_active ? 'Active' : 'Blocked'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      {/* Reset Password Icon */}
-                      <button
-                        onClick={() => handleResetPassword(m.id, m.name)}
-                        disabled={actionLoading === m.id}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
-                        title="Reset password to 12345678"
-                      >
-                        <RotateCcw
-                          className={`h-4 w-4 ${actionLoading === m.id ? 'animate-spin' : ''}`}
-                          style={{ color: 'var(--primary-orange)' }}
-                        />
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                          Reset password to 12345678
-                        </span>
-                      </button>
-
-                      {/* Permissions Icon */}
-                      <button
-                        onClick={() => handleOpenPermissions(m.id)}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                        title="Manage permissions"
-                      >
-                        <Shield className="h-4 w-4" style={{ color: 'var(--primary-cyan)' }} />
-                      </button>
-
-                      {/* Change Password Icon */}
-                      <button
-                        onClick={() => setPasswordModal({ open: true, userId: m.id, userName: m.name })}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                        title="Change password"
-                      >
-                        <Key className="h-4 w-4" style={{ color: 'var(--success)' }} />
-                      </button>
-
-                      {/* Impersonate Icon */}
-                      <button
-                        onClick={() => handleImpersonate(m.id, m.name)}
-                        disabled={actionLoading === `impersonate-${m.id}`}
-                        className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
-                        title={`Log in as ${m.name || 'this user'}`}
-                      >
-                        <LogIn 
-                          className={`h-4 w-4 ${actionLoading === `impersonate-${m.id}` ? 'animate-spin' : ''}`} 
-                          style={{ color: '#c084fc' }} // Purple-400
-                        />
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                          Log in as {m.name || 'user'}
-                        </span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {pageData.length === 0 && (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
+          <div className="overflow-x-auto custom-scrollbar w-full">
+            <table className="w-full min-w-[1100px]">
+              <thead style={{ backgroundColor: 'var(--background-dark)' }}>
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No members found</td>
+                  <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Name</th>
+                  <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Email</th>
+                  <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Role</th>
+                  {activeTab === 'client' && (
+                    <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Wallet Balance</th>
+                  )}
+                  <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Last Login</th>
+                  <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Login Counts</th>
+                  <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Account Status</th>
+                  <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pageData.map(m => (
+                  <tr key={m.id}>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-primary)' }}>{m.name || 'N/A'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{m.email}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded text-xs" style={{
+                        backgroundColor: m.role === 'Client' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(107, 240, 255, 0.1)',
+                        color: m.role === 'Client' ? '#a855f7' : 'var(--primary-cyan)'
+                      }}>
+                        {m.role}
+                      </span>
+                    </td>
+                    {activeTab === 'client' && (
+                      <td className="px-4 py-3 text-center">
+                        <span className="font-semibold" style={{ color: '#22c55e' }}>
+                          ₹{parseFloat(m.wallet_balance || 0).toFixed(2)}
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {formatDate(m.last_login)}
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ color: 'var(--text-primary)' }}>
+                      <span className="font-medium">{m.login_count || 0}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {/* Toggle Switch for Account Status */}
+                      <button
+                        onClick={() => handleToggleStatus(m.id, m.name, m.is_active)}
+                        disabled={actionLoading === `status-${m.id}`}
+                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                        style={{
+                          backgroundColor: m.is_active ? '#22c55e' : '#475569'
+                        }}
+                        title={m.is_active ? 'Click to block' : 'Click to activate'}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${m.is_active ? 'translate-x-6' : 'translate-x-1'}`}
+                        />
+                      </button>
+                      <span
+                        className="ml-2 text-xs"
+                        style={{ color: m.is_active ? 'var(--success)' : 'var(--error)' }}
+                      >
+                        {m.is_active ? 'Active' : 'Blocked'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Reset Password Icon */}
+                        <button
+                          onClick={() => handleResetPassword(m.id, m.name)}
+                          disabled={actionLoading === m.id}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
+                          title="Reset password to 12345678"
+                        >
+                          <RotateCcw
+                            className={`h-4 w-4 ${actionLoading === m.id ? 'animate-spin' : ''}`}
+                            style={{ color: 'var(--primary-orange)' }}
+                          />
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            Reset password to 12345678
+                          </span>
+                        </button>
+
+                        {/* Permissions Icon */}
+                        <button
+                          onClick={() => handleOpenPermissions(m.id)}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Manage permissions"
+                        >
+                          <Shield className="h-4 w-4" style={{ color: 'var(--primary-cyan)' }} />
+                        </button>
+
+                        {/* Change Password Icon */}
+                        <button
+                          onClick={() => setPasswordModal({ open: true, userId: m.id, userName: m.name })}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                          title="Change password"
+                        >
+                          <Key className="h-4 w-4" style={{ color: 'var(--success)' }} />
+                        </button>
+
+                        {/* Impersonate Icon */}
+                        <button
+                          onClick={() => handleImpersonate(m.id, m.name)}
+                          disabled={actionLoading === `impersonate-${m.id}`}
+                          className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
+                          title={`Log in as ${m.name || 'this user'}`}
+                        >
+                          <LogIn 
+                            className={`h-4 w-4 ${actionLoading === `impersonate-${m.id}` ? 'animate-spin' : ''}`} 
+                            style={{ color: '#c084fc' }} // Purple-400
+                          />
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            Log in as {m.name || 'user'}
+                          </span>
+                        </button>
+
+                        {/* Client-only: Add Money */}
+                        {activeTab === 'client' && (
+                          <>
+                            <button
+                              onClick={() => setWalletModal({ open: true, userId: m.id, userName: m.name, type: 'add', currentBalance: parseFloat(m.wallet_balance || 0) })}
+                              className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
+                              title="Add money to wallet"
+                            >
+                              <PlusCircle className="h-4 w-4" style={{ color: '#22c55e' }} />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                Add money
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={() => setWalletModal({ open: true, userId: m.id, userName: m.name, type: 'withdraw', currentBalance: parseFloat(m.wallet_balance || 0) })}
+                              className="p-2 rounded-lg hover:bg-white/10 transition-colors group relative"
+                              title="Withdraw from wallet"
+                            >
+                              <ArrowDownCircle className="h-4 w-4" style={{ color: '#ef4444' }} />
+                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded bg-black/80 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                Withdraw money
+                              </span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pageData.length === 0 && (
+                  <tr>
+                    <td colSpan={activeTab === 'client' ? 8 : 7} className="px-4 py-6 text-center" style={{ color: 'var(--text-muted)' }}>No members found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -522,8 +685,7 @@ export function TeamMembers() {
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 placeholder="Enter new password (min 6 characters)"
-                className="w-full rounded-xl px-3 py-2"
-                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--primary-orange)', color: 'var(--text-primary)' }}
+                className="premium-input w-full"
                 autoFocus
               />
             </div>
@@ -532,15 +694,13 @@ export function TeamMembers() {
               <button
                 onClick={handleChangePassword}
                 disabled={actionLoading === passwordModal.userId}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-                style={{ backgroundColor: 'var(--primary-orange)', color: 'white' }}
+                className="premium-btn premium-btn-primary"
               >
                 {actionLoading === passwordModal.userId ? 'Saving...' : 'Submit'}
               </button>
               <button
                 onClick={() => { setPasswordModal({ open: false, userId: null, userName: '' }); setNewPassword(''); }}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:bg-white/10"
-                style={{ color: 'var(--text-secondary)' }}
+                className="premium-btn premium-btn-ghost"
               >
                 Cancel
               </button>
@@ -552,13 +712,13 @@ export function TeamMembers() {
       {/* Create User Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="rounded-2xl p-6 w-full max-w-3xl" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+          <div className="rounded-2xl p-6 w-full max-w-3xl animate-in fade-in zoom-in-95 duration-200" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Users › Create</p>
                 <h3 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Add Team Member
+                  {activeTab === 'client' ? 'Add Client Member' : 'Add Team Member'}
                 </h3>
               </div>
               <button
@@ -570,23 +730,26 @@ export function TeamMembers() {
             </div>
 
             {/* Form Section */}
-            <div className="rounded-xl p-4 mb-6" style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)' }}>
-              <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>Team Member</p>
+            <div className="rounded-xl p-4 mb-6" style={{ backgroundColor: 'var(--background-app)', border: '1px solid var(--border)' }}>
+              <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
+                {activeTab === 'client' ? 'Client Member Details' : 'Team Member Details'}
+              </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Role */}
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Role<span className="text-red-400">*</span></label>
-                  <select
-                    value={createForm.role}
-                    onChange={e => setCreateForm({ ...createForm, role: e.target.value })}
-                    className="w-full rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'white', border: '1px solid var(--border)', color: 'black' }}
-                  >
-                    <option value="">Select an option</option>
-                    {CREATE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
+              <div className={`grid grid-cols-1 ${activeTab === 'team' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+                {/* Role (only for Team tab) */}
+                {activeTab === 'team' && (
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Role<span className="text-red-400">*</span></label>
+                    <select
+                      value={createForm.role}
+                      onChange={e => setCreateForm({ ...createForm, role: e.target.value })}
+                      className="premium-input w-full"
+                    >
+                      <option value="">Select an option</option>
+                      {CREATE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                )}
 
                 {/* Name */}
                 <div>
@@ -596,8 +759,7 @@ export function TeamMembers() {
                     value={createForm.name}
                     onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
                     placeholder="Enter name"
-                    className="w-full rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'white', border: '1px solid var(--border)', color: 'black' }}
+                    className="premium-input w-full"
                   />
                 </div>
 
@@ -609,8 +771,7 @@ export function TeamMembers() {
                     value={createForm.email}
                     onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
                     placeholder="Enter email"
-                    className="w-full rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'white', border: '1px solid var(--border)', color: 'black' }}
+                    className="premium-input w-full"
                   />
                 </div>
 
@@ -622,8 +783,7 @@ export function TeamMembers() {
                     value={createForm.password}
                     onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
                     placeholder="Enter password"
-                    className="w-full rounded-lg px-3 py-2"
-                    style={{ backgroundColor: 'white', border: '1px solid var(--border)', color: 'black' }}
+                    className="premium-input w-full"
                   />
                 </div>
               </div>
@@ -634,23 +794,91 @@ export function TeamMembers() {
               <button
                 onClick={() => handleCreateUser(false)}
                 disabled={createLoading}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ backgroundColor: 'var(--primary-orange)', color: 'white' }}
+                className="premium-btn premium-btn-primary"
               >
                 {createLoading ? 'Creating...' : 'Create'}
               </button>
               <button
                 onClick={() => handleCreateUser(true)}
                 disabled={createLoading}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                className="premium-btn premium-btn-secondary"
               >
                 Create & create another
               </button>
               <button
                 onClick={() => { setShowCreateModal(false); setCreateForm({ role: '', name: '', email: '', password: '' }); }}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                className="premium-btn premium-btn-ghost"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Modal */}
+      {walletModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="rounded-2xl p-6 w-full max-w-md animate-in fade-in zoom-in-95 duration-200" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {walletModal.type === 'add' ? '💰 Add Money' : '💸 Withdraw Money'}
+              </h3>
+              <button
+                onClick={() => { setWalletModal({ open: false, userId: null, userName: '', type: 'add', currentBalance: 0 }); setWalletAmount(''); setWalletRemarks(''); }}
+                className="p-1 rounded hover:bg-white/10"
+              >
+                <X className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+              {walletModal.type === 'add' ? 'Add balance to' : 'Withdraw balance from'} <strong>{walletModal.userName}</strong>'s wallet
+            </p>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+              Current Balance: <span style={{ color: '#22c55e', fontWeight: 600 }}>₹{walletModal.currentBalance.toFixed(2)}</span>
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Amount (₹)<span className="text-red-400">*</span></label>
+              <input
+                type="number"
+                value={walletAmount}
+                onChange={e => setWalletAmount(e.target.value)}
+                placeholder="Enter amount"
+                min="0.01"
+                step="0.01"
+                className="premium-input w-full"
+                style={{
+                  borderColor: walletModal.type === 'add' ? 'var(--color-success)' : 'var(--color-error)'
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Remarks (optional)</label>
+              <input
+                type="text"
+                value={walletRemarks}
+                onChange={e => setWalletRemarks(e.target.value)}
+                placeholder="e.g. Manual top-up, Adjustment..."
+                className="premium-input w-full"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleWalletAction}
+                disabled={walletLoading}
+                className="premium-btn text-white"
+                style={{ backgroundColor: walletModal.type === 'add' ? 'var(--color-success)' : 'var(--color-error)' }}
+              >
+                {walletLoading ? 'Processing...' : (walletModal.type === 'add' ? 'Add Money' : 'Withdraw')}
+              </button>
+              <button
+                onClick={() => { setWalletModal({ open: false, userId: null, userName: '', type: 'add', currentBalance: 0 }); setWalletAmount(''); setWalletRemarks(''); }}
+                className="premium-btn premium-btn-ghost"
               >
                 Cancel
               </button>

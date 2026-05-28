@@ -67,15 +67,14 @@ export const Sidebar = ({ isMobileOpen = false, onMobileClose }) => {
     {
       icon: <Globe size={18} />,
       label: 'Sites',
-      to: '/manager/sites',
-      active: location.pathname === '/manager/sites'
+      active: location.pathname.startsWith('/manager/sites'),
+      hasDropdown: true,
+      dropdownItems: [
+        { label: 'View Sites', to: '/manager/sites' },
+        { label: 'Link Completed', to: '/manager/sites/link-completed' },
+        { label: 'Live Links', to: '/manager/sites/live-links' }
+      ]
     },
-    {
-      icon: <User size={18} />,
-      label: 'Profile',
-      to: '/manager/profile',
-      active: location.pathname === '/manager/profile'
-    }
   ];
 
   const handleLogout = () => {

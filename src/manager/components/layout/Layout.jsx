@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ModernSidebar } from '../../../components/ModernSidebar'; // Adjust path as needed, likely ../../../components/ModernSidebar
-import { Home, Package, Clock, AlertTriangle, MessageSquare, Globe, User } from 'lucide-react';
+import { Home, Package, Clock, AlertTriangle, MessageSquare, Globe, User, Users } from 'lucide-react';
 import { useAuth } from '../../../auth/AuthContext.jsx'; // Adjust path if needed
 import { authAPI } from '../../../lib/api';
 
@@ -65,12 +65,13 @@ export const Layout = ({ children }) => {
       icon: <Package size={18} />,
       label: 'Orders',
       to: '/manager/orders/view',
-      active: location.pathname.startsWith('/manager/orders'),
+      active: location.pathname.startsWith('/manager/orders') || location.pathname.startsWith('/manager/client-orders'),
       hasDropdown: true,
       permissionKey: 'orders',
       dropdownItems: [
         { label: 'Create New Order', to: '/manager/orders/create' },
-        { label: 'View Orders', to: '/manager/orders/view' }
+        { label: 'View Orders', to: '/manager/orders/view' },
+        { label: 'Client Orders', to: '/manager/client-orders' }
       ]
     },
     {
@@ -107,9 +108,14 @@ export const Layout = ({ children }) => {
     {
       icon: <Globe size={18} />,
       label: 'Sites',
-      to: '/manager/sites',
-      active: location.pathname === '/manager/sites',
-      permissionKey: 'sites'
+      to: '#',
+      active: location.pathname.startsWith('/manager/sites'),
+      hasDropdown: true,
+      permissionKey: 'sites',
+      dropdownItems: [
+        { label: 'View Sites', to: '/manager/sites' },
+        { label: 'Link Completed', to: '/manager/sites/link-completed' }
+      ]
     },
     {
       icon: <User size={18} />,

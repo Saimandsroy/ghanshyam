@@ -38,6 +38,8 @@ export function LoginPage() {
         Writer: '/writer',
         writer: '/writer',
         Accountant: '/accountant',
+        Client: '/client',
+        client: '/client',
         super_admin: '/admin'
       };
       navigate(routeMap[result.role] || '/');

@@ -17,8 +17,11 @@ import { RejectedBloggers } from './pages/rejected/Bloggers.jsx';
 import { RejectedWriters } from './pages/rejected/Writers.jsx';
 import { Threads } from './pages/Threads.jsx';
 import { Sites } from './pages/Sites.jsx';
+import { LinkCompleted } from './pages/sites/LinkCompleted.jsx';
 import { Profile } from './pages/Profile.jsx';
 import { ChangePassword } from './pages/ChangePassword.jsx';
+import { ClientOrders } from './pages/orders/ClientOrders.jsx';
+import { ClientOrderDetails } from './pages/orders/ClientOrderDetails.jsx';
 
 export function ManagerRoutes() {
   return (
@@ -48,6 +51,12 @@ export function ManagerRoutes() {
       {/* Threads & Sites */}
       <Route path="threads" element={<Threads />} />
       <Route path="sites" element={<Sites />} />
+      <Route path="sites/link-completed" element={<LinkCompleted />} />
+      <Route path="sites/live-links" element={<LinkCompleted />} />
+
+      {/* Client Orders */}
+      <Route path="client-orders" element={<ClientOrders />} />
+      <Route path="client-orders/:id" element={<ClientOrderDetails />} />
 
       {/* Profile */}
       <Route path="profile" element={<Profile />} />

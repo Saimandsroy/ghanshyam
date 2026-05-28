@@ -140,7 +140,8 @@ export const ViewOrders = () => {
   const handleUpdate = async () => {
     try {
       setSubmitting(true);
-      await managerAPI.updateOrder(selectedOrder.id, editData);
+      const cleanId = typeof selectedOrder.id === 'string' ? selectedOrder.id.replace('M-', '') : selectedOrder.id;
+      await managerAPI.updateOrder(cleanId, editData);
       setSuccess('Order updated successfully!');
       setShowEditModal(false);
       fetchOrders();
@@ -156,7 +157,8 @@ export const ViewOrders = () => {
     if (window.confirm('Are you strictly sure you want to permanently delete this order? This action cannot be undone and will delete all associated processes.')) {
       try {
         setLoading(true);
-        await managerAPI.deleteOrder(orderId);
+        const cleanId = typeof orderId === 'string' ? orderId.replace('M-', '') : orderId;
+        await managerAPI.deleteOrder(cleanId);
         setSuccess('Order permanently deleted.');
         fetchOrders(); // Refresh table
         setTimeout(() => setSuccess(''), 3000);
@@ -381,26 +383,36 @@ export const ViewOrders = () => {
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => navigate(`/manager/orders/${order.id}`)}
+                            onClick={() => {
+                              if (order.is_unapproved_client_order) {
+                                navigate(`/manager/client-orders/${order.id.replace('C-', '')}`);
+                              } else {
+                                navigate(`/manager/orders/${order.id.replace('M-', '')}`);
+                              }
+                            }}
                             className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors"
                             title="View Details"
                           >
                             <Eye className="h-5 w-5" />
                           </button>
-                          <button
-                            onClick={() => openEditModal(order)}
-                            className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Edit Order"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteOrder(order.id)}
-                            className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Delete Order"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {!order.is_unapproved_client_order && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(order)}
+                                className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                title="Edit Order"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="p-2 rounded-lg text-[var(--text-subtle)] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                title="Delete Order"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

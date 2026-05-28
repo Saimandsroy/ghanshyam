@@ -32,10 +32,22 @@ const NavItem = ({
   active = false,
   hasDropdown = false,
   dropdownItems = [],
+  items = [],
   onClick,
-  collapsed = false
+  collapsed = false,
+  onMobileClose
 }) => {
-  const [showDropdown, setShowDropdown] = useState(false);
+  const actualDropdownItems = dropdownItems.length > 0 ? dropdownItems : items;
+  const actuallyHasDropdown = hasDropdown || actualDropdownItems.length > 0;
+  
+  const [showDropdown, setShowDropdown] = useState(active);
+
+  // Auto-expand if the route becomes active
+  React.useEffect(() => {
+    if (active) {
+      setShowDropdown(true);
+    }
+  }, [active]);
 
   // If collapsed, we don't show dropdown inline, but maybe tooltip (omitted for brevity, just icon)
   // For strictly collapsed view, we might disable dropdown or show it as hover menu.
@@ -59,7 +71,7 @@ const NavItem = ({
           </motion.span>
         )}
       </div>
-      {!collapsed && hasDropdown && (
+      {!collapsed && actuallyHasDropdown && (
         <motion.div
           animate={{ rotate: showDropdown ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -71,11 +83,11 @@ const NavItem = ({
   );
 
   const handleClick = (e) => {
-    if (collapsed && hasDropdown) {
+    if (collapsed && actuallyHasDropdown) {
       // Handle collapse click
     }
 
-    if (hasDropdown && !collapsed) {
+    if (actuallyHasDropdown && !collapsed) {
       e.preventDefault();
       setShowDropdown(!showDropdown);
     } else if (onClick) {
@@ -88,7 +100,7 @@ const NavItem = ({
 
   return (
     <div className="mb-1">
-      {hasDropdown || onClick ? (
+      {actuallyHasDropdown || onClick ? (
         <button
           className={buttonClasses}
           onClick={handleClick}
@@ -137,7 +149,7 @@ const NavItem = ({
 
       {/* Dropdown Menu - Only show if not collapsed */}
       <AnimatePresence>
-        {hasDropdown && showDropdown && !collapsed && (
+        {actuallyHasDropdown && showDropdown && !collapsed && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -147,14 +159,18 @@ const NavItem = ({
           >
             <div className="pl-4 pr-2 py-1 space-y-1 mt-1">
               <div className="pl-4 border-l border-[var(--color-border)] space-y-1">
-                {dropdownItems.map((item, index) => (
+                {actualDropdownItems.map((item, index) => (
                   <Link
                     key={index}
                     to={item.to}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-[var(--text-body)] hover:text-[var(--text-main)] hover:bg-[var(--surface-muted)]"
+                    onClick={() => {
+                      if (collapsed) setCollapsed(false);
+                      if (onMobileClose) onMobileClose();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-[var(--text-body)] hover:text-[var(--text-main)] hover:bg-[var(--surface-muted)] relative z-50 cursor-pointer block w-full"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-border-strong)] group-hover:bg-[var(--color-primary)] transition-colors"></div>
-                    {item.label}
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-border-strong)] group-hover:bg-[var(--color-primary)] transition-colors inline-block mr-2"></div>
+                    <span className="relative z-10">{item.label}</span>
                   </Link>
                 ))}
               </div>
@@ -239,7 +255,7 @@ export const ModernSidebar = ({
         </div>
 
         {/* Navigation Section */}
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-20 custom-scrollbar overflow-x-hidden">
           <nav className="space-y-1">
             {navItems.map((item, index) => (
               <NavItem
@@ -250,8 +266,10 @@ export const ModernSidebar = ({
                 active={item.active}
                 hasDropdown={item.hasDropdown}
                 dropdownItems={item.dropdownItems}
+                items={item.items}
                 collapsed={collapsed}
-                onClick={collapsed && item.hasDropdown ? () => setCollapsed(false) : undefined} 
+                onMobileClose={onMobileClose}
+                onClick={collapsed && (item.hasDropdown || (item.items && item.items.length > 0)) ? () => setCollapsed(false) : undefined} 
               />
             ))}
           </nav>

@@ -74,7 +74,7 @@ export function OrderDetails() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Order #{order.id}</h1>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Order {order.order_number || `#${order.id}`}</h1>
             <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-${cfg.color}-500/10 text-${cfg.color}-400 border border-${cfg.color}-500/20`}>
               {cfg.label}
             </span>

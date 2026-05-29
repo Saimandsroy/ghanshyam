@@ -295,7 +295,7 @@ export const ClientOrderDetails = () => {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Client Order #{order.id}
+                Client Order {order.order_number || `#${order.id}`}
               </h1>
               <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium bg-${cfg.color}-500/10 text-${cfg.color}-400 border border-${cfg.color}-500/20`}>
                 {cfg.label}

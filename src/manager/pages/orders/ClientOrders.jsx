@@ -163,8 +163,8 @@ export const ClientOrders = () => {
                 <div className="absolute top-0 left-0 w-1 h-full bg-[var(--primary-cyan)] opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex items-center justify-between flex-wrap gap-4 relative z-10">
                   <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 flex items-center justify-center text-[var(--primary-cyan)] font-bold font-mono shadow-inner">
-                      #{order.id}
+                    <div className="w-16 h-14 px-1 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 flex items-center justify-center text-[var(--primary-cyan)] font-bold font-mono text-[9px] text-center break-all leading-tight shadow-inner">
+                      {order.order_number || `#${order.id}`}
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-1.5">

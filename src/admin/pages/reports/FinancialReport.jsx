@@ -106,7 +106,7 @@ export function FinancialReport() {
       filename = 'client_revenue_report';
       dataToExport = filteredRecords.map(r => ({
         'Date': formatDate(r.date),
-        'Order ID': `ORD${r.order_id}`,
+        'Order ID': r.order_number || `ORD${r.order_id}`,
         'Client Name': r.client_name,
         'Website': r.website || 'N/A',
         'Content Type': r.content_type,
@@ -118,7 +118,7 @@ export function FinancialReport() {
       filename = 'blogger_payout_report';
       dataToExport = filteredRecords.map(r => ({
         'Date': formatDate(r.date),
-        'Order ID': `ORD${r.order_id}`,
+        'Order ID': r.order_number || `ORD${r.order_id}`,
         'Blogger Name': r.blogger_name,
         'Website': r.website || 'N/A',
         'Blogger Price': r.blogger_paid.toFixed(2),
@@ -128,7 +128,7 @@ export function FinancialReport() {
     } else if (activeTab === 'profit') {
       filename = 'profit_calculation_report';
       dataToExport = filteredRecords.map(r => ({
-        'Order ID': `ORD${r.order_id}`,
+        'Order ID': r.order_number || `ORD${r.order_id}`,
         'Client Name': r.client_name,
         'Website': r.website || 'N/A',
         'Client Charged': r.client_charged.toFixed(2),
@@ -456,7 +456,7 @@ export function FinancialReport() {
                       {activeTab === 'revenue' && (
                         <>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{formatDate(row.date)}</td>
-                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>ORD{row.order_id}</td>
+                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{row.order_number || `ORD${row.order_id}`}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.client_name}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.website || 'N/A'}</td>
                           <td className="px-4 py-3.5 text-sm">
@@ -477,7 +477,7 @@ export function FinancialReport() {
                       {activeTab === 'blogger' && (
                         <>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{formatDate(row.date)}</td>
-                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>ORD{row.order_id}</td>
+                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{row.order_number || `ORD${row.order_id}`}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.blogger_name || 'N/A'}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.website || 'N/A'}</td>
                           <td className="px-4 py-3.5 text-sm font-semibold text-red-400">{formatCurrency(row.blogger_paid, row.currency)}</td>
@@ -502,7 +502,7 @@ export function FinancialReport() {
 
                       {activeTab === 'profit' && (
                         <>
-                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>ORD{row.order_id}</td>
+                          <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{row.order_number || `ORD${row.order_id}`}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.client_name}</td>
                           <td className="px-4 py-3.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{row.website || 'N/A'}</td>
                           <td className="px-4 py-3.5 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{formatCurrency(row.client_charged, row.currency)}</td>

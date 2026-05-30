@@ -110,7 +110,7 @@ export function FinancialReport() {
         'Client Name': r.client_name,
         'Website': r.website || 'N/A',
         'Content Type': r.content_type,
-        'Client Charged': r.client_charged.toFixed(2),
+        'Client Charged': (r.client_charged || 0).toFixed(2),
         'Currency': r.currency || 'USD',
         'Payment Status': r.payment_status === 'completed' ? 'Paid' : r.payment_status
       }));
@@ -121,7 +121,7 @@ export function FinancialReport() {
         'Order ID': r.order_number || `ORD${r.order_id}`,
         'Blogger Name': r.blogger_name,
         'Website': r.website || 'N/A',
-        'Blogger Price': r.blogger_paid.toFixed(2),
+        'Blogger Price': (r.blogger_paid || 0).toFixed(2),
         'Currency': r.currency || 'USD',
         'Payment Status': r.blogger_status === 8 ? 'Paid' : 'Pending'
       }));
@@ -131,10 +131,10 @@ export function FinancialReport() {
         'Order ID': r.order_number || `ORD${r.order_id}`,
         'Client Name': r.client_name,
         'Website': r.website || 'N/A',
-        'Client Charged': r.client_charged.toFixed(2),
-        'Blogger Paid': r.blogger_paid.toFixed(2),
-        'Platform Profit': r.profit.toFixed(2),
-        'Profit Margin %': `${r.margin.toFixed(1)}%`,
+        'Client Charged': (r.client_charged || 0).toFixed(2),
+        'Blogger Paid': (r.blogger_paid || 0).toFixed(2),
+        'Platform Profit': (r.profit || 0).toFixed(2),
+        'Profit Margin %': `${(r.margin || 0).toFixed(1)}%`,
         'Payout Type': r.blogger_paid === 0 ? 'Platform-Owned (No Payout)' : 'External Blogger'
       }));
     }

@@ -212,7 +212,10 @@ export const ClientOrderDetails = () => {
   const handleRejectClientOrder = async () => {
     const reason = prompt('Enter rejection reason (this will be shown to the client and their wallet will be refunded):');
     if (reason === null) return;
-    
+    if (!reason.trim()) {
+      alert('Please provide a reason.');
+      return;
+    }
     try {
       setSaving(true);
       setError('');

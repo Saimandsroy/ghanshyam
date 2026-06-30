@@ -31,7 +31,8 @@ export function PaymentHistory() {
         name: '',
         email: '',
         paymentMethod: '',
-        clearanceDate: ''
+        clearanceStartDate: '',
+        clearanceEndDate: ''
     });
 
     useEffect(() => {
@@ -93,7 +94,8 @@ export function PaymentHistory() {
                     filter_name: filters.name || undefined,
                     filter_email: filters.email || undefined,
                     filter_payment_method: filters.paymentMethod || undefined,
-                    filter_clearance_date: filters.clearanceDate || undefined
+                    filter_clearance_start_date: filters.clearanceStartDate || undefined,
+                    filter_clearance_end_date: filters.clearanceEndDate || undefined
                 }
             });
             setPayments(response.data.payments || []);
@@ -313,12 +315,12 @@ export function PaymentHistory() {
 
     // Reset filters - also reset to page 1
     const resetFilters = () => {
-        setFilters({ name: '', email: '', paymentMethod: '', clearanceDate: '' });
+        setFilters({ name: '', email: '', paymentMethod: '', clearanceStartDate: '', clearanceEndDate: '' });
         setPage(1);
     };
 
     // Check if any filter is active
-    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.clearanceDate;
+    const hasActiveFilters = filters.name || filters.email || filters.paymentMethod || filters.clearanceStartDate || filters.clearanceEndDate;
 
     return (
         <div className="space-y-6">
@@ -405,17 +407,40 @@ export function PaymentHistory() {
                                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
-                            {/* Clearance Date Filter */}
-                            <div>
-                                <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Clearance Date</label>
-                                <div className="relative">
-                                    <input
-                                        type="date"
-                                        value={filters.clearanceDate}
-                                        onChange={e => setFilters({ ...filters, clearanceDate: e.target.value })}
-                                        className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
-                                        style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                                    />
+                            {/* Clearance Date Range Filter */}
+                            <div className="md:col-span-2">
+                                <label className="block text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Clearance Date Range</label>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="date"
+                                            value={filters.clearanceStartDate}
+                                            onChange={e => {
+                                                setFilters({ ...filters, clearanceStartDate: e.target.value });
+                                                setSortConfig({ key: 'clearance_date', direction: 'asc' });
+                                            }}
+                                            className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                            placeholder="From"
+                                        />
+                                    </div>
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>to</span>
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="date"
+                                            value={filters.clearanceEndDate}
+                                            onChange={e => {
+                                                setFilters({ ...filters, clearanceEndDate: e.target.value });
+                                                if (!filters.clearanceStartDate) {
+                                                    setSortConfig({ key: 'clearance_date', direction: 'asc' });
+                                                }
+                                            }}
+                                            min={filters.clearanceStartDate || undefined}
+                                            className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
+                                            style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                            placeholder="To"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

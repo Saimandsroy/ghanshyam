@@ -284,7 +284,10 @@ export function WithdrawalRequests() {
                                     <input
                                         type="date"
                                         value={filters.startDate}
-                                        onChange={e => setFilters({ ...filters, startDate: e.target.value })}
+                                        onChange={e => {
+                                            setFilters({ ...filters, startDate: e.target.value });
+                                            setSortConfig({ key: 'datetime', direction: 'asc' });
+                                        }}
                                         className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
                                         style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                                         placeholder="Start Date"
@@ -295,7 +298,12 @@ export function WithdrawalRequests() {
                                     <input
                                         type="date"
                                         value={filters.endDate}
-                                        onChange={e => setFilters({ ...filters, endDate: e.target.value })}
+                                        onChange={e => {
+                                            setFilters({ ...filters, endDate: e.target.value });
+                                            if (!filters.startDate) {
+                                                setSortConfig({ key: 'datetime', direction: 'asc' });
+                                            }
+                                        }}
                                         min={filters.startDate || undefined}
                                         className="w-full rounded-xl px-3 py-2.5 text-sm transition-all duration-200 focus:ring-2 focus:ring-cyan-500/30 outline-none"
                                         style={{ backgroundColor: 'var(--background-dark)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}

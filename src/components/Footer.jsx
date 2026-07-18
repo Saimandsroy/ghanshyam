@@ -89,7 +89,7 @@ export function Footer() {
         {/* Footer Bottom */}
         <div className="border-t border-slate-200 pt-8 pb-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-500 font-medium text-sm">
-            Copyright &copy; {new Date().getFullYear()} Esoftec. All rights reserved.
+            &copy; {new Date().getFullYear()} linkmanagement.net, A Venture of <a href="https://rankmeup.in/" target="_blank" rel="noopener noreferrer" className="hover:text-[#F97316] transition-colors">RankMeUP</a> Services. All Rights Reserved.
           </p>
           <div className="flex items-center gap-6">
             <a href="#" className="text-slate-500 font-medium hover:text-[#F97316] text-sm transition-colors">Terms of Service</a>
